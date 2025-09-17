@@ -1,15 +1,18 @@
+import os
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.firefox.service import Service
+from webdriver_manager.firefox import GeckoDriverManager
 
 
 def initialize_driver():
-    # Initializes the browser options
-    options = webdriver.ChromeOptions()
+    options = webdriver.FirefoxOptions()
 
-    # Initialise the browser using WebDriver Manager
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)
+    snap_tmp = os.path.expanduser("~/snap/firefox/common/tmp")
+    os.makedirs(snap_tmp, exist_ok=True)
+    os.environ["TMPDIR"] = snap_tmp
+
+    service = Service(GeckoDriverManager().install())
+    driver = webdriver.Firefox(service=service, options=options)
     return driver
 
 
