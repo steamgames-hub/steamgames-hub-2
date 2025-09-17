@@ -45,6 +45,7 @@ def test_upload_dataset():
 
         # Send the form
         password_field.send_keys(Keys.RETURN)
+        time.sleep(4)
         wait_for_page_to_load(driver)
 
         # Count initial datasets
