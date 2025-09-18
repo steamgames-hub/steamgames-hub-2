@@ -10,16 +10,16 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "click",
-    "python-dotenv",
-]
+    "python-dotenv"
+    ]
 
 [project.optional-dependencies]
 dev = [
     "black",
     "isort",
     "flake8",
-    "autoflake",
-]
+    "autoflake"
+    ]
 
 [project.scripts]
 rosemary = "rosemary.cli:cli"

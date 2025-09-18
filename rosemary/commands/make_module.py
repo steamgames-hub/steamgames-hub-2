@@ -13,8 +13,7 @@ def pascalcase(s):
 def setup_jinja_env():
     """Configures and returns a Jinja environment."""
     env = Environment(
-        loader=FileSystemLoader(searchpath="./rosemary/templates"),
-        autoescape=select_autoescape(["html", "xml", "j2"]),
+        loader=FileSystemLoader(searchpath="./rosemary/templates"), autoescape=select_autoescape(["html", "xml", "j2"])
     )
     env.filters["pascalcase"] = pascalcase
     return env
@@ -52,8 +51,7 @@ def make_module(name):
         "forms.py": "module_forms.py.j2",
         "seeders.py": "module_seeders.py.j2",
         os.path.join("templates", name, "index.html"): "module_templates_index.html.j2",
-        "assets/js/scripts.js": "module_scripts.js.j2",
-        "assets/js/webpack.config.js": "module_webpack.config.js.j2",
+        "assets/scripts.js": "module_scripts.js.j2",
         "tests/test_unit.py": "module_tests_test_unit.py.j2",
         "tests/locustfile.py": "module_tests_locustfile.py.j2",
         "tests/test_selenium.py": "module_tests_test_selenium.py.j2",
@@ -66,9 +64,8 @@ def make_module(name):
     # Create 'tests' directory directly under module_path, without additional subfolders.
     os.makedirs(os.path.join(module_path, "tests"), exist_ok=True)
 
-    # Create 'assets' directory directly under module_path
-    os.makedirs(os.path.join(module_path, "assets", "css"), exist_ok=True)
-    os.makedirs(os.path.join(module_path, "assets", "js"), exist_ok=True)
+    # Create 'assets' directory directly under module_path, without additional subfolders.
+    os.makedirs(os.path.join(module_path, "assets"), exist_ok=True)
 
     # Create empty __init__.py file directly in the 'tests' directory.
     open(os.path.join(module_path, "tests", "__init__.py"), "a").close()
@@ -76,12 +73,7 @@ def make_module(name):
     # Render and write files, including 'test_unit.py' directly in 'tests'.
     for filename, template_name in files_and_templates.items():
         if template_name:  # Check if there is a defined template.
-            render_and_write_file(
-                env,
-                template_name,
-                os.path.join(module_path, filename),
-                {"module_name": name},
-            )
+            render_and_write_file(env, template_name, os.path.join(module_path, filename), {"module_name": name})
         else:
             open(os.path.join(module_path, filename), "a").close()  # Create empty file if there is no template.
 
@@ -106,9 +98,6 @@ def make_module(name):
         for file_ in files:
             file_path = os.path.join(root, file_)
             os.chown(file_path, uid, gid)
-            os.chmod(
-                file_path,
-                stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH,
-            )
+            os.chmod(file_path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH)
 
     click.echo(click.style(f"Module '{name}' permissions changed successfully.", fg="green"))
