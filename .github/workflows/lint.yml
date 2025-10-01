@@ -2,21 +2,19 @@ name: Python Lint
 
 on:
   push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
+    branches: [actions]
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.x'
+          python-version: '3.12'
 
       - name: Install Dependencies
         run: |
@@ -24,5 +22,10 @@ jobs:
           pip install flake8 flake8-pyproject black isort
 
       - name: Lint with flake8
-        run: |
-          flake8 app rosemary core
+        run: flake8 app rosemary core
+
+      - name: Check formatting with black
+        run: black --check app rosemary core
+
+      - name: Check import order with isort
+        run: isort --check-only app rosemary core
