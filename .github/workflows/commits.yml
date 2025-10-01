@@ -1,8 +1,6 @@
 name: Commits Syntax Checker
 
-on:
-  push:
-    branches: [actions]
+on: [push]
 
 jobs:
   check:

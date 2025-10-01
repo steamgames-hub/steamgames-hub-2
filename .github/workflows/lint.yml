@@ -1,15 +1,26 @@
+# ----------------------------------------------------------------------------
+# Creative Commons CC BY 4.0 - David Romero - Diverso Lab
+# ----------------------------------------------------------------------------
+# This workflow is licensed under the Creative Commons Attribution 4.0
+# International License. You are free to share and adapt the material
+# as long as appropriate credit is given, a link to the license is provided,
+# and you indicate if changes were made.
+#
+# For more details, visit:
+# https://creativecommons.org/licenses/by/4.0/
+# ----------------------------------------------------------------------------
+
 name: Python Lint
 
-on:
-  push:
-    branches: [actions]
+on: [push]
 
 jobs:
   lint:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout
+        uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v6

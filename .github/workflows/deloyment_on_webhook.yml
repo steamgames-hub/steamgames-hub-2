@@ -10,7 +10,7 @@ on:
 
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/actions'
+    if: github.ref == 'refs/heads/actions2'
     runs-on: ubuntu-22.04
 
     steps:
