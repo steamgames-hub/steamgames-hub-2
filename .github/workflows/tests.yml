@@ -21,6 +21,7 @@ jobs:
     env:
       MARIADB_ROOT_PASSWORD: uvlhub_root_password
       MARIADB_DATABASE: uvlhubdb_test
+      MARIADB_TEST_DATABASE: uvlhubdb_test
       MARIADB_USER: uvlhub_user
       MARIADB_PASSWORD: uvlhub_password
       MARIADB_HOSTNAME: 127.0.0.1
