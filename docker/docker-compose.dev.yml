@@ -1,7 +1,6 @@
 services:
   web:
     container_name: web_app_container
-    image: drorganvidez/uvlhub:dev
     env_file:
       - ../.env
     expose:
