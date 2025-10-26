@@ -1,0 +1,13 @@
+#!/bin/bash
+
+mensaje_commit=$(cat "$1")
+
+if ! [[ "$mensaje_commit" =~ ^(feat|fix|chore): ]]; then
+  echo "ERROR: El mensaje del commit debe comenzar con uno de los siguientes prefijos: feat:, fix:, chore:"
+  exit 1
+fi
+
+if ! [[ "$mensaje_commit" =~ (Refs|Closes|Fixes):\ #[0-9]+$ ]]; then
+  echo "ERROR: El mensaje del commit debe terminar con uno de los siguientes prefijos: Refs:, Closes:, Fixes:"
+  exit 1
+fi
