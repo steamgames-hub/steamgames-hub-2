@@ -36,8 +36,8 @@ jobs:
 
       - name: Run linters and generate reports
         run: |
-          # Ruff JSON
-          ruff check . --format=json > ruff-report.json || true
+          # Ruff JSON (options must precede paths on older versions)
+          ruff check --format json . > ruff-report.json || true
           # Pylint JSON (runs only on tracked python files)
           pylint -f json $(git ls-files "*.py") > pylint-report.json || true
           # Bandit security scan (JSON)
@@ -45,29 +45,22 @@ jobs:
           # Radon cyclomatic complexity in JSON
           radon cc -j . > radon-cc.json || true
 
-      - name: Download Codacy Analysis CLI
-        run: |
-          # We try to download the latest release artifact using the conventional
-          # GitHub "latest/download" URL. If your project requires a specific
-          # CLI version, replace this URL with the stable release you want.
-          CLI_URL="https://github.com/codacy/codacy-analysis-cli/releases/latest/download/codacy-analysis-cli.jar"
-          echo "Downloading Codacy Analysis CLI from $CLI_URL"
-          curl -sL -o codacy-analysis-cli.jar "$CLI_URL"
-          ls -lah codacy-analysis-cli.jar
-
-      - name: Run Codacy Analysis CLI
+      - name: Run Codacy Analysis CLI (Docker)
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
         run: |
-          # Assumptions/notes:
-          # - The CLI jar was downloaded above. If the release asset name differs
-          #   or the URL is not valid anymore, update the download step.
-          # - The exact CLI flags may vary between CLI versions. Adjust as needed.
-          echo "Running Codacy Analysis CLI (it will collect/upload analysis results)"
-          java -jar codacy-analysis-cli.jar analyze \
+          # Run the Codacy Analysis CLI via Docker to avoid managing JAR downloads
+          # Adjust the image tag if you prefer a pinned version over "latest".
+          echo "Running Codacy Analysis CLI via Docker"
+          docker run --rm \
+            -e CODACY_PROJECT_TOKEN \
+            -v "$PWD":/src \
+            -w /src \
+            codacy/codacy-analysis-cli:latest \
+            analyze \
             --project-token "$CODACY_PROJECT_TOKEN" \
             --commit-uuid "${{ github.sha }}" \
-            --branch "${{ github.ref }}" \
+            --branch "${{ github.ref_name }}" \
             --path . || true
 
       - name: Upload reports as workflow artifacts (optional)
