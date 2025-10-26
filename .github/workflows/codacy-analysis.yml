@@ -36,8 +36,8 @@ jobs:
 
       - name: Run linters and generate reports
         run: |
-          # Ruff JSON (options must precede paths on older versions)
-          ruff check --format json . > ruff-report.json || true
+          # Ruff JSON (use --output-format on current Ruff)
+          ruff check --output-format json . > ruff-report.json || true
           # Pylint JSON (runs only on tracked python files)
           pylint -f json $(git ls-files "*.py") > pylint-report.json || true
           # Bandit security scan (JSON)
@@ -60,7 +60,6 @@ jobs:
             analyze \
             --project-token "$CODACY_PROJECT_TOKEN" \
             --commit-uuid "${{ github.sha }}" \
-            --branch "${{ github.ref_name }}" \
             --path . || true
 
       - name: Upload reports as workflow artifacts (optional)
