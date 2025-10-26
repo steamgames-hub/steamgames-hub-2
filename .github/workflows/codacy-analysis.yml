@@ -18,56 +18,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java (needed for Codacy Analysis CLI)
-        uses: actions/setup-java@v4
+      - name: Run Codacy Analysis CLI (official action)
+        uses: codacy/codacy-analysis-cli-action@562ee3e92b8e92df8b67e0a5ff8aa8e261919c08
         with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-
-      - name: Install linters and tools
-        run: |
-          python -m pip install --upgrade pip
-          pip install ruff pylint bandit radon
-
-      - name: Run linters and generate reports
-        run: |
-          # Ruff JSON (use --output-format on current Ruff)
-          ruff check --output-format json . > ruff-report.json || true
-          # Pylint JSON (runs only on tracked python files)
-          pylint -f json $(git ls-files "*.py") > pylint-report.json || true
-          # Bandit security scan (JSON)
-          bandit -r . -f json -o bandit-report.json || true
-          # Radon cyclomatic complexity in JSON
-          radon cc -j . > radon-cc.json || true
-
-      - name: Run Codacy Analysis CLI (Docker)
-        env:
-          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
-        run: |
-          # Run the Codacy Analysis CLI via Docker to avoid managing JAR downloads
-          # Adjust the image tag if you prefer a pinned version over "latest".
-          echo "Running Codacy Analysis CLI via Docker"
-          docker run --rm \
-            -e CODACY_PROJECT_TOKEN \
-            -v "$PWD":/src \
-            -w /src \
-            codacy/codacy-analysis-cli:latest \
-            analyze \
-            --project-token "$CODACY_PROJECT_TOKEN" \
-            --commit-uuid "${{ github.sha }}" \
-            --path . || true
-
-      - name: Upload reports as workflow artifacts (optional)
-        uses: actions/upload-artifact@v4
-        with:
-          name: codacy-analysis-reports
-          path: |
-            ruff-report.json
-            pylint-report.json
-            bandit-report.json
-            radon-cc.json
+          # Choose a specific client-side tool, like "ruff" or "bandit".
+          # Omit the "tool" to run all tools enabled on Codacy for this repo.
+          # tool: ruff
+          upload: true
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          max-allowed-issues: 2147483647
