@@ -9,9 +9,9 @@ name: Pytest
 
 on:
   push:
-    branches: [main]
+    branches: [main, Trunk, bugfix]
   pull_request:
-    branches: [main]
+    branches: [main, Trunk, bugfix]
 
 jobs:
   pytest:
