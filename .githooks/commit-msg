@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# commit-msg hook: Enforce Conventional Commits 1.0.0
+# Formato: tipo(scope opcional)!?: descripción
+# Tipos permitidos: feat, fix, docs, style, refactor, perf, test,
+#                   build, ci, chore, revert
+
+COMMIT_MSG_FILE=${1:?"Uso: commit-msg <ruta-del-archivo-de-mensaje>"}
+
+# Leer todas las líneas del mensaje
+mapfile -t LINES < "$COMMIT_MSG_FILE" || LINES=()
+first_line="${LINES[0]:-}"
+
+# Permitir commits automáticos de Merge y Revert (de Git) sin validar
+if [[ $first_line =~ ^Merge\  ]] || [[ $first_line =~ ^Revert\  ]]; then
+	exit 0
+fi
+
+# Regex de la cabecera (título)
+#   tipo: uno de la lista
+#   scope: opcional, con caracteres [a-z0-9._/ -], dentro de paréntesis
+#   breaking: opcional '!'
+#   luego ': ' (dos puntos y espacio) y la descripción
+types_regex='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
+header_re="^(${types_regex})(\([a-z0-9._\/-]+\))?(!)?:\ .+"
+
+if [[ -z "$first_line" ]]; then
+	echo "ERROR: El mensaje del commit no puede estar vacío."
+	exit 1
+fi
+
+if ! [[ $first_line =~ $header_re ]]; then
+	echo "ERROR: La primera línea debe seguir Conventional Commits."
+	echo "  Formato: tipo(scope opcional)!?: descripción"
+	echo "  Tipos: feat | fix | docs | style | refactor | perf | test | build | ci | chore | revert"
+	echo "  Ejemplos:"
+	echo "    feat: añade búsqueda por etiquetas"
+	echo "    fix(auth): corrige validación de tokens"
+	echo "    refactor(core)!: elimina API obsoleta"
+	exit 1
+fi
+
+# Advertencias (no bloquean)
+if (( ${#first_line} > 72 )); then
+	echo "ADVERTENCIA: La primera línea supera 72 caracteres (recomendación: <= 72)." >&2
+fi
+if [[ ${first_line: -1} == '.' ]]; then
+	echo "ADVERTENCIA: Se recomienda no terminar el título con punto." >&2
+fi
+
+# Exigir línea en blanco entre título y cuerpo si existe cuerpo
+if ((${#LINES[@]} > 1)); then
+	# Si hay segunda línea y no está vacía, forzamos línea en blanco
+	second_line="${LINES[1]}"
+	if [[ -n "$second_line" ]]; then
+		echo "ERROR: Debe haber una línea en blanco entre el título y el cuerpo del commit."
+		echo "Sugerencia: añade una línea en blanco después de la primera línea."
+		exit 1
+	fi
+fi
+
+# Si el título incluye '!' (breaking change), exigir un footer BREAKING CHANGE
+if [[ $first_line =~ ^(${types_regex})(\([a-z0-9._\/-]+\))?(!):\  ]]; then
+	has_breaking_footer=0
+	for line in "${LINES[@]:2}"; do
+		if [[ $line =~ ^BREAKING[[:space:]-]CHANGE:\  ]]; then
+			has_breaking_footer=1
+			break
+		fi
+	done
+	if [[ $has_breaking_footer -eq 0 ]]; then
+		echo "ERROR: Detectado '!' en el título. Debes añadir un footer 'BREAKING CHANGE: <descripción>'."
+		echo "Ejemplo de footer:"
+		echo "  BREAKING CHANGE: renombra el campo 'user_id' a 'account_id'"
+		exit 1
+	fi
+fi
+
+exit 0
