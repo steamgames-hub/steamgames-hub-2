@@ -54,7 +54,3 @@ ubuntu-bionic-18.04-cloudimg-console.log
 # Custom ignores
 # ==========================
 .moduleignore
-
-
-#Ignore vscode AI rules
-.github/instructions/codacy.instructions.md
