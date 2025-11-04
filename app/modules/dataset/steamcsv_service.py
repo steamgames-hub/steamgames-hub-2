@@ -4,11 +4,8 @@ import csv
 import os
 from typing import List
 
-from app.modules.dataset.type_registry import BaseDatasetService, register
 
-
-@register
-class SteamCSVService(BaseDatasetService):
+class SteamCSVService:
     type_key = "steamcsv"
 
     REQUIRED_HEADERS: List[str] = [
@@ -65,4 +62,5 @@ class SteamCSVService(BaseDatasetService):
         return None
 
     def files_block_partial(self) -> str:
-        return "dataset/types/steamcsv/_files_block.html"
+        # New flattened template path (no 'types' folder)
+        return "dataset/_files_block.html"

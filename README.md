@@ -1,10 +1,12 @@
 <div style="text-align: center;">
-  <img src="https://www.uvlhub.io/static/img/logos/logo-light.svg" alt="Logo">
+  <strong>SteamGamesHub</strong>
+  <br/>
+  CSV dataset repository for Steam games, integrated with Zenodo.
 </div>
 
-# uvlhub.io
+# SteamGamesHub
 
-Repository of feature models in UVL format integrated with Zenodo and flamapy following Open Science principles - Developed by DiversoLab
+CSV dataset repository for Steam games. Upload, preview, and publish CSV datasets with Zenodo integration.
 
 ## Official documentation
 

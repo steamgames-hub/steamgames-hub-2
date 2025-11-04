@@ -90,7 +90,7 @@ var currentId = 0;
 
 
         document.addEventListener('click', function (event) {
-            if (event.target && event.target.classList.contains('add_author_to_uvl')) {
+            if (event.target && event.target.classList.contains('add_author_to_file')) {
 
                 let authorsButtonId = event.target.id;
                 let authorsId = authorsButtonId.replace("_button", "");
@@ -168,13 +168,6 @@ var currentId = 0;
                         }
                     }
 
-                    // Ensure dataset_type matches current selector value (avoid stale/missing type)
-                    try {
-                        const dsTypeSelect = document.getElementById('dataset_type_select');
-                        if (dsTypeSelect && dsTypeSelect.value) {
-                            formUploadData.set('dataset_type', dsTypeSelect.value);
-                        }
-                    } catch (e) { /* no-op */ }
 
                     let checked_orcid = true;
                     if (Array.isArray(formData.author_orcid)) {

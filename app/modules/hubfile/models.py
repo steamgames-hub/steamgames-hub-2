@@ -51,7 +51,7 @@ class Hubfile(db.Model):
         """
         try:
             fmmd = self.feature_model.fm_meta_data if self.feature_model else None
-            version = getattr(fmmd, "uvl_version", None)
+            version = getattr(fmmd, "csv_version", None)
             if version:
                 return str(version)
             # Fallback: short hash from checksum

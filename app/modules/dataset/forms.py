@@ -23,7 +23,7 @@ class AuthorForm(FlaskForm):
 
 
 class FeatureModelForm(FlaskForm):
-    uvl_filename = StringField("CSV Filename", validators=[DataRequired()])
+    csv_filename = StringField("CSV Filename", validators=[DataRequired()])
     title = StringField("Title", validators=[Optional()])
     desc = TextAreaField("Description", validators=[Optional()])
     publication_type = SelectField(
@@ -44,23 +44,17 @@ class FeatureModelForm(FlaskForm):
 
     def get_fmmetadata(self):
         return {
-            "uvl_filename": self.uvl_filename.data,
+            "csv_filename": self.csv_filename.data,
             "title": self.title.data,
             "description": self.desc.data,
             "publication_type": self.publication_type.data,
             "publication_doi": self.publication_doi.data,
             "tags": self.tags.data,
-            "uvl_version": self.version.data,
+            "csv_version": self.version.data,
         }
 
 
 class DataSetForm(FlaskForm):
-    dataset_type = SelectField(
-        "Dataset type",
-        choices=[("steamcsv", "Steam CSV"), ("uvl", "UVL")],
-        default="steamcsv",
-        validators=[DataRequired()],
-    )
     title = StringField("Title", validators=[DataRequired()])
     desc = TextAreaField("Description", validators=[DataRequired()])
     publication_type = SelectField(
