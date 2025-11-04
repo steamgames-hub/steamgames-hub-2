@@ -69,13 +69,13 @@ class DataSetSeeder(BaseSeeder):
         # Assume there are 12 CSV files, create corresponding FMMetaData and FeatureModel
         fm_meta_data_list = [
             FMMetaData(
-                uvl_filename=f"file{i+1}.csv",
+                csv_filename=f"file{i+1}.csv",
                 title=f"Feature Model {i+1}",
                 description=f"Description for feature model {i+1}",
                 publication_type=PublicationType.SOFTWARE_DOCUMENTATION,
                 publication_doi=f"10.1234/fm{i+1}",
                 tags="tag1, tag2",
-                uvl_version="1.0",
+                csv_version="1.0",
             )
             for i in range(12)
         ]
@@ -115,10 +115,10 @@ class DataSetSeeder(BaseSeeder):
 
             file_path = os.path.join(dest_folder, file_name)
 
-            uvl_file = Hubfile(
+            csv_file = Hubfile(
                 name=file_name,
                 checksum=f"checksum{i+1}",
                 size=os.path.getsize(file_path),
                 feature_model_id=feature_model.id,
             )
-            self.seed([uvl_file])
+            self.seed([csv_file])

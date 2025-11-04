@@ -48,12 +48,7 @@
 
                         <div class="row" style="padding-left: 2rem">
 
-                            <div class="col-lg-6 col-xs-12 col-md-12">
-                                <div class="mb-3">
-                                    {{ form.dataset_type.label(class="form-label") }} *
-                                    {{ form.dataset_type(class="form-control", id="dataset_type_select") }}
-                                </div>
-                            </div>
+                            
 
                             <div class="col-lg-6 col-xs-12 col-md-12">
                                 <div class="mb-3">
@@ -239,99 +234,22 @@
                         url: "/dataset/file/upload",
                         paramName: 'file',
                         maxFilesize: 10,
-                        acceptedFiles: '.csv,.uvl',
+                        acceptedFiles: '.csv',
                         init: function () {
 
                             let fileList = document.getElementById('file-list');
                             let dropzoneText = document.getElementById('dropzone-text');
                             let alerts = document.getElementById('alerts');
                             let filesTitleHeading = document.getElementById('files_title_heading');
-                            const typeSelect = document.getElementById('dataset_type_select');
-
-                            function updateUiByType() {
-                                const selectedType = typeSelect ? typeSelect.value : 'steamcsv';
-                                if (selectedType === 'uvl') {
-                                    filesTitleHeading.textContent = 'UVL files';
-                                    dropzoneText.textContent = 'Accepted: .uvl';
-                                } else {
-                                    filesTitleHeading.textContent = 'CSV files';
-                                    dropzoneText.textContent = 'Accepted: .csv';
-                                }
-                                // Also update Dropzone accepted files
-                                const allowed = (selectedType === 'uvl') ? '.uvl' : '.csv';
-                                if (window.myDropzoneInstance) {
-                                    window.myDropzoneInstance.options.acceptedFiles = allowed;
-                                }
-                            }
-
-                            function pruneMismatchedFiles() {
-                                const selectedType = typeSelect ? typeSelect.value : 'steamcsv';
-                                const allowedExt = (selectedType === 'uvl') ? 'uvl' : 'csv';
-                                const list = document.getElementById('file-list');
-                                const items = Array.from(list.querySelectorAll('li'));
-                                let removedAny = false;
-                                items.forEach((li) => {
-                                    // filename stored on list item dataset or from <h4> text
-                                    const storedName = li.dataset.filename || (li.querySelector('h4') ? li.querySelector('h4').textContent : '');
-                                    if (!storedName) return;
-                                    const ext = storedName.split('.').pop().toLowerCase();
-                                    if (ext !== allowedExt) {
-                                        // Request server-side delete
-                                        let xhr = new XMLHttpRequest();
-                                        xhr.open('POST', '/dataset/file/delete', true);
-                                        xhr.setRequestHeader('Content-Type', 'application/json');
-                                        xhr.send(JSON.stringify({file: storedName}));
-                                        // Remove from UI
-                                        li.remove();
-                                        removedAny = true;
-                                    }
-                                });
-
-                                // Also remove from Dropzone internal state to avoid being "stuck"
-                                if (window.myDropzoneInstance) {
-                                    // Clone the array since we'll mutate it while iterating
-                                    const filesCopy = Array.from(window.myDropzoneInstance.files);
-                                    filesCopy.forEach((f) => {
-                                        const serverName = (f && f._serverFilename) ? f._serverFilename : (f ? f.name : '');
-                                        if (!serverName) return;
-                                        const fext = serverName.split('.').pop().toLowerCase();
-                                        if (fext !== allowedExt) {
-                                            window.myDropzoneInstance.removeFile(f);
-                                        }
-                                    });
-                                }
-
-                                // If no files remain, hide upload section and clean errors
-                                if (removedAny && list.children.length === 0) {
-                                    const uploadSection = document.getElementById('upload_dataset');
-                                    if (uploadSection) {
-                                        uploadSection.style.display = 'none';
-                                    }
-                                    if (typeof clean_upload_errors === 'function') {
-                                        clean_upload_errors();
-                                    }
-                                }
-                            }
+                            dropzoneText.textContent = 'Accepted: .csv';
 
                             // Keep a reference to the Dropzone instance
                             window.myDropzoneInstance = this;
 
-                            // Initialize UI state
-                            updateUiByType();
-                            // React to selector changes
-                            if (typeSelect) {
-                                typeSelect.addEventListener('change', function() {
-                                    updateUiByType();
-                                    pruneMismatchedFiles();
-                                });
-                            }
-
                             this.on('addedfile', function (file) {
 
                                 let ext = file.name.split('.').pop().toLowerCase();
-                                const typeSelect = document.getElementById('dataset_type_select');
-                                const selectedType = typeSelect ? typeSelect.value : 'steamcsv';
-                                const validExt = (selectedType === 'uvl') ? 'uvl' : 'csv';
+                                const validExt = 'csv';
                                 if (ext !== validExt) {
                                     this.removeFile(file);
 
@@ -350,7 +268,7 @@
                                 show_upload_dataset();
 
                                 console.log("File uploaded: ", response);
-                                // actions when file is uploaded (CSV/UVL)
+                                // actions when file is uploaded (CSV only)
                                 let listItem = document.createElement('li');
                                 let h4Element = document.createElement('h4');
                                 h4Element.textContent = response.filename;
@@ -437,7 +355,7 @@
 
                                 /*
                                     ##########################################
-                                    UVL FORM
+                                    FILE INFO FORM (CSV)
                                     ##########################################
                                 */
 
@@ -449,7 +367,7 @@
 
                                 formContainer.innerHTML = `
                                     <div class="row">
-                                        <input type="hidden" value="${response.filename}" name="feature_models-${formUniqueId}-uvl_filename">
+                                        <input type="hidden" value="${response.filename}" name="feature_models-${formUniqueId}-csv_filename">
                                         <div class="col-12">
                                             <div class="row">
                                                 <div class="col-12">
@@ -505,7 +423,7 @@
                                                 <div class="col-6">
                                                     <div class="mb-3">
                                                         <label class="form-label">File version</label>
-                                                        <input type="text" class="form-control" name="feature_models-${formUniqueId}-uvl_version">
+                                                        <input type="text" class="form-control" name="feature_models-${formUniqueId}-csv_version">
                                                     </div>
                                                 </div>
                                                 <div class="col-12">
@@ -513,7 +431,7 @@
                                                         <label class="form-label">Authors</label>
                                                         <div id="` + formContainer.id + `_authors">
                                                         </div>
-                                                        <button type="button" class="add_author_to_uvl btn btn-secondary" id="` + formContainer.id + `_authors_button">Add author</button>
+                                                        <button type="button" class="add_author_to_file btn btn-secondary" id="` + formContainer.id + `_authors_button">Add author</button>
                                                     </div>
                                                 </div>
                                             </div>

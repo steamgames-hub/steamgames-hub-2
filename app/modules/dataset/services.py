@@ -36,29 +36,6 @@ def calculate_checksum_and_size(file_path):
         return hash_sha256, file_size
 
 
-def _resolve_dataset_type_from_request(form) -> str:
-    """Resolve dataset type robustly from the incoming request/form.
-    Returns 'steamcsv' or 'uvl', defaulting to 'steamcsv' if unknown/empty.
-    """
-    raw_type = request.form.get("dataset_type", "").strip().lower()
-    ds_type = getattr(form, "dataset_type", None)
-    form_type = (ds_type.data.strip().lower() if ds_type and ds_type.data else "")
-    type_key = raw_type or form_type or "steamcsv"
-    if type_key not in {"steamcsv", "uvl"}:
-        type_key = "steamcsv"
-    try:
-        logger.info(
-            "[resolve_type:services] raw_type='%s', form_type='%s', final='%s', keys=%s",
-            raw_type,
-            form_type,
-            type_key,
-            list(request.form.keys()),
-        )
-    except Exception:
-        pass
-    return type_key
-
-
 class DataSetService(BaseService):
     def __init__(self):
         super().__init__(DataSetRepository())
@@ -82,8 +59,8 @@ class DataSetService(BaseService):
         os.makedirs(dest_dir, exist_ok=True)
 
         for feature_model in dataset.feature_models:
-            uvl_filename = feature_model.fm_meta_data.uvl_filename
-            shutil.move(os.path.join(source_dir, uvl_filename), dest_dir)
+            csv_filename = feature_model.fm_meta_data.csv_filename
+            shutil.move(os.path.join(source_dir, csv_filename), dest_dir)
 
     def get_synchronized(self, current_user_id: int) -> DataSet:
         return self.repository.get_synchronized(current_user_id)
@@ -123,12 +100,7 @@ class DataSetService(BaseService):
         }
         try:
             logger.info(f"Creating dsmetadata...: {form.get_dsmetadata()}")
-            # Use dataset_type (steamcsv|uvl), default to steamcsv. Prefer raw request value for robustness
             dsmetadata_data = form.get_dsmetadata()
-            type_key = _resolve_dataset_type_from_request(form)
-            # Only attempt to persist dataset_type if the column exists in the mapped model
-            if hasattr(DSMetaData, "dataset_type"):
-                dsmetadata_data["dataset_type"] = type_key
             dsmetadata = self.dsmetadata_repository.create(**dsmetadata_data)
             for author_data in [main_author] + form.get_authors():
                 author = self.author_repository.create(commit=False, ds_meta_data_id=dsmetadata.id, **author_data)
@@ -137,7 +109,7 @@ class DataSetService(BaseService):
             dataset = self.create(commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id)
 
             for feature_model in form.feature_models:
-                uvl_filename = feature_model.uvl_filename.data
+                csv_filename = feature_model.csv_filename.data
                 fmmetadata = self.fmmetadata_repository.create(commit=False, **feature_model.get_fmmetadata())
                 for author_data in feature_model.get_authors():
                     author = self.author_repository.create(commit=False, fm_meta_data_id=fmmetadata.id, **author_data)
@@ -148,11 +120,11 @@ class DataSetService(BaseService):
                 )
 
                 # associated files in feature model
-                file_path = os.path.join(current_user.temp_folder(), uvl_filename)
+                file_path = os.path.join(current_user.temp_folder(), csv_filename)
                 checksum, size = calculate_checksum_and_size(file_path)
 
                 file = self.hubfilerepository.create(
-                    commit=False, name=uvl_filename, checksum=checksum, size=size, feature_model_id=fm.id
+                    commit=False, name=csv_filename, checksum=checksum, size=size, feature_model_id=fm.id
                 )
                 fm.files.append(file)
             self.repository.session.commit()

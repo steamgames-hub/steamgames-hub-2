@@ -33,7 +33,7 @@ from app.modules.dataset.services import (
 )
 from app.modules.hubfile.services import HubfileService
 from app.modules.zenodo.services import ZenodoService
-from app.modules.dataset.type_registry import get_service
+from app.modules.dataset.steamcsv_service import SteamCSVService
 
 logger = logging.getLogger(__name__)
 
@@ -46,28 +46,7 @@ doi_mapping_service = DOIMappingService()
 ds_view_record_service = DSViewRecordService()
 
 
-def _resolve_dataset_type_from_request(form) -> str:
-    """Resolve dataset type robustly from the incoming request/form.
-    Returns 'steamcsv' or 'uvl', defaulting to 'steamcsv' if unknown/empty.
-    """
-    raw_type = request.form.get("dataset_type", "").strip().lower()
-    ds_type = getattr(form, "dataset_type", None)
-    form_type = (ds_type.data.strip().lower() if ds_type and ds_type.data else "")
-    type_key = raw_type or form_type or "steamcsv"
-    if type_key not in {"steamcsv", "uvl"}:
-        type_key = "steamcsv"
-    try:
-        # Diagnostic log for type resolution
-        logger.info(
-            "[resolve_type] raw_type='%s', form_type='%s', final='%s', keys=%s",
-            raw_type,
-            form_type,
-            type_key,
-            list(request.form.keys()),
-        )
-    except Exception:
-        pass
-    return type_key
+# Dataset type selection removed: Steam CSV only
 
 
 @dataset_bp.route("/dataset/upload", methods=["GET", "POST"])
@@ -82,23 +61,17 @@ def create_dataset():
             return jsonify({"message": form.errors}), 400
 
         try:
-            # Validate pending files in temp folder according to dataset type
-            type_key = _resolve_dataset_type_from_request(form)
-            # Diagnostics: log resolved dataset type and temp folder contents
+            # Validate pending files in temp folder (Steam CSV only)
+            # Diagnostics: log temp folder contents
             try:
                 temp_dir = current_user.temp_folder()
                 dir_list = []
                 if os.path.isdir(temp_dir):
                     dir_list = sorted(os.listdir(temp_dir))
-                logger.info(
-                    "[upload] Resolved dataset_type='%s', temp_folder='%s', files=%s",
-                    type_key,
-                    temp_dir,
-                    dir_list,
-                )
+                logger.info("[upload] temp_folder='%s', files=%s", temp_dir, dir_list)
             except Exception as diag_exc:
                 logger.warning("[upload] Could not inspect temp folder for diagnostics: %s", diag_exc)
-            service = get_service(type_key)
+            service = SteamCSVService()
             try:
                 service.validate_folder(current_user.temp_folder())
             except ValueError as verr:
@@ -171,7 +144,7 @@ def upload():
     file = request.files["file"]
     temp_folder = current_user.temp_folder()
 
-    if not file or not (file.filename.endswith(".csv") or file.filename.endswith(".uvl")):
+    if not file or not (file.filename.endswith(".csv")):
         return jsonify({"message": "No valid file"}), 400
 
     # create temp folder
