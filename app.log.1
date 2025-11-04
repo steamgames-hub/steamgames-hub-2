@@ -1,0 +1,113 @@
+ * Debug mode: on
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://10.0.2.15:5000
+[33mPress CTRL+C to quit[0m
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 949-883-328
+[2025-10-31 15:30:07,579] INFO in routes: Access index
+2025-10-31 15:30:07,579 - app.modules.public.routes - INFO - Access index
+10.0.2.2 - - [31/Oct/2025 15:30:07] "GET / HTTP/1.1" 200 -
+10.0.2.2 - - [31/Oct/2025 15:30:07] "GET /static/css/app.css HTTP/1.1" 200 -
+10.0.2.2 - - [31/Oct/2025 15:30:07] "GET /static/css/dropzone.css HTTP/1.1" 200 -
+10.0.2.2 - - [31/Oct/2025 15:30:07] "GET /public/scripts.js HTTP/1.1" 200 -
+10.0.2.2 - - [31/Oct/2025 15:30:07] "GET /static/css/own.css HTTP/1.1" 200 -
+10.0.2.2 - - [31/Oct/2025 15:30:07] "GET /static/js/app.js HTTP/1.1" 200 -
+10.0.2.2 - - [31/Oct/2025 15:30:08] "GET /static/img/logos/logo-dark.svg HTTP/1.1" 200 -
+10.0.2.2 - - [31/Oct/2025 15:30:08] "GET /static/img/icons/icon-250x250.png HTTP/1.1" 200 -
+2025-10-31 18:52:12,299 - app - ERROR - Exception on /dataset/unsynchronized/6/ [GET]
+Traceback (most recent call last):
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/flask_restful/__init__.py", line 298, in error_router
+    return original_handler(e)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/app/modules/dataset/routes.py", line 326, in get_unsynchronized_dataset
+    return render_template("dataset/view_dataset.html", dataset=dataset)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/manuel/steamgames-hub-1/app/modules/dataset/templates/dataset/view_dataset.html", line 1, in top-level template code
+    {% extends "base_template.html" %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/app/templates/base_template.html", line 200, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/app/modules/dataset/templates/dataset/view_dataset.html", line 150, in block 'content'
+    {% for tag in dataset.ds_meta_data.tags.split(',') %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/jinja2/utils.py", line 92, in from_obj
+    if hasattr(obj, "jinja_pass_arg"):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'None' has no attribute 'split'
+2025-10-31 18:52:12,304 - app - ERROR - Internal Server Error: 500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.
+2025-10-31 18:53:15,632 - app - ERROR - Exception on /dataset/unsynchronized/6/ [GET]
+Traceback (most recent call last):
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/flask_restful/__init__.py", line 298, in error_router
+    return original_handler(e)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/app/modules/dataset/routes.py", line 326, in get_unsynchronized_dataset
+    return render_template("dataset/view_dataset.html", dataset=dataset)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/manuel/steamgames-hub-1/app/modules/dataset/templates/dataset/view_dataset.html", line 1, in top-level template code
+    {% extends "base_template.html" %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/app/templates/base_template.html", line 200, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/app/modules/dataset/templates/dataset/view_dataset.html", line 150, in block 'content'
+    {% for tag in dataset.ds_meta_data.tags.split(',') %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/manuel/steamgames-hub-1/venv/lib/python3.12/site-packages/jinja2/utils.py", line 92, in from_obj
+    if hasattr(obj, "jinja_pass_arg"):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'None' has no attribute 'split'
+2025-10-31 18:53:15,634 - app - ERROR - Internal Server Error: 500 Internal Server Error: The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.
