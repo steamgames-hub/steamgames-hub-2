@@ -168,6 +168,14 @@ var currentId = 0;
                         }
                     }
 
+                    // Ensure dataset_type matches current selector value (avoid stale/missing type)
+                    try {
+                        const dsTypeSelect = document.getElementById('dataset_type_select');
+                        if (dsTypeSelect && dsTypeSelect.value) {
+                            formUploadData.set('dataset_type', dsTypeSelect.value);
+                        }
+                    } catch (e) { /* no-op */ }
+
                     let checked_orcid = true;
                     if (Array.isArray(formData.author_orcid)) {
                         for (let orcid of formData.author_orcid) {

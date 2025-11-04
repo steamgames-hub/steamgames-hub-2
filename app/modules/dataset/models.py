@@ -55,6 +55,7 @@ class DSMetaData(db.Model):
     deposition_id = db.Column(db.Integer)
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=False)
+    dataset_type = db.Column(db.String(50))
     publication_type = db.Column(SQLAlchemyEnum(PublicationType), nullable=False)
     publication_doi = db.Column(db.String(120))
     dataset_doi = db.Column(db.String(120))

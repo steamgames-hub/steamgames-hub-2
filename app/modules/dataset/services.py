@@ -32,8 +32,31 @@ def calculate_checksum_and_size(file_path):
     file_size = os.path.getsize(file_path)
     with open(file_path, "rb") as file:
         content = file.read()
-        hash_md5 = hashlib.md5(content).hexdigest()
-        return hash_md5, file_size
+        hash_sha256 = hashlib.sha256(content).hexdigest()
+        return hash_sha256, file_size
+
+
+def _resolve_dataset_type_from_request(form) -> str:
+    """Resolve dataset type robustly from the incoming request/form.
+    Returns 'steamcsv' or 'uvl', defaulting to 'steamcsv' if unknown/empty.
+    """
+    raw_type = request.form.get("dataset_type", "").strip().lower()
+    ds_type = getattr(form, "dataset_type", None)
+    form_type = (ds_type.data.strip().lower() if ds_type and ds_type.data else "")
+    type_key = raw_type or form_type or "steamcsv"
+    if type_key not in {"steamcsv", "uvl"}:
+        type_key = "steamcsv"
+    try:
+        logger.info(
+            "[resolve_type:services] raw_type='%s', form_type='%s', final='%s', keys=%s",
+            raw_type,
+            form_type,
+            type_key,
+            list(request.form.keys()),
+        )
+    except Exception:
+        pass
+    return type_key
 
 
 class DataSetService(BaseService):
@@ -100,7 +123,13 @@ class DataSetService(BaseService):
         }
         try:
             logger.info(f"Creating dsmetadata...: {form.get_dsmetadata()}")
-            dsmetadata = self.dsmetadata_repository.create(**form.get_dsmetadata())
+            # Use dataset_type (steamcsv|uvl), default to steamcsv. Prefer raw request value for robustness
+            dsmetadata_data = form.get_dsmetadata()
+            type_key = _resolve_dataset_type_from_request(form)
+            # Only attempt to persist dataset_type if the column exists in the mapped model
+            if hasattr(DSMetaData, "dataset_type"):
+                dsmetadata_data["dataset_type"] = type_key
+            dsmetadata = self.dsmetadata_repository.create(**dsmetadata_data)
             for author_data in [main_author] + form.get_authors():
                 author = self.author_repository.create(commit=False, ds_meta_data_id=dsmetadata.id, **author_data)
                 dsmetadata.authors.append(author)
@@ -133,8 +162,8 @@ class DataSetService(BaseService):
             raise exc
         return dataset
 
-    def update_dsmetadata(self, id, **kwargs):
-        return self.dsmetadata_repository.update(id, **kwargs)
+    def update_dsmetadata(self, metadata_id, **kwargs):
+        return self.dsmetadata_repository.update(metadata_id, **kwargs)
 
     def get_uvlhub_doi(self, dataset: DataSet) -> str:
         domain = os.getenv("DOMAIN", "localhost")
@@ -155,8 +184,8 @@ class DSMetaDataService(BaseService):
     def __init__(self):
         super().__init__(DSMetaDataRepository())
 
-    def update(self, id, **kwargs):
-        return self.repository.update(id, **kwargs)
+    def update(self, metadata_id, **kwargs):
+        return self.repository.update(metadata_id, **kwargs)
 
     def filter_by_doi(self, doi: str) -> Optional[DSMetaData]:
         return self.repository.filter_by_doi(doi)
