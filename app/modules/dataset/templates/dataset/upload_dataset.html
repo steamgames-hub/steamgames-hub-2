@@ -224,6 +224,10 @@
                     <div id="dropzone-text" class="text-muted" style="font-size: 0.9rem;"></div>
                 </form>
 
+                <div class="mt-2">
+                    <thead class="text-muted">Required headers: <code>appid, name, release_date, is_free, developers, publishers, platforms, genres, tags</code></thead>
+                </div>
+
                 <span class="text-danger" id="alerts" style="display: none">
                     </span>
 
@@ -241,7 +245,7 @@
                             let dropzoneText = document.getElementById('dropzone-text');
                             let alerts = document.getElementById('alerts');
                             let filesTitleHeading = document.getElementById('files_title_heading');
-                            dropzoneText.textContent = 'Accepted: .csv';
+                            dropzoneText.textContent = 'Accepted: .csv'
 
                             // Keep a reference to the Dropzone instance
                             window.myDropzoneInstance = this;

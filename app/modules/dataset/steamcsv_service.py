@@ -26,16 +26,15 @@ class SteamCSVService:
 
         errors: List[str] = []
         found_csv = False
+
         for entry in os.listdir(folder_path):
             if not entry.lower().endswith(".csv"):
-                # Ignore non-CSV files for this type
-                continue
+                continue  # Ignore non-CSV files
             found_csv = True
             msg = self._validate_csv_file(folder_path, entry)
             if msg:
                 errors.append(msg)
 
-        # Require at least one CSV file for steamcsv datasets
         if not found_csv:
             raise ValueError("No .csv files found for Steam CSV dataset type")
 
@@ -44,23 +43,29 @@ class SteamCSVService:
 
     def _validate_csv_file(self, folder_path: str, entry: str) -> str | None:
         fpath = os.path.join(folder_path, entry)
+
         try:
             with open(fpath, "r", encoding="utf-8", newline="") as f:
                 reader = csv.reader(f)
                 headers = next(reader, [])
+                rows = list(reader)
         except Exception as exc:
             return f"{entry}: cannot read CSV ({exc})"
 
-        # Compare headers case-insensitively and ignoring extra spaces
-        present = {str(h).strip().lower() for h in headers}
-        missing = []
-        for h in self.REQUIRED_HEADERS:
-            if h.strip().lower() not in present:
-                missing.append(h)
-        if missing:
-            return f"{entry}: missing headers {', '.join(missing)}"
+        if headers != self.REQUIRED_HEADERS:
+            return (
+                f"{entry}: invalid headers. Expected exactly: "
+                f"{', '.join(self.REQUIRED_HEADERS)} in this order"
+            )
+
+        if not rows or all(not any(cell.strip() for cell in row) for row in rows):
+            return f"{entry}: must contain at least one data row"
+
+        for i, row in enumerate(rows, start=2):
+            if len(row) != len(self.REQUIRED_HEADERS):
+                return f"{entry}: row {i} does not match header column count"
+
         return None
 
     def files_block_partial(self) -> str:
-        # New flattened template path (no 'types' folder)
         return "dataset/_files_block.html"
