@@ -53,6 +53,25 @@ ds_view_record_service = DSViewRecordService()
 @login_required
 def create_dataset():
     form = DataSetForm()
+    # Cleanup: if user has no CSV files in their temp folder, remove the temp folder
+    try:
+        # Only run cleanup on GET (when not posting the form)
+        if request.method != "POST":
+            try:
+                temp_dir = current_user.temp_folder()
+                if os.path.isdir(temp_dir):
+                    csv_files = [f for f in os.listdir(temp_dir) if f.lower().endswith('.csv')]
+                    if not csv_files:
+                        try:
+                            shutil.rmtree(temp_dir)
+                            logger.info("[upload][cleanup] Removed empty temp folder for user %s: %s", current_user.id, temp_dir)
+                        except Exception as cleanup_exc:
+                            logger.warning("[upload][cleanup] Could not remove temp folder %s: %s", temp_dir, cleanup_exc)
+            except Exception as diag_exc:
+                logger.warning("[upload][cleanup] Could not inspect temp folder for diagnostics: %s", diag_exc)
+    except Exception:
+        # Be defensive: never let cleanup prevent rendering the page
+        pass
     if request.method == "POST":
 
         dataset = None
@@ -187,6 +206,32 @@ def delete():
         return jsonify({"message": "File deleted successfully"})
 
     return jsonify({"error": "Error: File not found"})
+
+
+@dataset_bp.route("/dataset/file/clean_temp", methods=["POST"])
+@login_required
+def clean_temp():
+    """Delete all contents of the current user's temp folder (used when starting a new CSV upload).
+
+    Returns JSON with a message and HTTP 200 on success. Any errors are logged and returned with 500.
+    """
+    try:
+        temp_folder = current_user.temp_folder()
+        if os.path.isdir(temp_folder):
+            # remove all files and directories inside temp_folder, but keep the folder itself
+            for entry in os.listdir(temp_folder):
+                path = os.path.join(temp_folder, entry)
+                try:
+                    if os.path.isfile(path) or os.path.islink(path):
+                        os.remove(path)
+                    elif os.path.isdir(path):
+                        shutil.rmtree(path)
+                except Exception as e:
+                    logger.warning("[clean_temp] Could not remove %s: %s", path, e)
+        return jsonify({"message": "Temp folder cleaned"}), 200
+    except Exception as exc:
+        logger.exception("[clean_temp] Exception cleaning temp folder: %s", exc)
+        return jsonify({"error": str(exc)}), 500
 
 
 @dataset_bp.route("/dataset/download/<int:dataset_id>", methods=["GET"])
