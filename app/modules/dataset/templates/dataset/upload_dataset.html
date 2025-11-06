@@ -250,15 +250,12 @@
                             // Keep a reference to the Dropzone instance
                             window.myDropzoneInstance = this;
 
-                            // Before sending a file, if the UI had no files yet, instruct server to clean
-                            // the temp folder so old files don't accumulate. We use a synchronous XHR
-                            // here to ensure the cleanup happens before the upload is processed.
                             this.on('sending', function (file, xhr, formData) {
                                 try {
-                                    // If there are no items in the file list (this is the first upload)
+
                                     if (fileList.children.length === 0) {
                                         var req = new XMLHttpRequest();
-                                        req.open('POST', '/dataset/file/clean_temp', false); // synchronous
+                                        req.open('POST', '/dataset/file/clean_temp', false); 
                                         req.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
                                         try {
                                             req.send(JSON.stringify({}));
