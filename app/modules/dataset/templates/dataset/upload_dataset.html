@@ -246,6 +246,25 @@
                             // Keep a reference to the Dropzone instance
                             window.myDropzoneInstance = this;
 
+                            this.on('sending', function (file, xhr, formData) {
+                                try {
+
+                                    if (fileList.children.length === 0) {
+                                        var req = new XMLHttpRequest();
+                                        req.open('POST', '/dataset/file/clean_temp', false); 
+                                        req.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+                                        try {
+                                            req.send(JSON.stringify({}));
+                                            console.log('Clean temp response', req.status, req.responseText);
+                                        } catch (e) {
+                                            console.warn('Could not clean temp folder before upload', e);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.warn('Error in sending handler for cleaning temp folder', e);
+                                }
+                            });
+
                             this.on('addedfile', function (file) {
 
                                 let ext = file.name.split('.').pop().toLowerCase();
