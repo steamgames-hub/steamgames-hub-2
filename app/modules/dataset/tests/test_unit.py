@@ -2,7 +2,6 @@ import hashlib
 import os
 import io
 import json
-import uuid
 import shutil
 from types import SimpleNamespace
 from pathlib import Path
@@ -268,7 +267,7 @@ def test_dsviewrecordservice_create_cookie_absent(monkeypatch):
 
     with app.test_request_context("/"):
         cookie = svc.create_cookie(dataset=SimpleNamespace())
-        # should generate a uuid-like string
+
         assert isinstance(cookie, str) and len(cookie) > 0
         assert created["called"] is True
         assert created["cookie"] == cookie

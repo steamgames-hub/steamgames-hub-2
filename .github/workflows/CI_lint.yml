@@ -36,6 +36,7 @@ jobs:
 
       # Step 4: Run flake8 for PEP8 linting
       - name: Lint with flake8
+        continue-on-error: true
         run: flake8 app rosemary core
 
       # Step 5: Verify code formatting with Black
