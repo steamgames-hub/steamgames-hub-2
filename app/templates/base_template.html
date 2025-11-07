@@ -174,6 +174,20 @@ chico sundermann">
                             <i class="align-middle" data-feather="user"></i> 
                         </a>
 
+                        <i class="align-middle me-2" data-feather="user"></i>
+                        <span class="text-dark d-inline-block me-7">
+                                {% if current_user.role == 'admin' %}
+                                    Administrator account
+                                {% elif current_user.role == 'curator' %}
+                                    Curator account
+                                {% elif current_user.role == 'user' %}
+                                    User account
+                                {% elif current_user.role == 'guest' %}
+                                    Guest account
+                                {% endif %}
+                        </span>
+                        
+
                         <a class="nav-link dropdown-toggle d-none d-sm-inline-block" href="#" data-bs-toggle="dropdown">
                             <span class="text-dark">{{ current_user.profile.surname }}, {{ current_user.profile.name }}</span>
                         </a>
