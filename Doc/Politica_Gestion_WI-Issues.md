@@ -46,11 +46,10 @@ Los WIs/Issues seguirán un flujo de trabajo con cuatro estados principales:
 
 3.  **`In Review`**
     -   **Significado**: El desarrollo ha finalizado y la tarea está lista para ser validada por el **revisor (tester)**.
-    -   **Acción**: El desarrollador abre un Pull Request a `Trunk`. El revisor clona la rama, realiza las pruebas necesarias y verifica que se cumplen los requisitos.
-
+    -   **Acción**: El tester se baja los cambios de la rama de feature correspondiente y realiza los tests, si encuentra algun bug pequeño lo arregla, si es grande se reabre la issue para que el desarrollador la corriga. Una vez el tester de el visto bueno este pasa a cerrarla.
 4.  **`Closed`**
     -   **Significado**: La tarea ha sido implementada, probada y el código correspondiente se ha fusionado en la rama `Trunk`.
-    -   **Acción**: El estado se actualiza automáticamente.
+    -   **Acción**: El tester fusiona los cambios a la rama Trunk y sube los cambios con un mensaje de commit de cierre de la issue.
 
 ---
 
