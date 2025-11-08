@@ -38,7 +38,11 @@
 
         <div class="card shadow-sm" > 
             <div class="card-body">
-                <p class="card-text h5"><i class="fa fa-user"></i> <strong>Save drafts by default:</strong> {{user_profile.save_drafts}}</p>
+                {% if user_profile.save_drafts == true %}
+                <p class="card-text h5"><i class="fa fa-user"></i> <strong>Save drafts by default:</strong> Yes</p>
+                {% else %}
+                <p class="card-text h5"><i class="fa fa-user"></i> <strong>Save drafts by default:</strong> No</p>
+                {% endif %}
             </div>
         </div>
 
