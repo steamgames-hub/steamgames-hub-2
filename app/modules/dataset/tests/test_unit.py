@@ -2,7 +2,6 @@ import hashlib
 import os
 import io
 import json
-import uuid
 import shutil
 from types import SimpleNamespace
 from pathlib import Path
@@ -23,8 +22,6 @@ from app.modules.dataset.services import (
     DSDownloadRecordService,
     SizeService,
 )
-from types import SimpleNamespace
-
 
 CSV_EXAMPLES_DIR = Path(__file__).parent.parent / "csv_examples"
 CSV_FAILURE_DIR = Path(__file__).parent.parent / "csv_examples_failure"
