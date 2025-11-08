@@ -66,3 +66,7 @@ Los WIs/Issues seguirán un flujo de trabajo con cuatro estados principales:
     closes #45
     ```
 -   **Responsabilidad**: Es responsabilidad del **tester** incluir el mensaje de cierre en el commit final.
+
+## 4. Issues de integración
+- **Como asignar**: Si las issues tienen la etiqueta de integration, el otro equipo asignará dos de sus miembros al tablero kanban de nuestro equipo para la issue de integración y seguirá el flujo de desarrollo que ellos tengan acordado. Una vez la terminen la marcaran como closed en nuestro tablero y asvisarán de ello.
+- **Como integrar los cambios**: Una vez la issue de integración este marcada como closed, un miembro de nuestro equipo hará una pull request de su rama de desarrollo a nuestra rama Trunk para integrar sus cambios directamente en nuestra rama de desarrollo principal. 
