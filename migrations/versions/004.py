@@ -1,16 +1,16 @@
 """
 CSV-only refactor: drop dataset_type and rename UVL columns to CSV.
 
-Revision ID: 003_csv_only_refactor
-Revises: 002
+Revision ID: 004
+Revises: 003
 Create Date: 2025-11-04
 """
 from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = '003_csv_only_refactor'
-down_revision = '002'
+revision = '004'
+down_revision = '003'
 branch_labels = None
 depends_on = None
 
