@@ -12,6 +12,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(256), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    verified = db.Column(db.Boolean, nullable=False, default=False)
     role = db.Column(db.String(50), default="user")
 
     data_sets = db.relationship("DataSet", backref="user", lazy=True)
@@ -21,6 +22,9 @@ class User(db.Model, UserMixin):
         super(User, self).__init__(**kwargs)
         if "password" in kwargs:
             self.set_password(kwargs["password"])
+            
+        if "verified" in kwargs:
+            self.verified = kwargs["verified"]
 
     def __repr__(self):
         return f"<User {self.email}>"
@@ -35,3 +39,6 @@ class User(db.Model, UserMixin):
         from app.modules.auth.services import AuthenticationService
 
         return AuthenticationService().temp_folder_by_user(self)
+    
+    def verify_user(self):
+        self.verified = True

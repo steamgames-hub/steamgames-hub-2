@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Verify your email</title>
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link rel="shortcut icon" href="{{ url_for("static", filename="img/icons/icon-250x250.png") }}"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link rel="stylesheet" href="{{ url_for("static", filename="css/app.css") }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" type="text/css"/>
+    <link rel="stylesheet" href="{{ url_for("static", filename="css/dropzone.css") }}">
+    <link rel="stylesheet" href="{{ url_for("static", filename="css/own.css") }}">
+  </head>
+
+  <body class="h-100 main bg-light bg-gradient">
+    <table class="w-100">
+      <tr>
+        <td align="center">
+          <table class="overflow-hidden m-5 rounded-top bg-white w-50" style="min-width: 250px;">
+            <tr class="text-light" style="background: #222e3c;">
+              <td class="py-3 px-4 d-flex align-items-center">
+                <img src="https://raw.githubusercontent.com/steamgames-hub/steamgames-hub-2/refs/heads/main/app/static/img/icons/icon-250x250.png" alt="Steam Games Hub" width="36" height="36" style="display:block; margin-right:12px;">
+                <h1 class="fs-3 m-0">Steam Games Hub</h1>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="p-4 text-break">
+                <h2 class="lead fw-bold">Verify your email</h2>
+                <p class="fs-5">Thanks for creating an account. To complete your registration and verify your email address, please click the button below.</p>
+
+                <p class="my-4 text-center">
+                  <a href="{{ confirm_url }}" class="py-2 px-5 text-decoration-none fs-5 fw-bold rounded d-inline-block text-light" style="background:#147abb;">Verify email</a>
+                </p>
+
+                <p class="mb-1 text-muted">If the button doesn't work, copy and paste the following link into your browser:</p>
+                <p class="mt-0 mb-5" style="color:#147abb;"><a href="{{ confirm_url }}" style="color: #0d6efd;">{{ confirm_url }}</a></p>
+
+                <p class="text-muted">If you did not request this email, you can safely ignore it.</p>
+              </td>
+            </tr>
+
+            <tr class="rounded-bottom text-center text-muted bg-white">
+              <td class="pb-4">
+                <div>Steam Games Hub &bull; <a href="https://steamgames-hub-2.onrender.com/" class="text-muted">steamgameshub.io</a></div>
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
