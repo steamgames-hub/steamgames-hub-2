@@ -77,7 +77,8 @@
                         <div class="row mb-2">
 
                             <div class="col-12">
-                                {% for tag in dataset.ds_meta_data.tags.split(',') %}
+                                {% set tag_list = dataset.ds_meta_data.tags.split(',') if dataset.ds_meta_data.tags else [] %}
+                                {% for tag in tag_list %}
                                     <span class="badge bg-secondary">{{ tag.strip() }}</span>
                                 {% endfor %}
                             </div>

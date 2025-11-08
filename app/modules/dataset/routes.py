@@ -1,4 +1,5 @@
 import json
+import csv
 import logging
 import os
 import shutil
@@ -30,7 +31,9 @@ from app.modules.dataset.services import (
     DSMetaDataService,
     DSViewRecordService,
 )
+from app.modules.hubfile.services import HubfileService
 from app.modules.zenodo.services import ZenodoService
+from app.modules.dataset.steamcsv_service import SteamCSVService
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +44,9 @@ dsmetadata_service = DSMetaDataService()
 zenodo_service = ZenodoService()
 doi_mapping_service = DOIMappingService()
 ds_view_record_service = DSViewRecordService()
+
+
+# Dataset type selection removed: Steam CSV only
 
 
 @dataset_bp.route("/dataset/upload", methods=["GET", "POST"])
@@ -55,6 +61,22 @@ def create_dataset():
             return jsonify({"message": form.errors}), 400
 
         try:
+            # Validate pending files in temp folder (Steam CSV only)
+            # Diagnostics: log temp folder contents
+            try:
+                temp_dir = current_user.temp_folder()
+                dir_list = []
+                if os.path.isdir(temp_dir):
+                    dir_list = sorted(os.listdir(temp_dir))
+                logger.info("[upload] temp_folder='%s', files=%s", temp_dir, dir_list)
+            except Exception as diag_exc:
+                logger.warning("[upload] Could not inspect temp folder for diagnostics: %s", diag_exc)
+            service = SteamCSVService()
+            try:
+                service.validate_folder(current_user.temp_folder())
+            except ValueError as verr:
+                return jsonify({"message": str(verr)}), 400
+
             logger.info("Creating dataset...")
             dataset = dataset_service.create_from_form(form=form, current_user=current_user)
             logger.info(f"Created dataset: {dataset}")
@@ -122,7 +144,7 @@ def upload():
     file = request.files["file"]
     temp_folder = current_user.temp_folder()
 
-    if not file or not file.filename.endswith(".uvl"):
+    if not file or not (file.filename.endswith(".csv")):
         return jsonify({"message": "No valid file"}), 400
 
     # create temp folder
@@ -148,12 +170,7 @@ def upload():
         return jsonify({"message": str(e)}), 500
 
     return (
-        jsonify(
-            {
-                "message": "UVL uploaded and validated successfully",
-                "filename": new_filename,
-            }
-        ),
+        jsonify({"message": "File uploaded and validated successfully", "filename": new_filename}),
         200,
     )
 
@@ -182,7 +199,7 @@ def download_dataset(dataset_id):
     zip_path = os.path.join(temp_dir, f"dataset_{dataset_id}.zip")
 
     with ZipFile(zip_path, "w") as zipf:
-        for subdir, dirs, files in os.walk(file_path):
+        for subdir, _, files in os.walk(file_path):
             for file in files:
                 full_path = os.path.join(subdir, file)
 
@@ -270,3 +287,29 @@ def get_unsynchronized_dataset(dataset_id):
         abort(404)
 
     return render_template("dataset/view_dataset.html", dataset=dataset)
+
+
+@dataset_bp.route("/dataset/file/preview/<int:file_id>", methods=["GET"])
+def preview_csv(file_id: int):
+    """Return a small preview (headers + up to 50 rows) for a CSV file."""
+    hubfile_service = HubfileService()
+    hubfile = hubfile_service.repository.get_or_404(file_id)
+    file_path = hubfile.get_path()
+
+    headers = []
+    rows = []
+    try:
+        with open(file_path, "r", encoding="utf-8", newline="") as f:
+            reader = csv.reader(f)
+            for i, row in enumerate(reader):
+                if i == 0:
+                    headers = row
+                else:
+                    rows.append(row)
+                if len(rows) >= 50:
+                    break
+    except Exception as exc:
+        logger.exception("Error generating CSV preview: %s", exc)
+        return jsonify({"message": str(exc)}), 400
+
+    return jsonify({"headers": headers, "rows": rows})
