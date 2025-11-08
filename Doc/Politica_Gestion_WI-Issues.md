@@ -21,6 +21,7 @@ Se deben utilizar las siguientes etiquetas para clasificar el trabajo:
 -   `task`: Una tarea específica que no es una `feature` ni un `bug`.
 -   `bug`: Un error o fallo en el código existente.
 -   `docs`: Tareas relacionadas con la documentación.
+-   `integration`: Tarea que realizara el otro equipo y que integraremos en el proyecto una vez la terminen.
 
 ### Etiquetas de Dificultad
 La prioridad y el esfuerzo se definen con las siguientes etiquetas:
