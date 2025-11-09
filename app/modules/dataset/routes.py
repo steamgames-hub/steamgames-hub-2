@@ -390,3 +390,18 @@ def list_incidents(dataset_id: int):
         for i in incidents
     ]
     return jsonify(result)
+
+
+@dataset_bp.route("/dataset/report/<int:dataset_id>", methods=["GET"])
+@login_required
+def report_dataset(dataset_id: int):
+    """Render a simple page where a curator can describe an issue for a dataset.
+
+    The form on this page will POST to `/dataset/incidents` (JSON) to create the incident.
+    """
+    # Only curators may access the report page
+    if getattr(current_user, "role", "") != "curator":
+        abort(403)
+
+    dataset = dataset_service.get_or_404(dataset_id)
+    return render_template("dataset/notify_issue.html", dataset=dataset)
