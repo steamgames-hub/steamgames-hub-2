@@ -125,7 +125,9 @@ def create_dataset():
         msg = "Everything works!"
         return jsonify({"message": msg}), 200
 
-    return render_template("dataset/upload_dataset.html", form=form)
+    user_preference = current_user.profile.save_drafts
+
+    return render_template("dataset/upload_dataset.html", form=form, save_drafts=user_preference)
 
 
 @dataset_bp.route("/dataset/list", methods=["GET", "POST"])

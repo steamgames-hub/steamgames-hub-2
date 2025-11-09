@@ -4,6 +4,38 @@
 
 {% block content %}
 
+    <div id="myModal" class="modal">
+        
+        <div class="modal-content">
+            <h2>Do you really want to <strong>exit</strong>?</h2>
+            <p class="p-0 m-0">
+                You can now decide whether your dataset will be saved as a draft or not. If you check the box, every dataset you leave without uploading will be saved as draft.
+            </p>
+            <div class="modal-buttons-container">
+                <button class="btn btn-primary mt-2" onclick="saveDraft()">Save as draft</button>
+                <div class="checkbox-container">
+                    <input type="checkbox" id="save_drafts_preference">
+                    <label for="save_drafts_preference" class="checkbox-label">Always save next drafts</label>
+                </div>
+                <button class="btn btn-secondary mt-2" onclick="discardDraft()">Discard draft</button>
+            </div>
+        </div>
+    </div>
+    {% if not save_drafts %}
+    <script>
+        document.querySelectorAll('a').forEach(link => {
+            if(link.getAttribute("class") === 'sidebar-link' || link.getAttribute("class") === 'sidebar-brand'){
+                link.addEventListener('click', function(event) {
+                    if (!hasAnswered) {
+                        hasAnswered = true;
+                        urlToLeave = link.getAttribute("href");
+                        showModal(event);
+                    }
+                });
+            }
+        });
+    </script>
+    {% endif %}
     <h1 class="h2 mb-3"><b>Upload</b> dataset</h1>
 
     <div class="row">
