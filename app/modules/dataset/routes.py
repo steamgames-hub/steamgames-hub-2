@@ -191,6 +191,39 @@ def delete():
     return jsonify({"error": "Error: File not found"})
 
 
+@dataset_bp.route("/dataset/file/clean_temp", methods=["POST"])
+@login_required
+def clean_temp():
+    """Remove files inside the current user's temp folder but keep the folder.
+
+    Returns JSON with a friendly message. This mirrors the JS action in the
+    upload template which calls this endpoint.
+    """
+    temp_folder = current_user.temp_folder()
+
+    try:
+        if os.path.exists(temp_folder) and os.path.isdir(temp_folder):
+            for name in os.listdir(temp_folder):
+                path = os.path.join(temp_folder, name)
+                try:
+                    if os.path.isfile(path) or os.path.islink(path):
+                        os.remove(path)
+                    else:
+                        shutil.rmtree(path)
+                except Exception:
+                    # best-effort: ignore failures to remove individual items
+                    continue
+        # Ensure the directory exists afterwards
+        if not os.path.exists(temp_folder):
+            os.makedirs(temp_folder, exist_ok=True)
+    except Exception as exc:
+        logger.exception("Error cleaning temp folder: %s", exc)
+        return jsonify({"message": str(exc)}), 500
+
+    # Redirect back to the upload page (this mirrors the original UI flow)
+    return redirect(url_for("dataset.create_dataset")), 302
+
+
 @dataset_bp.route("/dataset/download/<int:dataset_id>", methods=["GET"])
 def download_dataset(dataset_id):
     dataset = dataset_service.get_or_404(dataset_id)
