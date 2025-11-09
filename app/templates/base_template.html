@@ -34,6 +34,7 @@
 </head>
 
 <body>
+
 <div class="wrapper">
 
     <nav id="sidebar" class="sidebar js-sidebar">
@@ -143,7 +144,7 @@
 
         </div>
     </nav>
-
+    
     <div class="main">
         <nav class="navbar navbar-expand navbar-light navbar-bg">
             <a class="sidebar-toggle js-sidebar-toggle">
@@ -194,6 +195,18 @@
 
         <main class="content">
             <div class="container p-0">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    <div class="mt-4">
+                        {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                {% endwith %}
 
                 {% block content %}{% endblock %}
 
