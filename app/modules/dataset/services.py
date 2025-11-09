@@ -213,3 +213,13 @@ class SizeService:
             return f"{round(size / (1024 ** 2), 2)} MB"
         else:
             return f"{round(size / (1024 ** 3), 2)} GB"
+
+
+class IncidentService(BaseService):
+    def __init__(self):
+        from app.modules.dataset.repositories import IncidentRepository
+
+        super().__init__(IncidentRepository())
+
+    def list_for_dataset(self, dataset_id: int):
+        return self.repository.list_by_dataset(dataset_id)

@@ -1,9 +1,14 @@
 import pytest
+import json
 from flask import url_for
 
 from app.modules.auth.repositories import UserRepository
 from app.modules.auth.services import AuthenticationService
 from app.modules.profile.repositories import UserProfileRepository
+
+from app import db
+from app.modules.auth.models import User
+from app.modules.dataset.models import DSMetaData, DataSet, PublicationType
 
 
 @pytest.fixture(scope="module")
@@ -102,3 +107,64 @@ def test_service_create_with_profile_fail_no_password(clean_database):
 
     assert UserRepository().count() == 0
     assert UserProfileRepository().count() == 0
+
+
+def test_curator_can_create_incident(test_client):
+    # ensure test user exists and make them a curator
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(email="test@example.com", password="test1234", verified=True)
+        db.session.add(user)
+        db.session.commit()
+
+    # ensure profile exists
+    from app.modules.profile.models import UserProfile
+
+    if not user.profile:
+        profile = UserProfile(user_id=user.id, name="Test", surname="User", save_drafts=False)
+        db.session.add(profile)
+        db.session.commit()
+
+    user.role = "curator"
+    db.session.commit()
+
+    # login
+    # ensure any previously-authenticated test client is logged out first
+    test_client.get("/logout", follow_redirects=True)
+    resp = test_client.post("/login", data={"email": "test@example.com", "password": "test1234"}, follow_redirects=True)
+    assert resp.status_code == 200
+
+    # create a DSMetaData and DataSet to reference
+    md = DSMetaData(title="t", description="d", publication_type=PublicationType.NONE)
+    db.session.add(md)
+    db.session.commit()
+    ds = DataSet(user_id=user.id, ds_meta_data_id=md.id)
+    db.session.add(ds)
+    db.session.commit()
+
+    payload = {"dataset_id": ds.id, "description": "Something wrong with DB"}
+    r = test_client.post("/dataset/incidents", data=json.dumps(payload), content_type="application/json")
+    assert r.status_code == 201
+    body = json.loads(r.data)
+    assert body.get("id") is not None
+    assert body.get("dataset_id") == ds.id
+
+
+def test_non_curator_cannot_create_incident(test_client):
+    # ensure test user exists and is not a curator
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(email="test@example.com", password="test1234", verified=True)
+        db.session.add(user)
+        db.session.commit()
+
+    user.role = "user"
+    db.session.commit()
+
+    # login
+    resp = test_client.post("/login", data={"email": "test@example.com", "password": "test1234"}, follow_redirects=True)
+    assert resp.status_code == 200
+
+    payload = {"dataset_id": 1, "description": "Do not allow"}
+    r = test_client.post("/dataset/incidents", data=json.dumps(payload), content_type="application/json")
+    assert r.status_code == 403

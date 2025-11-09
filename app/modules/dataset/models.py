@@ -162,3 +162,22 @@ class DOIMapping(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     dataset_doi_old = db.Column(db.String(120))
     dataset_doi_new = db.Column(db.String(120))
+
+
+class Incident(db.Model):
+    """Incidencia reportada por un curator sobre un DataSet.
+
+    Campos:
+    - id: PK
+    - description: texto con la descripción de la incidencia
+    - dataset_id: FK a DataSet
+    - reporter_id: FK a User (quién reporta)
+    - created_at: timestamp de creación
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    description = db.Column(db.Text, nullable=False)
+    dataset_id = db.Column(db.Integer, db.ForeignKey("data_set.id"), nullable=False)
+    reporter_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    dataset = db.relationship("DataSet", backref=db.backref("incidents", lazy=True, cascade="all, delete"))

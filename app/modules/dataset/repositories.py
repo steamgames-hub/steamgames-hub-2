@@ -6,6 +6,7 @@ from flask_login import current_user
 from sqlalchemy import desc, func
 
 from app.modules.dataset.models import Author, DataSet, DOIMapping, DSDownloadRecord, DSMetaData, DSViewRecord
+from app.modules.dataset.models import Incident
 from core.repositories.BaseRepository import BaseRepository
 
 logger = logging.getLogger(__name__)
@@ -106,3 +107,11 @@ class DOIMappingRepository(BaseRepository):
 
     def get_new_doi(self, old_doi: str) -> str:
         return self.model.query.filter_by(dataset_doi_old=old_doi).first()
+
+
+class IncidentRepository(BaseRepository):
+    def __init__(self):
+        super().__init__(Incident)
+
+    def list_by_dataset(self, dataset_id: int):
+        return self.model.query.filter_by(dataset_id=dataset_id).order_by(Incident.created_at.desc()).all()

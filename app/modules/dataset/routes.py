@@ -38,11 +38,11 @@ from app.modules.dataset.steamcsv_service import SteamCSVService
 logger = logging.getLogger(__name__)
 
 
-dataset_service = DataSetService()
 author_service = AuthorService()
 dsmetadata_service = DSMetaDataService()
 zenodo_service = ZenodoService()
 doi_mapping_service = DOIMappingService()
+dataset_service = DataSetService()
 ds_view_record_service = DSViewRecordService()
 
 
@@ -348,3 +348,45 @@ def preview_csv(file_id: int):
         return jsonify({"message": str(exc)}), 400
 
     return jsonify({"headers": headers, "rows": rows})
+
+
+@dataset_bp.route("/dataset/incidents", methods=["POST"])
+@login_required
+def create_incident():
+    """Endpoint para que un curator notifique una incidencia sobre un dataset.
+
+    JSON body expected: { "dataset_id": int, "description": str }
+    Only users with role == 'curator' are allowed to create incidents.
+    """
+    data = request.get_json() or {}
+    dataset_id = data.get("dataset_id")
+    description = data.get("description")
+
+    if not dataset_id or not description:
+        return jsonify({"message": "dataset_id and description are required"}), 400
+
+    # role check
+    if getattr(current_user, "role", "") != "curator":
+        return jsonify({"message": "Forbidden"}), 403
+
+    # create incident
+    from app.modules.dataset.services import IncidentService
+
+    svc = IncidentService()
+    incident = svc.create(commit=True, description=description, dataset_id=dataset_id, reporter_id=current_user.id)
+
+    return jsonify({"id": incident.id, "dataset_id": incident.dataset_id, "description": incident.description}), 201
+
+
+@dataset_bp.route("/dataset/incidents/<int:dataset_id>", methods=["GET"])
+def list_incidents(dataset_id: int):
+    """Return list of incidents for a given dataset (public)."""
+    from app.modules.dataset.services import IncidentService
+
+    svc = IncidentService()
+    incidents = svc.list_for_dataset(dataset_id)
+    result = [
+        {"id": i.id, "description": i.description, "reporter_id": i.reporter_id, "created_at": i.created_at.isoformat()}
+        for i in incidents
+    ]
+    return jsonify(result)
