@@ -1,0 +1,48 @@
+<div class="list-group-item">
+    <div class="row">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <h4 style="margin-bottom: 0px">CSV files</h4>
+            <h4 style="margin-bottom: 0px;"><span class="badge bg-dark">{{ dataset.get_files_count() }}</span></h4>
+        </div>
+    </div>
+</div>
+
+{% for feature_model in dataset.feature_models %}
+    {% for file in feature_model.files %}
+        <div class="list-group-item">
+            <div class="row">
+                <div class="col-12">
+                    <div class="row">
+                                                                        <div class="col-8">
+                                                                                <i data-feather="file"></i> {{ file.name }}
+                                                                                {% set version = file.get_version_label() %}
+                                                                                {% if version %}
+                                                                                    <span class="badge bg-secondary" title="Version">v{{ version }}</span>
+                                                                                {% endif %}
+                                                        <br>
+                                                        <small class="text-muted">({{ file.get_formatted_size() }})</small>
+                                                </div>
+                        <div class="col-2">
+                            <div id="check_{{ file.id }}"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 text-end">
+                    <button onclick="viewFile('{{ file.id }}')" class="btn btn-outline-secondary btn-sm" style="border-radius: 5px;">
+                        <i data-feather="eye"></i> View
+                    </button>
+
+                    <button onclick="previewCSV('{{ file.id }}')" class="btn btn-outline-secondary btn-sm" style="border-radius: 5px;">
+                        <i data-feather="table"></i> Preview
+                    </button>
+
+                    <div class="btn-group" role="group">
+                        <a class="btn btn-primary btn-sm" href="{{ url_for('hubfile.download_file', file_id=file.id) }}" style=" border-radius: 5px;">
+                            <i data-feather="download"></i> Download
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+{% endfor %}

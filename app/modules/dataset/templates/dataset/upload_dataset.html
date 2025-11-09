@@ -48,6 +48,8 @@
 
                         <div class="row" style="padding-left: 2rem">
 
+                            
+
                             <div class="col-lg-6 col-xs-12 col-md-12">
                                 <div class="mb-3">
                                     {{ form.title.label(class="form-label") }} *
@@ -214,12 +216,12 @@
 
         <div class="col-xl-6 col-lg-12 col-md-12 col-sm-12">
 
-            <h1 class="h3 mb-3 mt-2">UVL models</h1>
+            <h1 class="h3 mb-3 mt-2"><span id="files_title_heading">CSV files</span></h1>
 
             <div id="uploaded_models_form" style="padding-left: 2rem">
 
                 <form action="{{ url_for('dataset.upload') }}" class="dropzone" id="myDropzone">
-                    <div id="dropzone-text"></div>
+                    <div id="dropzone-text" class="text-muted" style="font-size: 0.9rem;"></div>
                 </form>
 
                 <span class="text-danger" id="alerts" style="display: none">
@@ -232,21 +234,46 @@
                         url: "/dataset/file/upload",
                         paramName: 'file',
                         maxFilesize: 10,
-                        acceptedFiles: '.uvl',
+                        acceptedFiles: '.csv',
                         init: function () {
 
                             let fileList = document.getElementById('file-list');
                             let dropzoneText = document.getElementById('dropzone-text');
                             let alerts = document.getElementById('alerts');
+                            let filesTitleHeading = document.getElementById('files_title_heading');
+                            dropzoneText.textContent = 'Accepted: .csv';
+
+                            // Keep a reference to the Dropzone instance
+                            window.myDropzoneInstance = this;
+
+                            this.on('sending', function (file, xhr, formData) {
+                                try {
+
+                                    if (fileList.children.length === 0) {
+                                        var req = new XMLHttpRequest();
+                                        req.open('POST', '/dataset/file/clean_temp', false); 
+                                        req.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+                                        try {
+                                            req.send(JSON.stringify({}));
+                                            console.log('Clean temp response', req.status, req.responseText);
+                                        } catch (e) {
+                                            console.warn('Could not clean temp folder before upload', e);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.warn('Error in sending handler for cleaning temp folder', e);
+                                }
+                            });
 
                             this.on('addedfile', function (file) {
 
-                                let ext = file.name.split('.').pop();
-                                if (ext !== 'uvl') {
+                                let ext = file.name.split('.').pop().toLowerCase();
+                                const validExt = 'csv';
+                                if (ext !== validExt) {
                                     this.removeFile(file);
 
                                     let alert = document.createElement('p');
-                                    alert.textContent = 'Invalid file extension: ' + file.name;
+                                    alert.textContent = 'Invalid file extension for ' + selectedType + ': ' + file.name;
                                     alerts.appendChild(alert);
                                     alerts.style.display = 'block';
                                 }
@@ -260,11 +287,15 @@
                                 show_upload_dataset();
 
                                 console.log("File uploaded: ", response);
-                                // actions when UVL model is uploaded
+                                // actions when file is uploaded (CSV only)
                                 let listItem = document.createElement('li');
                                 let h4Element = document.createElement('h4');
                                 h4Element.textContent = response.filename;
                                 listItem.appendChild(h4Element);
+                                // store filename for later server-side deletion on type switch
+                                listItem.dataset.filename = response.filename;
+                                // track server filename on the Dropzone file object to match later
+                                try { file._serverFilename = response.filename; } catch (e) {}
 
                                 // generate incremental id for form
                                 let formUniqueId = generateIncrementalId();
@@ -329,7 +360,8 @@
 
                                         }
                                     };
-                                    xhr.send(JSON.stringify({file: file.name}));
+                                    const filenameToDelete = listItem.dataset.filename || file._serverFilename || file.name;
+                                    xhr.send(JSON.stringify({file: filenameToDelete}));
                                 }.bind(this));
 
                                 /*
@@ -342,19 +374,19 @@
 
                                 /*
                                     ##########################################
-                                    UVL FORM
+                                    FILE INFO FORM (CSV)
                                     ##########################################
                                 */
 
-                                // create specific form for UVL
+                                // create specific form for file metadata
                                 let formContainer = document.createElement('div');
                                 formContainer.id = formUniqueId + "_form";
-                                formContainer.classList.add('uvl_form', "mt-3");
+                                formContainer.classList.add('file_form', "mt-3");
                                 formContainer.style.display = "none";
 
                                 formContainer.innerHTML = `
                                     <div class="row">
-                                        <input type="hidden" value="${response.filename}" name="feature_models-${formUniqueId}-uvl_filename">
+                                        <input type="hidden" value="${response.filename}" name="feature_models-${formUniqueId}-csv_filename">
                                         <div class="col-12">
                                             <div class="row">
                                                 <div class="col-12">
@@ -409,8 +441,8 @@
                                                 </div>
                                                 <div class="col-6">
                                                     <div class="mb-3">
-                                                        <label class="form-label">UVL version</label>
-                                                        <input type="text" class="form-control" name="feature_models-${formUniqueId}-uvl_version">
+                                                        <label class="form-label">File version</label>
+                                                        <input type="text" class="form-control" name="feature_models-${formUniqueId}-csv_version">
                                                     </div>
                                                 </div>
                                                 <div class="col-12">
@@ -418,7 +450,7 @@
                                                         <label class="form-label">Authors</label>
                                                         <div id="` + formContainer.id + `_authors">
                                                         </div>
-                                                        <button type="button" class="add_author_to_uvl btn btn-secondary" id="` + formContainer.id + `_authors_button">Add author</button>
+                                                        <button type="button" class="add_author_to_file btn btn-secondary" id="` + formContainer.id + `_authors_button">Add author</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -434,7 +466,7 @@
                             this.on('error', function (file, response) {
                                 console.error("Error uploading file: ", response);
                                 let alert = document.createElement('p');
-                                alert.textContent = 'UVL not valid: ' + file.name;
+                                alert.textContent = 'File not valid: ' + file.name;
                                 alerts.appendChild(alert);
                                 alerts.style.display = 'block';
                             });
