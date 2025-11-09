@@ -286,8 +286,21 @@ def test_thin_wrapper_services_smoke():
     assert hasattr(a, "repository")
     assert hasattr(d, "repository")
 
-def login_client(client, email="test@example.com", password="test1234"):
-    return client.post("/login", data={"email": email, "password": password}, follow_redirects=True)
+
+def login_client(client, email=None, password=None):
+    test_email = email or os.getenv(
+        "TEST_USER_EMAIL", 
+        "test@example.com"
+    )
+    test_password = password or os.getenv(
+        "TEST_USER_PASSWORD",
+        "test_password"
+    )
+    return client.post(
+        "/login",
+        data={"email": test_email, "password": test_password},
+        follow_redirects=True
+    )
 
 
 def test_get_upload_requires_login(test_client):
