@@ -36,3 +36,15 @@ def test_edit_profile_page_get(test_client):
     assert b"Edit profile" in response.data, "The expected content is not present on the page"
 
     logout(test_client)
+
+def test_change_preference_save_drafts(test_client):
+    """
+    Tests to modify the profile attribute "save_drafts" via a PUT request.
+    """
+    login_response = login(test_client, "user@example.com", "test1234")
+    assert login_response.status_code == 200, "Login was unsuccessful."
+
+    response = test_client.put("/profile/save_drafts")
+    assert response.status_code == 200, "The preference was changed succesfully"
+
+    logout(test_client)
