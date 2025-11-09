@@ -130,12 +130,12 @@ function write_upload_error(error_message) {
 
 window.onload = function () {
 
-    test_zenodo_connection();
-
+    ///test_zenodo_connection(); MOD: Fakenodo
+    
     document.getElementById('upload_button').addEventListener('click', function () {
-
         clean_upload_errors();
         show_loading();
+
 
         // check title and description
         let check = check_title_and_description();
