@@ -81,7 +81,7 @@ function hydrateFromURL() {
 
 function collectSearchCriteria() {
     const csrfEl = get('csrf_token');
-    const csrfToken = csrfEl ? csrfEl.value : ""; // guard missing element
+    const csrfToken = csrfEl ? csrfEl.value : "";
 
     // existentes
     const query = get('query')?.value || "";
