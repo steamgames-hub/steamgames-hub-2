@@ -53,3 +53,16 @@ def my_profile():
         pagination=user_datasets_pagination,
         total_datasets=total_datasets_count,
     )
+
+@profile_bp.route("/profile/save_drafts", methods=["PUT"])
+@login_required
+def change_save_drafts():
+    auth_service = AuthenticationService()
+    profile = auth_service.get_authenticated_user_profile
+    if not profile:
+        return redirect(url_for("public.index"))
+
+    service = UserProfileService()
+    result = service.change_save_drafts(profile().id)
+    
+    return my_profile()

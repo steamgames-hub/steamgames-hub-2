@@ -39,16 +39,33 @@
         <div class="card shadow-sm" > 
             <div class="card-body">
                 {% if user_profile.save_drafts == true %}
-                <p class="card-text h5"><i class="fa fa-user"></i> <strong>Save drafts by default:</strong> Yes</p>
+                <p id="save_drafts_text" class="card-text h5"><i class="fa fa-user"></i> <strong>Save drafts by default:</strong> Yes</p>
                 {% else %}
-                <p class="card-text h5"><i class="fa fa-user"></i> <strong>Save drafts by default:</strong> No</p>
+                <p id="save_drafts_text" class="card-text h5"><i class="fa fa-user"></i> <strong>Save drafts by default:</strong> No</p>
                 {% endif %}
+                <button id="change_save_drafts_button" class="btn btn-primary mt-2">
+                    <i data-feather="upload" class="center-button-icon"></i>
+                    Change this preference
+                </button>
+                <div id="loading" style="display: none">
+                    <img width="40px" src="{{ url_for("static", filename="gifs/loading.svg") }}"/>
+                    Changing your preferences, please wait...
+                </div>
             </div>
+            
         </div>
 
     </div>
 
+    
+
 </div>
+
+
+
+<span class="text-danger mt-2" id="upload_error" style="display: none">
+
+</span>
 
 <h1 class="h3 mb-3">User datasets</h1>
 

@@ -12,3 +12,9 @@ class UserProfileService(BaseService):
             return updated_instance, None
 
         return None, form.errors
+    
+    def change_save_drafts(self, user_profile_id):
+        current_user = self.get_by_id(user_profile_id)
+        preference = current_user.save_drafts
+        return self.update(user_profile_id, **{"save_drafts": not preference})
+        
