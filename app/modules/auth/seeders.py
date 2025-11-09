@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from app.modules.auth.models import User
 from app.modules.profile.models import UserProfile
 from core.seeders.BaseSeeder import BaseSeeder
@@ -8,21 +9,21 @@ class AuthSeeder(BaseSeeder):
     priority = 1  # Higher priority
 
     def run(self):
-
-        # Seeding users
+        # 1️⃣ Seeding users
         users = [
-            User(email="user1@example.com", password="1234"),
-            User(email="user2@example.com", password="1234"),
+            User(email="user1@yopmail.com", password="1234"),
+            User(email="user2@yopmail.com", password="1234"),
         ]
 
-        # Inserted users with their assigned IDs are returned by `self.seed`.
+        # Insert users and get the saved objects with IDs
         seeded_users = self.seed(users)
 
-        # Create profiles for each user inserted.
+        # 2️⃣ Crear perfiles y asignar código 2FA de prueba
         user_profiles = []
         names = [("John", "Doe"), ("Jane", "Doe")]
 
         for user, name in zip(seeded_users, names):
+            # Perfil
             profile_data = {
                 "user_id": user.id,
                 "orcid": "",
@@ -33,5 +34,11 @@ class AuthSeeder(BaseSeeder):
             user_profile = UserProfile(**profile_data)
             user_profiles.append(user_profile)
 
-        # Seeding user profiles
+            # Código 2FA de prueba
+            user.two_factor_code = "123456"
+            user.two_factor_expires_at = datetime.utcnow() + timedelta(minutes=5)
+            user.two_factor_verified = False
+
+        # 3️⃣ Seeding user profiles
         self.seed(user_profiles)
+

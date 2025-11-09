@@ -15,6 +15,9 @@ class User(db.Model, UserMixin):
 
     data_sets = db.relationship("DataSet", backref="user", lazy=True)
     profile = db.relationship("UserProfile", backref="user", uselist=False)
+    two_factor_code = db.Column(db.String(6), nullable=True)
+    two_factor_expires_at = db.Column(db.DateTime, nullable=True)
+    two_factor_verified = db.Column(db.Boolean, default=False)
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)

@@ -1,78 +1,52 @@
-import os
-
+from flask import render_template, redirect, url_for, request
 from flask_login import current_user, login_user
+from datetime import datetime, timedelta
+import random
 
+from core.blueprints.base_blueprint import BaseBlueprint
+from app.modules.auth.forms import LoginForm, SignupForm, TwoFactorForm
 from app.modules.auth.models import User
-from app.modules.auth.repositories import UserRepository
-from app.modules.profile.models import UserProfile
-from app.modules.profile.repositories import UserProfileRepository
-from core.configuration.configuration import uploads_folder_name
-from core.services.BaseService import BaseService
+from app import db, mail
+from flask_mail import Message
 
+auth_bp = BaseBlueprint("auth", __name__, template_folder="templates")
 
-class AuthenticationService(BaseService):
-    def __init__(self):
-        super().__init__(UserRepository())
-        self.user_profile_repository = UserProfileRepository()
+# Servicio de autenticación simplificado
+class AuthenticationService:
+    def is_email_available(self, email):
+        return User.query.filter_by(email=email).first() is None
 
-    def login(self, email, password, remember=True):
-        user = self.repository.get_by_email(email)
-        if user is not None and user.check_password(password):
-            login_user(user, remember=remember)
+    def create_with_profile(self, name, surname, email, password, **kwargs):
+        user = User(name=name, surname=surname, email=email)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        return user
+
+    def login(self, email, password):
+        user = User.query.filter_by(email=email).first()
+        if user and user.check_password(password):
+            self.generate_2fa(user)
+            return user
+        return None
+
+    def generate_2fa(self, user):
+        code = f"{random.randint(0, 999999):06d}"
+        user.two_factor_code = code
+        user.two_factor_expires_at = datetime.utcnow() + timedelta(minutes=5)
+        db.session.commit()
+
+        msg = Message(
+            "Código 2FA",
+            recipients=[user.email],
+            body=f"Tu código de verificación es: {code}\nVálido por 5 minutos."
+        )
+        mail.send(msg)
+
+    def verify_2fa(self, user, code):
+        if user.two_factor_code == code and datetime.utcnow() < user.two_factor_expires_at:
+            login_user(user)
             return True
         return False
 
-    def is_email_available(self, email: str) -> bool:
-        return self.repository.get_by_email(email) is None
-
-    def create_with_profile(self, **kwargs):
-        try:
-            email = kwargs.pop("email", None)
-            password = kwargs.pop("password", None)
-            name = kwargs.pop("name", None)
-            surname = kwargs.pop("surname", None)
-
-            if not email:
-                raise ValueError("Email is required.")
-            if not password:
-                raise ValueError("Password is required.")
-            if not name:
-                raise ValueError("Name is required.")
-            if not surname:
-                raise ValueError("Surname is required.")
-
-            user_data = {"email": email, "password": password}
-
-            profile_data = {
-                "name": name,
-                "surname": surname,
-            }
-
-            user = self.create(commit=False, **user_data)
-            profile_data["user_id"] = user.id
-            self.user_profile_repository.create(**profile_data)
-            self.repository.session.commit()
-        except Exception as exc:
-            self.repository.session.rollback()
-            raise exc
-        return user
-
-    def update_profile(self, user_profile_id, form):
-        if form.validate():
-            updated_instance = self.update(user_profile_id, **form.data)
-            return updated_instance, None
-
-        return None, form.errors
-
-    def get_authenticated_user(self) -> User | None:
-        if current_user.is_authenticated:
-            return current_user
-        return None
-
-    def get_authenticated_user_profile(self) -> UserProfile | None:
-        if current_user.is_authenticated:
-            return current_user.profile
-        return None
-
-    def temp_folder_by_user(self, user: User) -> str:
-        return os.path.join(uploads_folder_name(), "temp", str(user.id))
+authentication_service = AuthenticationService()

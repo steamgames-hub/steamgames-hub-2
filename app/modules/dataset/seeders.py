@@ -17,8 +17,8 @@ class DataSetSeeder(BaseSeeder):
 
     def run(self):
         # Retrieve users
-        user1 = User.query.filter_by(email="user1@example.com").first()
-        user2 = User.query.filter_by(email="user2@example.com").first()
+        user1 = User.query.filter_by(email="user1@yopmail.com").first()
+        user2 = User.query.filter_by(email="user2@yopmail.com").first()
 
         if not user1 or not user2:
             raise Exception("Users not found. Please seed users first.")
