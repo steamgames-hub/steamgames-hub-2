@@ -24,7 +24,7 @@ function updateURL(params) {
 
     // limpia primero los que gestionamos
     const managed = [
-        "query","publication_type","sorting",
+        "query","sorting",
         "author","tags","community",
         "date_from","date_to","min_downloads","min_views"
     ];
@@ -44,9 +44,6 @@ function hydrateFromURL() {
     const query = p.get("query");
     if (query && get('query')) get('query').value = query;
 
-    const pt = p.get("publication_type");
-    if (pt && get('publication_type')) get('publication_type').value = pt;
-
     const sorting = p.get("sorting");
     if (sorting) {
         const radio = document.querySelector(`[name="sorting"][value="${sorting}"]`);
@@ -56,6 +53,7 @@ function hydrateFromURL() {
     // avanzados
     if (p.get("author") && get('author')) get('author').value = p.get("author");
     if (p.get("tags") && get('tags')) get('tags').value = p.get("tags");
+    if (p.get("filenames") && get('filenames')) get('filenames').value = p.get("filenames");
     if (p.get("community") && get('community')) get('community').value = p.get("community");
 
     // fechas
@@ -85,13 +83,13 @@ function collectSearchCriteria() {
 
     // existentes
     const query = get('query')?.value || "";
-    const publication_type = get('publication_type')?.value || "any";
     const sorting = document.querySelector('[name="sorting"]:checked')?.value || "newest";
 
     // avanzados
     const author = get('author')?.value?.trim() || "";
     const tags = get('tags')?.value?.trim() || "";             // CSV: "tag1, tag2"
     const community = get('community')?.value?.trim() || "";  // TODO: nuevo campo
+    const filenames = get('filenames')?.value?.trim() || "";
     const date_from = buildDateFromParts("date_from");
     const date_to = buildDateFromParts("date_to");
     const min_downloads = get('min_downloads')?.value?.trim();
@@ -100,13 +98,13 @@ function collectSearchCriteria() {
     const searchCriteria = {
         csrf_token: csrfToken,
         query: query,
-        publication_type: publication_type,
         sorting: sorting
     };
 
-    // añade solo si tienen valor por el si backend aún no soporta estos campos
+    // añade solo si tienen valor por si el backend aún no soporta estos campos
     if (author) searchCriteria.author = author;
     if (tags) searchCriteria.tags = tags;
+    if (filenames) searchCriteria.filenames = filenames;
     if (community) searchCriteria.community = community;
     if (date_from) searchCriteria.date_from = date_from;
     if (date_to) searchCriteria.date_to = date_to;
@@ -119,8 +117,8 @@ function collectSearchCriteria() {
 
     // sincroniza URL 
     updateURL({
-        query, publication_type, sorting,
-        author, tags, community, date_from, date_to,
+        query, sorting,
+        author, tags, filenames, community, date_from, date_to,
         min_downloads: searchCriteria.min_downloads,
         min_views: searchCriteria.min_views
     });
@@ -188,12 +186,6 @@ function send_query() {
                         <div class="card-body">
                             <div class="d-flex align-items-center justify-content-between">
                                 <h3><a href="${dataset.url}">${escapeHtml(dataset.title)}</a></h3>
-                                <div>
-                                    <span class="badge bg-primary" style="cursor: pointer;"
-                                          onclick="set_publication_type_as_query('${dataset.publication_type}')">
-                                          ${dataset.publication_type}
-                                    </span>
-                                </div>
                             </div>
                             <p class="text-secondary">${formatDate(dataset.created_at)}</p>
 
@@ -262,26 +254,12 @@ function set_tag_as_query(tagName) {
     queryInput.dispatchEvent(new Event('input', {bubbles: true}));
 }
 
-function set_publication_type_as_query(publicationType) {
-    const publicationTypeSelect = document.getElementById('publication_type');
-    for (let i = 0; i < publicationTypeSelect.options.length; i++) {
-        if (publicationTypeSelect.options[i].text === publicationType.trim()) {
-            publicationTypeSelect.value = publicationTypeSelect.options[i].value;
-            break;
-        }
-    }
-    publicationTypeSelect.dispatchEvent(new Event('input', {bubbles: true}));
-}
-
 document.getElementById('clear-filters')?.addEventListener('click', clearFilters);
 
 function clearFilters() {
     // Reset filtros "clásicos"
     let queryInput = document.querySelector('#query');
     queryInput.value = "";
-
-    let publicationTypeSelect = document.querySelector('#publication_type');
-    publicationTypeSelect.value = "any";
 
     let sortingOptions = document.querySelectorAll('[name="sorting"]');
     sortingOptions.forEach(option => {

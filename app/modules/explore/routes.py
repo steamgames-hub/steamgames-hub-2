@@ -23,12 +23,11 @@ def serialize_dataset(d):
             "id": getattr(d, "id", None),
             "title": getattr(d, "title", None),
             "author": getattr(d, "author", None),
-            "publication_type": getattr(d, "publication_type", None),
             "tags": getattr(d, "tags", []),
+            "filenames": getattr(d, "filenames", []),
             "created_at": getattr(d, "created_at", None),
             "downloads": getattr(d, "downloads", None),
             "views": getattr(d, "views", None),
-            "uvl": getattr(d, "uvl", None),
             "community": getattr(d, "community", None),
         }
 
@@ -38,7 +37,8 @@ def serialize_dataset(d):
 
     if data.get("tags") is None:
         data["tags"] = []
-
+    if data.get("filenames") is None:
+        data["filenames"] = []
     return data
 
 
@@ -53,13 +53,12 @@ def index():
             except Exception:
                 return None
 
-        results = repo.filter( #TODO CAMBIAR LOS TIPOS DE PUBLICACION
+        results = repo.filter(
             query=payload.get("query", ""),
-            publication_type=payload.get("publication_type", "any"),
             sorting=payload.get("sorting", "newest"),
             author=payload.get("author"),
             tags=payload.get("tags", []),
-            uvl=payload.get("uvl"),
+            filenames=payload.get("filenames", []),
             community=payload.get("community"),
             date_from=parse_date(payload.get("date_from")),
             date_to=parse_date(payload.get("date_to")),

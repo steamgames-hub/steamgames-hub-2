@@ -48,45 +48,12 @@
                         <div class="col-12">
                             <div class="mb-3">
                                 <label class="form-label" for="query">
-                                    Search for datasets by title, description, authors, tags, UVL files...
+                                    Search for datasets by title, description, authors, tags, files...
                                 </label>
                                 <input class="form-control" id="query" name="query" required="" type="text"
                                        value="" autofocus>
                             </div>
                         </div>
-
-                        <div class="col-lg-6">
-                            <div class="mb-3">
-                                <label class="form-label" for="publication_type">Filter by publication
-                                    type</label>
-                                <select class="form-control" id="publication_type" name="publication_type"
-                                        required="">
-                                    <option value="any">Any</option> <!--TODO CAMBIAR LOS TIPOS DE PUBLICACION-->
-                                    <option value="none">None</option>
-                                    <option value="annotationcollection">Annotation Collection</option>
-                                    <option value="book">Book</option>
-                                    <option value="section">Book Section</option>
-                                    <option value="conferencepaper">Conference Paper</option>
-                                    <option value="datamanagementplan">Data Management Plan</option>
-                                    <option value="article">Journal Article</option>
-                                    <option value="patent">Patent</option>
-                                    <option value="preprint">Preprint</option>
-                                    <option value="deliverable">Project Deliverable</option>
-                                    <option value="milestone">Project Milestone</option>
-                                    <option value="proposal">Proposal</option>
-                                    <option value="report">Report</option>
-                                    <option value="softwaredocumentation">Software Documentation</option>
-                                    <option value="taxonomictreatment">Taxonomic Treatment</option>
-                                    <option value="technicalnote">Technical Note</option>
-                                    <option value="thesis">Thesis</option>
-                                    <option value="workingpaper">Working Paper</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
-
-                        </div>
-
-                    </div>
 
                     <div class="row">
 
@@ -140,7 +107,7 @@
                     <div class="mb-3">
                         <label class="form-label" for="author">Author</label>
                         <input id="author" class="form-control form-control-sm" type="text"
-                            placeholder="Author name or ORCID">
+                            placeholder="Author name">
                     </div>
 
                     <div class="mb-3">
@@ -152,13 +119,12 @@
                     <div class="mb-3">
                         <label class="form-label" for="tags">Tags</label>
                         <input id="tags" class="form-control form-control-sm" type="text"
-                            placeholder="tag1, tag2">
+                            placeholder="tag1, tag2 ...">
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label" for="uvl">UVL files</label>
-                        <input id="uvl" class="form-control form-control-sm" type="text"
-                            placeholder="UVL filename or identifier">
+                        <label class="from-label" for="filenames">Filenames</label>
+                        <input id="filenames" class="form-control form-control-sm" type="text" placeholder="filename1, filename2 ...">
                     </div>
 
                     <div class="row mt-3">
