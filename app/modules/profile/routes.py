@@ -5,30 +5,54 @@ from app import db
 from app.modules.auth.services import AuthenticationService
 from app.modules.dataset.models import DataSet
 from app.modules.profile import profile_bp
+from app.modules.profile.models import UserProfile
 from app.modules.profile.forms import UserProfileForm
 from app.modules.profile.services import UserProfileService
 from app.modules.auth.models import UserRole
+
 
 @profile_bp.route("/profile/edit/<int:user_id>", methods=["GET", "POST"])
 @login_required
 def edit_profile(user_id):
     auth_service = AuthenticationService()
-
     if current_user.role == UserRole.ADMIN:
         profile = auth_service.get_profile_by_user_id(user_id)
     else:
         profile = auth_service.get_authenticated_user_profile()
+
+    # If profile does not exist, create a blank one for the user (including empty affiliation)
     if not profile:
-        return redirect(url_for("public.index"))
+        user = (
+            auth_service.repository.get_by_id(user_id)
+            if current_user.role == UserRole.ADMIN else current_user
+        )
+        if user:
+            # Crea el perfil en la base de datos si no existe
+            auth_service.user_profile_repository.create(
+                user_id=user.id, name="", surname="", affiliation=""
+            )
+            auth_service.repository.session.commit()
+            # Recupera el perfil recién creado desde la base de datos
+            profile = auth_service.get_profile_by_user_id(user.id)
+        else:
+            return redirect(url_for("public.index"))
 
     form = UserProfileForm()
     if request.method == "POST":
         service = UserProfileService()
         result, errors = service.update_profile(profile.id, form)
         return service.handle_service_response(
-            result, errors, ("profile.edit_profile", { "user_id": profile.user_id }), "Profile updated successfully", "profile/edit.html", form
+            result,
+            errors,
+            ("profile.edit_profile", {"user_id": profile.user_id}),
+            "Profile updated successfully",
+            "profile/edit.html",
+            form,
         )
 
+    # Asegura que affiliation nunca sea None
+    if profile.affiliation is None:
+        profile.affiliation = ""
     return render_template("profile/edit.html", form=form, profile=profile)
 
 
@@ -58,6 +82,7 @@ def my_profile():
         total_datasets=total_datasets_count,
     )
 
+
 @profile_bp.route("/profile/save_drafts", methods=["PUT"])
 @login_required
 def change_save_drafts():
@@ -67,6 +92,6 @@ def change_save_drafts():
         return redirect(url_for("public.index"))
 
     service = UserProfileService()
-    result = service.change_save_drafts(profile().id)
-    
+    service.change_save_drafts(profile().id)
+
     return my_profile()

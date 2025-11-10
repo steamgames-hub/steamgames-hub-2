@@ -611,13 +611,85 @@ def test_list_all_incidents_success(test_client, monkeypatch):
         def list_all(self):
             return fake_incidents
 
-    # Patch the IncidentService instance creation
-    monkeypatch.setattr(
-        "app.modules.dataset.services.IncidentService",
-        lambda: FakeIncidentService()
-    )
+    # Patch the IncidentService used by the routes module so the view
+    # will receive our fake incidents list.
+    import app.modules.dataset.routes as routes_mod
+    monkeypatch.setattr(routes_mod, "IncidentService", lambda: FakeIncidentService())
 
     response = test_client.get("/dataset/incidents")
     assert response.status_code == 200
     # Verify incident data is passed to template
     assert b"Test incident 1" in response.data
+
+
+def test_open_incident_requires_admin(test_client):
+    # Ensure non-admin cannot open/close incidents
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(email="test@example.com", password="test1234", verified=True)
+        db.session.add(user)
+        db.session.commit()
+
+    user.role = UserRole.USER
+    db.session.commit()
+
+    response = login_client(test_client)
+    assert response.status_code == 200
+
+    r = test_client.put("/dataset/incidents/open/1/")
+    assert r.status_code == 403
+
+
+def test_open_incident_success(test_client, monkeypatch):
+    from datetime import datetime, timezone
+
+    # Login as admin
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(email="test@example.com", password="test1234", verified=True)
+        db.session.add(user)
+        db.session.commit()
+
+    user.role = UserRole.ADMIN
+    db.session.commit()
+
+    response = login_client(test_client)
+    assert response.status_code == 200
+
+    # Prepare fake incidents to be returned after toggling
+    fake_incidents = [
+        SimpleNamespace(
+            id=1,
+            description="Toggled incident",
+            dataset_id=1,
+            reporter_id=1,
+            created_at=datetime.now(timezone.utc),
+            dataset=SimpleNamespace(
+                id=1,
+                ds_meta_data=SimpleNamespace(
+                    dataset_doi="10.5281/zenodo.654321",
+                    title="Toggled Dataset"
+                )
+            ),
+            reporter=SimpleNamespace(
+                id=1,
+                profile=SimpleNamespace(name="Admin", surname="User")
+            ),
+            is_open=False,
+        )
+    ]
+
+    class FakeIncidentService2:
+        def open_or_close(self, issue_id):
+            # pretend to toggle
+            return True
+
+        def list_all(self):
+            return fake_incidents
+
+    import app.modules.dataset.routes as routes_mod
+    monkeypatch.setattr(routes_mod, "IncidentService", lambda: FakeIncidentService2())
+
+    r = test_client.put("/dataset/incidents/open/1/")
+    assert r.status_code == 200
+    assert b"Toggled incident" in r.data

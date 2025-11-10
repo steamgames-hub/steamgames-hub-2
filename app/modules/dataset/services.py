@@ -256,3 +256,12 @@ class IncidentService(BaseService):
     def list_all(self):
         """Get all incidents across all datasets, ordered by creation date (newest first)."""
         return self.repository.list_all()
+
+    def open_or_close(self, issue_id: int):
+        incident = self.repository.get_by_id(issue_id)
+        if incident:
+            incident.is_open = not incident.is_open
+            self.repository.session.commit()
+            return incident
+        else:
+            return None

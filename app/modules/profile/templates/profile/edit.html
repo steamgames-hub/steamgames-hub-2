@@ -37,28 +37,28 @@
                 {{ form.hidden_tag() }}
 
                 <div class="row form-group">
-
                     <div class="col-6">
                         {{ form.surname.label(class="form-label") }}
-                        {% set surname_value = form.surname.data if form.surname.data else profile.surname %}
-                        {{ form.surname(class="form-control", placeholder="Enter your surname", required=true, value=surname_value) }}
+                        {% set surname_value = form.surname.data if form.surname.data is not none and form.surname.data|length > 0 else (profile.surname if profile.surname else '') %}
+                        {{ form.surname(class="form-control", placeholder="Enter your surname", required=true, value=surname_value, minlength=1) }}
+                        {% if form.surname.data is not none and form.surname.data|length == 0 %}
+                            <span style="color: red;">Surname cannot be empty.</span><br>
+                        {% endif %}
                         {% for error in form.surname.errors %}
-                            <span style="color: red;">{{ error }}</span>
-                            <br>
+                            <span style="color: red;">{{ error }}</span><br>
                         {% endfor %}
                     </div>
-
                     <div class="col-6">
                         {{ form.name.label(class="form-label") }}
-                        {% set name_value = form.name.data if form.name.data else profile.name %}
-                        {{ form.name(class="form-control", placeholder="Enter your name",
-                        required=true, value=name_value) }}
+                        {% set name_value = form.name.data if form.name.data is not none and form.name.data|length > 0 else (profile.name if profile.name else '') %}
+                        {{ form.name(class="form-control", placeholder="Enter your name", required=true, value=name_value, minlength=1) }}
+                        {% if form.name.data is not none and form.name.data|length == 0 %}
+                            <span style="color: red;">Name cannot be empty.</span><br>
+                        {% endif %}
                         {% for error in form.name.errors %}
-                            <span style="color: red;">{{ error }}</span>
-                            <br>
+                            <span style="color: red;">{{ error }}</span><br>
                         {% endfor %}
                     </div>
-
                 </div>
 
                 <div class="row form-group mt-3">

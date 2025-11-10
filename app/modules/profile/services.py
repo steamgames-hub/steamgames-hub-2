@@ -8,7 +8,11 @@ class UserProfileService(BaseService):
 
     def update_profile(self, user_profile_id, form):
         if form.validate():
-            updated_instance = self.update(user_profile_id, **form.data)
+            data = dict(form.data)
+            # Forzar affiliation a string vacío si es None
+            if data.get('affiliation') is None:
+                data['affiliation'] = ''
+            updated_instance = self.update(user_profile_id, **data)
             return updated_instance, None
 
         return None, form.errors

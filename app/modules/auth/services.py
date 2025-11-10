@@ -6,11 +6,14 @@ from app.modules.auth.models import User
 from app.modules.auth.repositories import UserRepository
 from app.modules.profile.models import UserProfile
 from app.modules.profile.repositories import UserProfileRepository
+from app.modules.dataset.models import DataSet
 from core.configuration.configuration import uploads_folder_name
 from core.services.BaseService import BaseService
 
 
+
 class AuthenticationService(BaseService):
+
     def __init__(self):
         super().__init__(UserRepository())
         self.user_profile_repository = UserProfileRepository()
@@ -91,4 +94,15 @@ class AuthenticationService(BaseService):
     def downgrade_user_role(self, user: User):
         user.role = user.get_previous_role()
         self.repository.session.add(user)
+        self.repository.session.commit()
+        
+    def delete_user(self, user: User):
+        # Borrar datasets y perfil del usuario antes de borrar el usuario
+        datasets = self.repository.session.query(DataSet).filter_by(user_id=user.id).all()
+        for ds in datasets:
+            self.repository.session.delete(ds)
+        profile = self.repository.session.query(UserProfile).filter_by(user_id=user.id).first()
+        if profile:
+            self.repository.session.delete(profile)
+        self.repository.session.delete(user)
         self.repository.session.commit()

@@ -393,3 +393,85 @@ def test_downgrade_user_role_unsuccessful(test_client):
 
     db.session.refresh(user2)
     assert user2.role == UserRole.CURATOR, "User role was incorrectly downgraded"
+
+
+def test_list_all_users_admin_access(test_client):
+    # Crear usuario admin y loguear
+    admin = User(email="admin_list@example.com", password="test1234", verified=True, role=UserRole.ADMIN)
+    db.session.add(admin)
+    db.session.commit()
+    if not admin.profile:
+        profile = UserProfile(user_id=admin.id, name="Admin", surname="Test")
+        db.session.add(profile)
+        db.session.commit()
+    test_client.get("/logout", follow_redirects=True)
+    test_client.post("/login", data={"email": admin.email, "password": "test1234"}, follow_redirects=True)
+    # Acceso permitido
+    resp = test_client.get("/users")
+    assert resp.status_code == 200
+    assert b"Users" in resp.data or b"Role" in resp.data
+
+
+def test_list_all_users_non_admin_forbidden(test_client):
+    # Crear usuario normal y loguear
+    user = User(email="user_list@example.com", password="test1234", verified=True, role=UserRole.USER)
+    db.session.add(user)
+    db.session.commit()
+    if not user.profile:
+        profile = UserProfile(user_id=user.id, name="User", surname="Test")
+        db.session.add(profile)
+        db.session.commit()
+    test_client.get("/logout", follow_redirects=True)
+    test_client.post("/login", data={"email": user.email, "password": "test1234"}, follow_redirects=True)
+    # Acceso denegado
+    resp = test_client.get("/users")
+    assert resp.status_code == 403
+
+
+def test_delete_user_admin_success(test_client):
+    # Crear admin y usuario a borrar
+    admin = User(email="admin_delete@example.com", password="test1234", verified=True, role=UserRole.ADMIN)
+    user = User(email="user_delete@example.com", password="test1234", verified=True, role=UserRole.USER)
+    db.session.add(admin)
+    db.session.add(user)
+    db.session.commit()
+    if not admin.profile:
+        profile = UserProfile(user_id=admin.id, name="Admin", surname="Test")
+        db.session.add(profile)
+        db.session.commit()
+    if not user.profile:
+        profile = UserProfile(user_id=user.id, name="User", surname="Test")
+        db.session.add(profile)
+        db.session.commit()
+    test_client.get("/logout", follow_redirects=True)
+    test_client.post("/login", data={"email": admin.email, "password": "test1234"}, follow_redirects=True)
+    # Borrar usuario
+    resp = test_client.delete(f"/user/delete/{user.id}")
+    assert resp.status_code == 200
+    assert b"deleted" in resp.data
+    # Usuario ya no existe
+    assert User.query.get(user.id) is None
+
+
+def test_delete_user_non_admin_forbidden(test_client):
+    # Crear usuario normal y otro usuario
+    user1 = User(email="user1_delete@example.com", password="test1234", verified=True, role=UserRole.USER)
+    user2 = User(email="user2_delete@example.com", password="test1234", verified=True, role=UserRole.USER)
+    db.session.add(user1)
+    db.session.add(user2)
+    db.session.commit()
+    if not user1.profile:
+        profile = UserProfile(user_id=user1.id, name="User1", surname="Test")
+        db.session.add(profile)
+        db.session.commit()
+    if not user2.profile:
+        profile = UserProfile(user_id=user2.id, name="User2", surname="Test")
+        db.session.add(profile)
+        db.session.commit()
+    test_client.get("/logout", follow_redirects=True)
+    test_client.post("/login", data={"email": user1.email, "password": "test1234"}, follow_redirects=True)
+    # Intentar borrar otro usuario
+    resp = test_client.delete(f"/user/delete/{user2.id}")
+    assert resp.status_code == 403 or resp.status_code == 400
+    # Usuario sigue existiendo
+    assert User.query.get(user2.id) is not None
