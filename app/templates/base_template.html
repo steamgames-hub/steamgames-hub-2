@@ -82,6 +82,13 @@
                     </a>
                 </li>
 
+                <li class="sidebar-item {{ 'active' if request.endpoint == 'auth.list_all_users' else '' }}">
+                    <a class="sidebar-link" href="{{ url_for('auth.list_all_users') }}">
+                        <i class="align-middle" data-feather="list"></i> <span 
+                            class="align-middle">Users List</span>
+                    </a>
+                </li>
+
 
                 {% endif %}
 
