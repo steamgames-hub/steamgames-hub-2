@@ -412,18 +412,18 @@ def create_incident():
     return jsonify({"id": incident.id, "dataset_id": incident.dataset_id, "description": incident.description}), 201
 
 
-@dataset_bp.route("/dataset/incidents/<int:dataset_id>", methods=["GET"])
-def list_incidents(dataset_id: int):
-    """Return list of incidents for a given dataset (public)."""
-    from app.modules.dataset.services import IncidentService
+@dataset_bp.route("/dataset/incidents", methods=["GET"])
+@login_required
+def list_all_incidents():
+    """Admin-only page to list and review all dataset incidents."""
+    # Only admins can access this page
+    if current_user.role != UserRole.ADMIN:
+        abort(403)
 
-    svc = IncidentService()
-    incidents = svc.list_for_dataset(dataset_id)
-    result = [
-        {"id": i.id, "description": i.description, "reporter_id": i.reporter_id, "created_at": i.created_at.isoformat()}
-        for i in incidents
-    ]
-    return jsonify(result)
+    from app.modules.dataset.services import IncidentService
+    incident_service = IncidentService()
+    incidents = incident_service.list_all()
+    return render_template("dataset/list_incidents.html", incidents=incidents)
 
 
 @dataset_bp.route("/dataset/report/<int:dataset_id>", methods=["GET"])
@@ -434,7 +434,7 @@ def report_dataset(dataset_id: int):
     The form on this page will POST to `/dataset/incidents` (JSON) to create the incident.
     """
     # Only curators may access the report page
-    if getattr(current_user, "role", "") != "curator":
+    if current_user.role != UserRole.CURATOR:
         abort(403)
 
     dataset = dataset_service.get_or_404(dataset_id)

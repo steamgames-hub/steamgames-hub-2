@@ -5,6 +5,7 @@ from flask import request
 from sqlalchemy import Enum as SQLAlchemyEnum
 
 from app import db
+from app.modules.auth.models import User
 
 
 class PublicationType(Enum):
@@ -181,3 +182,4 @@ class Incident(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     dataset = db.relationship("DataSet", backref=db.backref("incidents", lazy=True, cascade="all, delete"))
+    reporter = db.relationship("User", backref=db.backref("reported_incidents", lazy=True))

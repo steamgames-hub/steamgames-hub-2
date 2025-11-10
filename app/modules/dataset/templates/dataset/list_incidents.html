@@ -1,0 +1,63 @@
+{% extends "base_template.html" %}
+
+{% block title %}Dataset Issues{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid p-0">
+    <h1 class="h3 mb-3">
+        <b>Dataset</b> Issues
+    </h1>
+
+    {% if not incidents %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                No issues have been reported yet.
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Dataset</th>
+                                <th>Issue Description</th>
+                                <th>Reported By</th>
+                                <th>Reported</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for incident in incidents %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('dataset.subdomain_index', doi=incident.dataset.ds_meta_data.dataset_doi) }}">
+                                        {{ incident.dataset.ds_meta_data.title }}
+                                    </a>
+                                </td>
+                                <td>{{ incident.description }}</td>
+                                <td>{{ incident.reporter.profile.name }} {{ incident.reporter.profile.surname }}</td>
+                                <td>{{ incident.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>
+                                    <a href="{{ url_for('dataset.subdomain_index', doi=incident.dataset.ds_meta_data.dataset_doi) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i data-feather="eye"></i> View Dataset
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

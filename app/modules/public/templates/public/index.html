@@ -101,8 +101,8 @@
                                 {% if not current_user.is_anonymous and current_user.role.name == 'CURATOR' %}
                                 <a href="/dataset/report/{{ dataset.id }}" class="btn btn-outline-primary btn-sm"
                                    style="border-radius: 5px;">
-                                    <i class="center-button-icon"></i>
-                                    <b>!</b> Notify issue
+                                    <i data-feather="alert-triangle" class="center-button-icon"></i>
+                                    Notify issue
                                 </a>
                                 {% endif %}
                                 {% if not current_user.is_anonymous and current_user.role.name == 'ADMIN' %}
