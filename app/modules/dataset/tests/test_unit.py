@@ -531,3 +531,93 @@ def test_dataset_stats_route_empty(monkeypatch, test_client):
     data = json.loads(r.data)
     assert data["id"] == 99
     assert data["downloads"] == {}
+
+
+def test_list_all_incidents_requires_login(test_client):
+    test_client.get("/logout", follow_redirects=True)
+    response = test_client.get("/dataset/incidents")
+    assert response.status_code in (301, 302)  # Should redirect to login
+
+
+def test_list_all_incidents_requires_admin(test_client):
+    # Create and login as non-admin user
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(
+            email="test@example.com",
+            password="test1234",
+            verified=True
+        )
+        db.session.add(user)
+        db.session.commit()
+    
+    user.role = UserRole.USER
+    db.session.commit()
+
+    response = login_client(test_client)
+    assert response.status_code == 200
+
+    response = test_client.get("/dataset/incidents")
+    assert response.status_code == 403  # Should be forbidden for non-admin
+
+
+def test_list_all_incidents_success(test_client, monkeypatch):
+    from datetime import datetime, timezone
+    from app.modules.dataset.services import IncidentService
+
+    # Create and login as admin user
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(
+            email="test@example.com",
+            password="test1234",
+            verified=True
+        )
+        db.session.add(user)
+        db.session.commit()
+    
+    user.role = UserRole.ADMIN
+    db.session.commit()
+
+    response = login_client(test_client)
+    assert response.status_code == 200
+
+    # Mock IncidentService to return test data with full object structure
+    fake_incidents = [
+        SimpleNamespace(
+            id=1,
+            description="Test incident 1",
+            dataset_id=1,
+            reporter_id=1,
+            created_at=datetime.now(timezone.utc),
+            dataset=SimpleNamespace(
+                id=1,
+                ds_meta_data=SimpleNamespace(
+                    dataset_doi="10.5281/zenodo.123456",
+                    title="Test Dataset"
+                )
+            ),
+            reporter=SimpleNamespace(
+                id=1,
+                profile=SimpleNamespace(
+                    name="Test",
+                    surname="User"
+                )
+            )
+        )
+    ]
+
+    class FakeIncidentService:
+        def list_all(self):
+            return fake_incidents
+
+    # Patch the IncidentService instance creation
+    monkeypatch.setattr(
+        "app.modules.dataset.services.IncidentService",
+        lambda: FakeIncidentService()
+    )
+
+    response = test_client.get("/dataset/incidents")
+    assert response.status_code == 200
+    # Verify incident data is passed to template
+    assert b"Test incident 1" in response.data

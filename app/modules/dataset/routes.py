@@ -425,19 +425,6 @@ def list_all_incidents():
     incidents = incident_service.list_all()
     return render_template("dataset/list_incidents.html", incidents=incidents)
 
-@dataset_bp.route("/dataset/incidents/<int:dataset_id>", methods=["GET"])
-def list_incidents(dataset_id: int):
-    """Return list of incidents for a given dataset (public)."""
-    from app.modules.dataset.services import IncidentService
-
-    svc = IncidentService()
-    incidents = svc.list_for_dataset(dataset_id)
-    result = [
-        {"id": i.id, "description": i.description, "reporter_id": i.reporter_id, "created_at": i.created_at.isoformat()}
-        for i in incidents
-    ]
-    return jsonify(result)
-
 
 @dataset_bp.route("/dataset/report/<int:dataset_id>", methods=["GET"])
 @login_required
