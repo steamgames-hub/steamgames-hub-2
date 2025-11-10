@@ -267,7 +267,7 @@ function clearFilters() {
     });
 
     // Reset avanzados
-    ['author','tags','community','min_downloads','min_views',
+    ['author','tags', 'filenames','community','min_downloads','min_views',
      'date_from_day','date_from_month','date_from_year',
      'date_to_day','date_to_month','date_to_year'
     ].forEach(id => { if (get(id)) get(id).value = ""; });
