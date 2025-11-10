@@ -49,3 +49,17 @@ class User(db.Model, UserMixin):
     
     def verify_user(self):
         self.verified = True
+
+    def get_next_role(self):
+        if self.role == UserRole.USER:
+            return UserRole.CURATOR
+        elif self.role == UserRole.CURATOR:
+            return UserRole.ADMIN
+        return self.role
+    
+    def get_previous_role(self):
+        if self.role == UserRole.ADMIN:
+            return UserRole.CURATOR
+        elif self.role == UserRole.CURATOR:
+            return UserRole.USER
+        return self.role

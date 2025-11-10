@@ -82,3 +82,13 @@ class AuthenticationService(BaseService):
         if user:
             return user.profile
         return None
+    
+    def upgrade_user_role(self, user: User):
+        user.role = user.get_next_role()
+        self.repository.session.add(user)
+        self.repository.session.commit()
+
+    def downgrade_user_role(self, user: User):
+        user.role = user.get_previous_role()
+        self.repository.session.add(user)
+        self.repository.session.commit()

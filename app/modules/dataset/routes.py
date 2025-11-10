@@ -400,7 +400,7 @@ def create_incident():
         return jsonify({"message": "dataset_id and description are required"}), 400
 
     # role check
-    if getattr(current_user, "role", "") != "curator":
+    if getattr(current_user, "role", "") != UserRole.CURATOR:
         return jsonify({"message": "Forbidden"}), 403
 
     # create incident
