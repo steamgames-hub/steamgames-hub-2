@@ -37,10 +37,7 @@ document.getElementById('change_save_drafts_button').addEventListener('click', f
         if (response.ok) {
             console.log('Save draft preferences changed succesfully');
             hide_loading();
-            
-            ///Esto se podría evitar si se pudiera recargar la página
-            let profileText = document.getElementById('save_drafts_text');
-            profileText.childNodes[3].nodeValue = profileText.childNodes[3].nodeValue === " No" ? " Yes" : " No"
+            window.location.reload();
         } else {
             hide_loading();
             response.then(data => {

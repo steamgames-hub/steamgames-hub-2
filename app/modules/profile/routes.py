@@ -7,13 +7,17 @@ from app.modules.dataset.models import DataSet
 from app.modules.profile import profile_bp
 from app.modules.profile.forms import UserProfileForm
 from app.modules.profile.services import UserProfileService
+from app.modules.auth.models import UserRole
 
-
-@profile_bp.route("/profile/edit", methods=["GET", "POST"])
+@profile_bp.route("/profile/edit/<int:user_id>", methods=["GET", "POST"])
 @login_required
-def edit_profile():
+def edit_profile(user_id):
     auth_service = AuthenticationService()
-    profile = auth_service.get_authenticated_user_profile
+
+    if current_user.role == UserRole.ADMIN:
+        profile = auth_service.get_profile_by_user_id(user_id)
+    else:
+        profile = auth_service.get_authenticated_user_profile()
     if not profile:
         return redirect(url_for("public.index"))
 
@@ -22,10 +26,10 @@ def edit_profile():
         service = UserProfileService()
         result, errors = service.update_profile(profile.id, form)
         return service.handle_service_response(
-            result, errors, "profile.edit_profile", "Profile updated successfully", "profile/edit.html", form
+            result, errors, ("profile.edit_profile", { "user_id": profile.user_id }), "Profile updated successfully", "profile/edit.html", form
         )
 
-    return render_template("profile/edit.html", form=form)
+    return render_template("profile/edit.html", form=form, profile=profile)
 
 
 @profile_bp.route("/profile/summary")

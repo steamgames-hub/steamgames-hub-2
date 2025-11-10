@@ -8,7 +8,6 @@ Create Date: 2025-11-04
 from alembic import op
 import sqlalchemy as sa
 
-# revision identifiers, used by Alembic.
 revision = '005'
 down_revision = '004'
 branch_labels = None
@@ -16,65 +15,62 @@ depends_on = None
 
 
 def upgrade():
-    # Drop dataset_type column from ds_meta_data if exists
     try:
-        with op.batch_alter_table('ds_meta_data') as batch_op:
-            # MySQL tolerant drop
-            batch_op.drop_column('dataset_type')
-    except Exception:
-        pass
+        inspector = sa.inspect(op.get_bind())
+    
+        if 'dataset_type' in inspector.get_columns('ds_meta_data'):
+            with op.batch_alter_table('ds_meta_data') as batch_op:
+                batch_op.drop_column('dataset_type')
 
-    # Rename uvl_* columns to csv_* in fm_meta_data
-    try:
+        fm_columns = {col['name']: col for col in inspector.get_columns('fm_meta_data')}
+        
         with op.batch_alter_table('fm_meta_data') as batch_op:
-            # Provide existing types for MySQL rename support
-            batch_op.alter_column(
-                'uvl_filename',
-                new_column_name='csv_filename',
-                existing_type=sa.String(length=120),
-                existing_nullable=False,
-            )
+            if 'uvl_filename' in fm_columns:
+                batch_op.alter_column(
+                    'uvl_filename',
+                    new_column_name='csv_filename',
+                    existing_type=sa.String(length=120),
+                    existing_nullable=False,
+                )
+            
+            if 'uvl_version' in fm_columns:
+                batch_op.alter_column(
+                    'uvl_version',
+                    new_column_name='csv_version',
+                    existing_type=sa.String(length=120),
+                    existing_nullable=True,
+                )
     except Exception:
-        pass
-
-    try:
-        with op.batch_alter_table('fm_meta_data') as batch_op:
-            batch_op.alter_column(
-                'uvl_version',
-                new_column_name='csv_version',
-                existing_type=sa.String(length=120),
-                existing_nullable=True,
-            )
-    except Exception:
-        pass
+        print("Migration unnecessary, skipping...")
 
 
 def downgrade():
-    # Best-effort rollback
-    try:
+    inspector = sa.inspect(op.get_bind())
+    
+    if 'dataset_type' not in inspector.get_columns('ds_meta_data'):
         with op.batch_alter_table('ds_meta_data') as batch_op:
-            batch_op.add_column(sa.Column('dataset_type', sa.String(length=50)))
-    except Exception:
-        pass
+            batch_op.add_column(
+                sa.Column('dataset_type', sa.String(length=50))
+            )
 
-    try:
-        with op.batch_alter_table('fm_meta_data') as batch_op:
+    fm_columns = {
+        col['name']: col
+        for col in inspector.get_columns('fm_meta_data')
+    }
+    
+    with op.batch_alter_table('fm_meta_data') as batch_op:
+        if 'csv_filename' in fm_columns:
             batch_op.alter_column(
                 'csv_filename',
                 new_column_name='uvl_filename',
                 existing_type=sa.String(length=120),
                 existing_nullable=False,
             )
-    except Exception:
-        pass
-
-    try:
-        with op.batch_alter_table('fm_meta_data') as batch_op:
+        
+        if 'csv_version' in fm_columns:
             batch_op.alter_column(
                 'csv_version',
                 new_column_name='uvl_version',
                 existing_type=sa.String(length=120),
                 existing_nullable=True,
             )
-    except Exception:
-        pass

@@ -1,0 +1,96 @@
+{% extends "base_template.html" %}
+
+{% block title %}Dataset Issues{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid p-0">
+    <h1 class="h3 mb-3">
+        <b>Issues</b> for administrators
+    </h1>
+
+    {% if not incidents %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                No issues have been reported yet.
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Link</th>
+                                <th>Description</th>
+                                <th>Reported By</th>
+                                <th>Reported</th>
+                                <th>Still open?</th>
+                                <th>Options</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for incident in incidents %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('dataset.subdomain_index', doi=incident.dataset.ds_meta_data.dataset_doi) }}">
+                                        {{ incident.dataset.ds_meta_data.title }}
+                                    </a>
+                                </td>
+                                <td>{{ incident.description }}</td>
+                                <td>{{ incident.reporter.profile.name }} {{ incident.reporter.profile.surname }}</td>
+                                <td>{{ incident.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ incident.is_open }}</td>
+                                <td>
+                                    <button id={{incident.id}} class="btn btn-primary open_incident">
+                                {% if incident.is_open %}
+                                        Close issue
+                                {% else %}
+                                        Reopen issue
+                                {% endif %}
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+
+    document.getElementsByClassName('open_incident').forEach(
+        button => {
+            button.addEventListener('click', function () {
+        
+            
+                fetch('/dataset/incidents/open/' + button.id, {
+                    method: 'PUT'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('State of the incident changed succesfully');
+                        window.location.reload();
+                    } else {
+                        response.then(data => {
+                            console.error('Error: ' + data.message);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error in PUT request:', error);
+                });
+            });
+        }
+    )
+</script>
+
+{% endblock %}

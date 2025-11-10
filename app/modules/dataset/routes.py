@@ -30,21 +30,23 @@ from app.modules.dataset.services import (
     DSDownloadRecordService,
     DSMetaDataService,
     DSViewRecordService,
+    IncidentService,
 )
 from app.modules.hubfile.services import HubfileService
 from app.modules.zenodo.services import ZenodoService
 from app.modules.fakenodo.services import FakenodoService
 from app.modules.dataset.steamcsv_service import SteamCSVService
+from app.modules.auth.models import UserRole
 
 logger = logging.getLogger(__name__)
 
 
-dataset_service = DataSetService()
 author_service = AuthorService()
 dsmetadata_service = DSMetaDataService()
 zenodo_service = ZenodoService()
 fakenodo_service = FakenodoService() #MOD: Fakenodo
 doi_mapping_service = DOIMappingService()
+dataset_service = DataSetService()
 ds_view_record_service = DSViewRecordService()
 
 
@@ -149,6 +151,22 @@ def list_dataset():
     )
 
 
+@dataset_bp.route("/dataset/delete/<int:dataset_id>", methods=["POST"])
+@login_required
+def delete_dataset(dataset_id):
+    dataset = dataset_service.get_or_404(dataset_id)
+
+    if current_user.role != UserRole.ADMIN:
+        abort(403, description="Unauthorized")
+
+    try:
+        dataset_service.delete_dataset(dataset)
+        return redirect(url_for("public.index"))
+    except Exception as exc:
+        logger.exception(f"Exception while deleting dataset {exc}")
+        return jsonify({"Exception while deleting dataset: ": str(exc)}), 400
+
+
 @dataset_bp.route("/dataset/file/upload", methods=["POST"])
 @login_required
 def upload():
@@ -198,6 +216,39 @@ def delete():
         return jsonify({"message": "File deleted successfully"})
 
     return jsonify({"error": "Error: File not found"})
+
+
+@dataset_bp.route("/dataset/file/clean_temp", methods=["POST"])
+@login_required
+def clean_temp():
+    """Remove files inside the current user's temp folder but keep the folder.
+
+    Returns JSON with a friendly message. This mirrors the JS action in the
+    upload template which calls this endpoint.
+    """
+    temp_folder = current_user.temp_folder()
+
+    try:
+        if os.path.exists(temp_folder) and os.path.isdir(temp_folder):
+            for name in os.listdir(temp_folder):
+                path = os.path.join(temp_folder, name)
+                try:
+                    if os.path.isfile(path) or os.path.islink(path):
+                        os.remove(path)
+                    else:
+                        shutil.rmtree(path)
+                except Exception:
+                    # best-effort: ignore failures to remove individual items
+                    continue
+        # Ensure the directory exists afterwards
+        if not os.path.exists(temp_folder):
+            os.makedirs(temp_folder, exist_ok=True)
+    except Exception as exc:
+        logger.exception("Error cleaning temp folder: %s", exc)
+        return jsonify({"message": str(exc)}), 500
+
+    # Redirect back to the upload page (this mirrors the original UI flow)
+    return redirect(url_for("dataset.create_dataset")), 302
 
 
 @dataset_bp.route("/dataset/download/<int:dataset_id>", methods=["GET"])
@@ -259,6 +310,23 @@ def download_dataset(dataset_id):
         )
 
     return resp
+
+@dataset_bp.route("/dataset/<int:dataset_id>/stats", methods=["GET"])
+def get_dataset_stats(dataset_id):
+    dataset = dataset_service.get_or_404(dataset_id)
+
+    downloads = {
+        hubfile.name: hubfile.download_count or 0
+        for fm in dataset.feature_models
+        for hubfile in fm.files
+    }
+
+    response = {
+        "id": dataset.id,
+        "downloads": downloads
+    }
+
+    return jsonify(response), 200
 
 
 @dataset_bp.route("/doi/<path:doi>/", methods=["GET"])
@@ -325,3 +393,76 @@ def preview_csv(file_id: int):
         return jsonify({"message": str(exc)}), 400
 
     return jsonify({"headers": headers, "rows": rows})
+
+
+@dataset_bp.route("/dataset/incidents", methods=["POST"])
+@login_required
+def create_incident():
+    """Endpoint para que un curator notifique una incidencia sobre un dataset.
+
+    JSON body expected: { "dataset_id": int, "description": str }
+    Only users with role == 'curator' are allowed to create incidents.
+    """
+    data = request.get_json() or {}
+    dataset_id = data.get("dataset_id")
+    description = data.get("description")
+
+    if not dataset_id or not description:
+        return jsonify({"message": "dataset_id and description are required"}), 400
+
+    # role check
+    if getattr(current_user, "role", "") != UserRole.CURATOR:
+        return jsonify({"message": "Forbidden"}), 403
+
+    # create incident
+
+    svc = IncidentService()
+    incident = svc.create(commit=True, description=description, dataset_id=dataset_id, reporter_id=current_user.id)
+
+    return jsonify({"id": incident.id, "dataset_id": incident.dataset_id, "description": incident.description}), 201
+
+
+@dataset_bp.route("/dataset/incidents", methods=["GET"])
+@login_required
+def list_all_incidents():
+    """Admin-only page to list and review all dataset incidents."""
+    # Only admins can access this page
+    if current_user.role != UserRole.ADMIN:
+        abort(403)
+
+    incident_service = IncidentService()
+    incidents = incident_service.list_all()
+    return render_template("dataset/list_incidents.html", incidents=incidents)
+
+
+@dataset_bp.route("/dataset/report/<int:dataset_id>", methods=["GET"])
+@login_required
+def report_dataset(dataset_id: int):
+    """Render a simple page where a curator can describe an issue for a dataset.
+
+    The form on this page will POST to `/dataset/incidents` (JSON) to create the incident.
+    """
+    # Only curators may access the report page
+    if current_user.role != UserRole.CURATOR:
+        abort(403)
+
+    dataset = dataset_service.get_or_404(dataset_id)
+    return render_template("dataset/notify_issue.html", dataset=dataset)
+
+
+@dataset_bp.route("/dataset/incidents/open/<int:issue_id>/", methods=["PUT"])
+@login_required
+def open_incident(issue_id):
+    """Endpoint para que un administrador abra o cierre una incidencia.
+
+    Only users with role == 'administrator' are allowed to create incidents.
+    """
+
+    # role check
+    if getattr(current_user, "role", "") != UserRole.ADMIN:
+        return jsonify({"message": "Forbidden"}), 403
+
+    incident_service = IncidentService()
+    incident_service.open_or_close(issue_id)
+    incidents = incident_service.list_all()
+    return render_template("dataset/list_incidents.html", incidents=incidents)

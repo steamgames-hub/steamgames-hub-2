@@ -1,3 +1,4 @@
+import os
 import pytest
 
 from app import create_app, db
@@ -7,6 +8,9 @@ from app.modules.auth.models import User
 @pytest.fixture(scope="session")
 def test_app():
     """Create and configure a new app instance for each test session."""
+    # Ensure SECRET_KEY is set for functions that rely on its presence (token generation)
+    os.environ.setdefault("SECRET_KEY", "test-secret-key")
+
     test_app = create_app("testing")
 
     with test_app.app_context():
@@ -30,6 +34,14 @@ def test_client(test_app):
             """
             user_test = User(email="test@example.com", password="test1234", verified=True)
             db.session.add(user_test)
+            db.session.commit()
+
+            # create a UserProfile for test user so routes accessing
+            # current_user.profile.save_drafts don't fail
+            from app.modules.profile.models import UserProfile
+
+            profile = UserProfile(user_id=user_test.id, name="Test", surname="User", save_drafts=False)
+            db.session.add(profile)
             db.session.commit()
 
             print("Rutas registradas:")

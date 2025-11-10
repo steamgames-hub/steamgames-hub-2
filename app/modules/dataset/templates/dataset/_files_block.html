@@ -13,15 +13,21 @@
             <div class="row">
                 <div class="col-12">
                     <div class="row">
-                                                                        <div class="col-8">
-                                                                                <i data-feather="file"></i> {{ file.name }}
-                                                                                {% set version = file.get_version_label() %}
-                                                                                {% if version %}
-                                                                                    <span class="badge bg-secondary" title="Version">v{{ version }}</span>
-                                                                                {% endif %}
-                                                        <br>
-                                                        <small class="text-muted">({{ file.get_formatted_size() }})</small>
-                                                </div>
+                        <div class="col-8">
+                            <i data-feather="file"></i> {{ file.name }}
+                            {% set version = file.get_version_label() %}
+                            {% if version %}
+                                <span class="badge bg-secondary" title="Version">v{{ version }}</span>
+                            {% endif %}
+                            <br>
+                            <small class="text-muted">
+                                ({{ file.get_formatted_size() }})
+                            </small>
+                            <br>
+                            <small class="text-muted">
+                                ({{ file.download_count or 0 }} download{{ '' if file.download_count == 1 else 's' }})
+                            </small>
+                        </div>
                         <div class="col-2">
                             <div id="check_{{ file.id }}"></div>
                         </div>

@@ -33,14 +33,14 @@
 
         <div class="col-12 col-lg-6">
 
-            <form method="POST" action="{{ url_for('profile.edit_profile') }}" class="needs-validation" novalidate>
+            <form method="POST" action="{{ url_for('profile.edit_profile', user_id=profile.user_id) }}" class="needs-validation" novalidate>
                 {{ form.hidden_tag() }}
 
                 <div class="row form-group">
 
                     <div class="col-6">
                         {{ form.surname.label(class="form-label") }}
-                        {% set surname_value = form.surname.data if form.surname.data else current_user.profile.surname %}
+                        {% set surname_value = form.surname.data if form.surname.data else profile.surname %}
                         {{ form.surname(class="form-control", placeholder="Enter your surname", required=true, value=surname_value) }}
                         {% for error in form.surname.errors %}
                             <span style="color: red;">{{ error }}</span>
@@ -50,7 +50,7 @@
 
                     <div class="col-6">
                         {{ form.name.label(class="form-label") }}
-                        {% set name_value = form.name.data if form.name.data else current_user.profile.name %}
+                        {% set name_value = form.name.data if form.name.data else profile.name %}
                         {{ form.name(class="form-control", placeholder="Enter your name",
                         required=true, value=name_value) }}
                         {% for error in form.name.errors %}
@@ -65,7 +65,7 @@
 
                     <div class="col-6">
                         {{ form.affiliation.label(class="form-label") }}
-                        {% set affiliation_value = form.affiliation.data if form.affiliation.data else (current_user.profile.affiliation  if current_user.profile.affiliation else '') %}
+                        {% set affiliation_value = form.affiliation.data if form.affiliation.data else (profile.affiliation  if profile.affiliation else '') %}
                         {{ form.affiliation(class="form-control", placeholder="Enter your affiliation", required=true, value=affiliation_value) }}
                         {% for error in form.affiliation.errors %}
                             <span style="color: red;">{{ error }}</span>
@@ -79,7 +79,7 @@
 
                     <div class="col-12">
                         {{ form.orcid.label(class="form-label") }}
-                        {% set orcid_value = form.orcid.data if form.orcid.data else (current_user.profile.orcid  if current_user.profile.orcid else '') %}
+                        {% set orcid_value = form.orcid.data if form.orcid.data else (profile.orcid  if profile.orcid else '') %}
                         {{ form.orcid(class="form-control", placeholder="Enter your ORCID (0000-0123-4567-8901)",
                         required=true, value=orcid_value) }}
                         {% for error in form.orcid.errors %}

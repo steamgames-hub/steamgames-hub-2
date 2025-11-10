@@ -48,6 +48,11 @@ class SteamCSVService:
             with open(fpath, "r", encoding="utf-8", newline="") as f:
                 reader = csv.reader(f)
                 headers = next(reader, [])
+                has_data_row = False
+                for row in reader:
+                    if any(str(cell).strip() for cell in row):
+                        has_data_row = True
+                        break
         except Exception as exc:
             return f"{entry}: cannot read CSV ({exc})"
 
@@ -59,6 +64,9 @@ class SteamCSVService:
                 missing.append(h)
         if missing:
             return f"{entry}: missing headers {', '.join(missing)}"
+        if not has_data_row:
+            return f"{entry}: must contain at least one data row"
+
         return None
 
     def files_block_partial(self) -> str:

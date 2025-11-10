@@ -1,4 +1,5 @@
-from flask import redirect, render_template, request, url_for
+import logging
+from flask import redirect, render_template, abort, request, url_for, jsonify
 from flask_login import current_user, login_user, logout_user, login_required
 
 from app.modules.auth import auth_bp
@@ -7,12 +8,13 @@ from app.modules.auth.services import AuthenticationService
 from app.modules.profile.services import UserProfileService
 from app.modules.auth.mail_util.token import confirm_token, generate_token
 from app.modules.auth.mail import send_email
-from app.modules.auth.models import User
+from app.modules.auth.models import User, UserRole
 from app import db
 
 authentication_service = AuthenticationService()
 user_profile_service = UserProfileService()
 
+logger = logging.getLogger(__name__)
 
 @auth_bp.route("/signup/", methods=["GET", "POST"])
 def show_signup_form():
@@ -97,3 +99,33 @@ def redirect_checks_verified(url, verified):
         return redirect(url)
     else:
         return render_template("auth/verification_lockscreen.html")
+
+@auth_bp.route("/user/upgrade/<int:user_id>", methods=['POST'])
+@login_required
+def upgrade_user_role(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if not current_user.role == UserRole.ADMIN:
+        abort(403, description="Unauthorized")  
+    try:
+        authentication_service.upgrade_user_role(user)
+        msg = f"User {user.email} upgraded to role {user.role.value}"
+        return jsonify({"message": msg}), 200
+    except Exception as exc:
+        logger.exception(f"Exception while upgrading user role {exc}")
+        return jsonify({"Exception while upgrading user role: ": str(exc)}), 400
+
+@auth_bp.route("/user/downgrade/<int:user_id>", methods=['POST'])
+@login_required
+def downgrade_user_role(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if not current_user.role == UserRole.ADMIN:
+        abort(403, description="Unauthorized")  
+    try:
+        authentication_service.downgrade_user_role(user)
+        msg = f"User {user.email} downgraded to role {user.role.value}"
+        return jsonify({"message": msg}), 200
+    except Exception as exc:
+        logger.exception(f"Exception while downgrading user role {exc}")
+        return jsonify({"Exception while downgrading user role: ": str(exc)}), 400

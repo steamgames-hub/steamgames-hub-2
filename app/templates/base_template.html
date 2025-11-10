@@ -69,6 +69,23 @@
                     </a>
                 </li>
 
+                {% if not current_user.is_anonymous and current_user.role.name == 'ADMIN' %}
+
+                <li class="sidebar-header">
+                    Administrator options
+                </li>
+
+                <li class="sidebar-item {{ 'active' if request.endpoint == 'dataset.list_all_incidents' else '' }}">
+                    <a class="sidebar-link" href="{{ url_for('dataset.list_all_incidents') }}">
+                        <i class="align-middle" data-feather="alert-triangle"></i> <span 
+                            class="align-middle">Dataset Issues</span>
+                    </a>
+                </li>
+
+
+                {% endif %}
+
+
                 {% if current_user.is_anonymous %}
 
                     <li class="sidebar-header">
@@ -113,7 +130,7 @@
                     </li>
 
                     <li class="sidebar-item {{ 'active' if request.endpoint == 'profile.edit_profile' else '' }}">
-                        <a class="sidebar-link" href="{{ url_for('profile.edit_profile') }}">
+                        <a class="sidebar-link" href="{{ url_for('profile.edit_profile', user_id=current_user.id) }}">
                             <i class="align-middle" data-feather="user"></i> <span
                                 class="align-middle">Edit profile</span>
                         </a>
@@ -174,14 +191,12 @@
 
                         <i class="align-middle me-2" data-feather="user"></i>
                         <span class="text-dark d-inline-block me-7">
-                                {% if current_user.role == 'admin' %}
+                                {% if current_user.role.name == 'ADMIN' %}
                                     Administrator account
-                                {% elif current_user.role == 'curator' %}
+                                {% elif current_user.role.name == 'CURATOR' %}
                                     Curator account
-                                {% elif current_user.role == 'user' %}
+                                {% elif current_user.role.name == 'USER' %}
                                     User account
-                                {% elif current_user.role == 'guest' %}
-                                    Guest account
                                 {% endif %}
                         </span>
                         

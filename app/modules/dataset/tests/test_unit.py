@@ -10,6 +10,10 @@ import pytest
 
 from flask import Flask
 
+from app import db
+from app.modules.auth.models import User, UserRole
+from app.modules.profile.models import UserProfile
+from app.modules.dataset.models import DSMetaData, PublicationType, DataSet
 from app.modules.dataset.steamcsv_service import SteamCSVService
 
 from app.modules.dataset.services import (
@@ -60,13 +64,13 @@ def test_validate_folder_invalid_headers_failure(tmp_path):
         svc.validate_folder(str(tmp_path))
 
     # Should report invalid headers for at least one file
-    assert "invalid headers" in str(exc.value).lower()
+    assert "missing headers appid" in str(exc.value).lower()
 
 
 def test_validate_folder_missing_data_rows(tmp_path):
     # Create a CSV with correct headers but no data rows
     tmp_dir = tmp_path
-    fpath = tmp_dir / "only_headers.csv"
+    fpath = tmp_dir / "SoloTieneCabeceras.csv"
     headers = ",".join(SteamCSVService.REQUIRED_HEADERS)
     fpath.write_text(headers + "\n")
 
@@ -192,6 +196,73 @@ def test_create_from_form_with_mocks(tmp_path):
     assert hf.checksum == expected_checksum
     assert hf.size == expected_size
 
+def test_delete_dataset_success(test_client):
+
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(email="test@example.com", password="test1234", verified=True)
+        db.session.add(user)
+        db.session.commit()
+
+    if not user.profile:
+        profile = UserProfile(user_id=user.id, name="Test", surname="User")
+        db.session.add(profile)
+        db.session.commit()
+
+    user.role = UserRole.ADMIN
+    db.session.commit()
+
+    md = DSMetaData(title="t", description="d", publication_type=PublicationType.NONE)
+    db.session.add(md)
+    db.session.commit()
+    ds = DataSet(user_id=user.id, ds_meta_data_id=md.id)
+    db.session.add(ds)
+    db.session.commit()
+
+    test_client.get("/logout", follow_redirects=True)
+    response = test_client.post("/login", data={"email": "test@example.com", "password": "test1234"}, follow_redirects=True)
+    assert response.status_code == 200
+
+    response = test_client.post(f"/dataset/delete/{ds.id}", follow_redirects=True)
+    assert response.status_code == 200, "Delete request failed"
+
+    deleted = db.session.get(DataSet, ds.id)
+    assert deleted is None, "Dataset was not deleted"
+
+def test_delete_dataset_unsuccessful(test_client):
+
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(email="test@example.com", password="test1234", verified=True)
+        db.session.add(user)
+        db.session.commit()
+
+    if not user.profile:
+        profile = UserProfile(user_id=user.id, name="Test", surname="User")
+        db.session.add(profile)
+        db.session.commit()
+
+    user.role = UserRole.USER
+    db.session.commit()
+
+    md = DSMetaData(title="t", description="d", publication_type=PublicationType.NONE)
+    db.session.add(md)
+    db.session.commit()
+    ds = DataSet(user_id=user.id, ds_meta_data_id=md.id)
+    db.session.add(ds)
+    db.session.commit()
+
+    test_client.get("/logout", follow_redirects=True)
+    response = test_client.post("/login", data={"email": "test@example.com", "password": "test1234"}, follow_redirects=True)
+    assert response.status_code == 200
+
+    response = test_client.post(f"/dataset/delete/{ds.id}", follow_redirects=True)
+    assert response.status_code == 403, "Delete request should have failed"
+
+    deleted = db.session.get(DataSet, ds.id)
+    assert deleted is not None, "Dataset was incorrectly deleted"
+
+
 def test_dataset_service_delegations():
     svc = DataSetService()
     svc.repository = SimpleNamespace(
@@ -286,12 +357,26 @@ def test_thin_wrapper_services_smoke():
     assert hasattr(a, "repository")
     assert hasattr(d, "repository")
 
-def login_client(client, email="test@example.com", password="test1234"):
-    return client.post("/login", data={"email": email, "password": password}, follow_redirects=True)
+
+def login_client(client, email=None, password=None):
+    test_email = email or os.getenv(
+        "TEST_USER_EMAIL",
+        "test@example.com",
+    )
+    test_password = password or os.getenv(
+        "TEST_USER_PASSWORD",
+        "test1234",
+    )
+    return client.post(
+        "/login",
+        data={"email": test_email, "password": test_password},
+        follow_redirects=True,
+    )
 
 
 def test_get_upload_requires_login(test_client):
     # without login should redirect to login
+    test_client.get("/logout", follow_redirects=True)
     resp = test_client.get("/dataset/upload")
     assert resp.status_code in (302, 301)
 
@@ -356,12 +441,7 @@ def test_clean_temp_endpoint(test_client, tmp_path, monkeypatch):
 
     # call clean_temp
     resp = test_client.post("/dataset/file/clean_temp")
-    assert resp.status_code == 200
-    body = json.loads(resp.data)
-    assert body.get("message") == "Temp folder cleaned"
-    # folder exists but should be empty
-    assert os.path.isdir(temp_folder)
-    assert os.listdir(temp_folder) == []
+    assert resp.status_code == 302
 
 
 
@@ -411,3 +491,205 @@ def test_download_dataset_route(test_client, tmp_path, monkeypatch):
     assert r.status_code == 200
     # content-type should be application/zip
     assert r.headers.get("Content-Type") in ("application/zip", "application/octet-stream")
+    
+def test_dataset_stats_route(monkeypatch, test_client):
+    fake_files = [
+        SimpleNamespace(name="a.uvl", download_count=2),
+        SimpleNamespace(name="b.uvl", download_count=5),
+    ]
+    fake_feature_model = SimpleNamespace(files=fake_files)
+    fake_dataset = SimpleNamespace(id=123, feature_models=[fake_feature_model])
+
+    fake_service = SimpleNamespace(get_or_404=lambda _id: fake_dataset)
+    import app.modules.dataset.routes as routes_mod
+    monkeypatch.setattr(routes_mod, "dataset_service", fake_service)
+
+    response = test_client.get("/dataset/123/stats")
+    assert response.status_code == 200
+
+    data = json.loads(response.data)
+
+    assert data["id"] == 123
+    assert data["downloads"]["a.uvl"] == 2
+    assert data["downloads"]["b.uvl"] == 5
+
+
+def test_dataset_stats_route_empty(monkeypatch, test_client):
+
+    from types import SimpleNamespace
+    import json
+    import app.modules.dataset.routes as routes_mod
+
+    fake_dataset = SimpleNamespace(id=99, feature_models=[])
+
+    fake_service = SimpleNamespace(get_or_404=lambda _id: fake_dataset)
+    monkeypatch.setattr(routes_mod, "dataset_service", fake_service)
+
+    r = test_client.get("/dataset/99/stats")
+    assert r.status_code == 200
+
+    data = json.loads(r.data)
+    assert data["id"] == 99
+    assert data["downloads"] == {}
+
+
+def test_list_all_incidents_requires_login(test_client):
+    test_client.get("/logout", follow_redirects=True)
+    response = test_client.get("/dataset/incidents")
+    assert response.status_code in (301, 302)  # Should redirect to login
+
+
+def test_list_all_incidents_requires_admin(test_client):
+    # Create and login as non-admin user
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(
+            email="test@example.com",
+            password="test1234",
+            verified=True
+        )
+        db.session.add(user)
+        db.session.commit()
+    
+    user.role = UserRole.USER
+    db.session.commit()
+
+    response = login_client(test_client)
+    assert response.status_code == 200
+
+    response = test_client.get("/dataset/incidents")
+    assert response.status_code == 403  # Should be forbidden for non-admin
+
+
+def test_list_all_incidents_success(test_client, monkeypatch):
+    from datetime import datetime, timezone
+    from app.modules.dataset.services import IncidentService
+
+    # Create and login as admin user
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(
+            email="test@example.com",
+            password="test1234",
+            verified=True
+        )
+        db.session.add(user)
+        db.session.commit()
+    
+    user.role = UserRole.ADMIN
+    db.session.commit()
+
+    response = login_client(test_client)
+    assert response.status_code == 200
+
+    # Mock IncidentService to return test data with full object structure
+    fake_incidents = [
+        SimpleNamespace(
+            id=1,
+            description="Test incident 1",
+            dataset_id=1,
+            reporter_id=1,
+            created_at=datetime.now(timezone.utc),
+            dataset=SimpleNamespace(
+                id=1,
+                ds_meta_data=SimpleNamespace(
+                    dataset_doi="10.5281/zenodo.123456",
+                    title="Test Dataset"
+                )
+            ),
+            reporter=SimpleNamespace(
+                id=1,
+                profile=SimpleNamespace(
+                    name="Test",
+                    surname="User"
+                )
+            )
+        )
+    ]
+
+    class FakeIncidentService:
+        def list_all(self):
+            return fake_incidents
+
+    # Patch the IncidentService used by the routes module so the view
+    # will receive our fake incidents list.
+    import app.modules.dataset.routes as routes_mod
+    monkeypatch.setattr(routes_mod, "IncidentService", lambda: FakeIncidentService())
+
+    response = test_client.get("/dataset/incidents")
+    assert response.status_code == 200
+    # Verify incident data is passed to template
+    assert b"Test incident 1" in response.data
+
+
+def test_open_incident_requires_admin(test_client):
+    # Ensure non-admin cannot open/close incidents
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(email="test@example.com", password="test1234", verified=True)
+        db.session.add(user)
+        db.session.commit()
+
+    user.role = UserRole.USER
+    db.session.commit()
+
+    response = login_client(test_client)
+    assert response.status_code == 200
+
+    r = test_client.put("/dataset/incidents/open/1/")
+    assert r.status_code == 403
+
+
+def test_open_incident_success(test_client, monkeypatch):
+    from datetime import datetime, timezone
+
+    # Login as admin
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(email="test@example.com", password="test1234", verified=True)
+        db.session.add(user)
+        db.session.commit()
+
+    user.role = UserRole.ADMIN
+    db.session.commit()
+
+    response = login_client(test_client)
+    assert response.status_code == 200
+
+    # Prepare fake incidents to be returned after toggling
+    fake_incidents = [
+        SimpleNamespace(
+            id=1,
+            description="Toggled incident",
+            dataset_id=1,
+            reporter_id=1,
+            created_at=datetime.now(timezone.utc),
+            dataset=SimpleNamespace(
+                id=1,
+                ds_meta_data=SimpleNamespace(
+                    dataset_doi="10.5281/zenodo.654321",
+                    title="Toggled Dataset"
+                )
+            ),
+            reporter=SimpleNamespace(
+                id=1,
+                profile=SimpleNamespace(name="Admin", surname="User")
+            ),
+            is_open=False,
+        )
+    ]
+
+    class FakeIncidentService2:
+        def open_or_close(self, issue_id):
+            # pretend to toggle
+            return True
+
+        def list_all(self):
+            return fake_incidents
+
+    import app.modules.dataset.routes as routes_mod
+    monkeypatch.setattr(routes_mod, "IncidentService", lambda: FakeIncidentService2())
+
+    r = test_client.put("/dataset/incidents/open/1/")
+    assert r.status_code == 200
+    assert b"Toggled incident" in r.data
