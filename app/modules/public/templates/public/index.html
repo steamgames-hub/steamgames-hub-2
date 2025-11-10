@@ -98,6 +98,29 @@
                                     <i data-feather="download" class="center-button-icon"></i>
                                     Download ({{ dataset.get_file_total_size_for_human() }})
                                 </a>
+                                {% if not current_user.is_anonymous and current_user.role.name == 'CURATOR' %}
+                                <a href="/dataset/report/{{ dataset.id }}" class="btn btn-outline-primary btn-sm"
+                                   style="border-radius: 5px;">
+                                    <i data-feather="alert-triangle" class="center-button-icon"></i>
+                                    Notify issue
+                                </a>
+                                {% endif %}
+                                {% if not current_user.is_anonymous and current_user.role.name == 'ADMIN' %}
+                                <form method="POST" action="/dataset/delete/{{ dataset.id }}"
+                                      onsubmit="return confirm('Are you sure you want to delete this dataset? This action cannot be undone.');"
+                                      style="display: inline;">
+                                    <button type="submit" class="btn btn-outline-primary btn-sm" style="border-radius: 5px;">
+                                        <i data-feather="trash" class="center-button-icon"></i>
+                                        Delete
+                                    </button>
+                                </form>
+
+                                <a href="{{ url_for('profile.edit_profile', user_id=dataset.user.id) }}" class="btn btn-outline-primary btn-sm"
+                                   style="border-radius: 5px;">
+                                    <i data-feather="edit" class="center-button-icon"></i>
+                                    Edit uploader profile
+                                </a>
+                                {% endif %}
                             </div>
                         </div>
 

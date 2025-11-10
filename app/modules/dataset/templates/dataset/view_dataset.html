@@ -292,8 +292,7 @@
     function hideLoading() {
         document.getElementById("loading").style.display = "none";
     }
-
-    
+ 
     /*
     async function valid() {
         showLoading()
@@ -353,6 +352,23 @@
             console.error('Failed to copy text: ', err);
         });
     }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        const datasetId = JSON.parse('{{ dataset.id | tojson | safe }}');
+        try {
+            const response = await fetch(`/dataset/${datasetId}/stats`);
+            if (!response.ok) throw new Error("Failed to load stats");
+            const data = await response.json();
+
+            for (const [filename, count] of Object.entries(data.downloads)) {
+                const el = document.querySelector(`.download-count[data-filename="${filename}"]`);
+                if (el) el.textContent = `${count} downloads`;
+            }
+        } catch (err) {
+            console.error("Could not load download stats:", err);
+        }
+    });
+
 </script>
 
 {% endblock %}

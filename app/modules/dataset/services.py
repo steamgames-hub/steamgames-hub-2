@@ -133,6 +133,15 @@ class DataSetService(BaseService):
             self.repository.session.rollback()
             raise exc
         return dataset
+    
+    def delete_dataset(self, dataset):
+        try:
+            self.repository.session.delete(dataset)
+            self.repository.session.commit()
+        except Exception as exc:
+            logger.exception(f"Exception deleting dataset: {exc}")
+            self.repository.session.rollback()
+            raise exc
 
     def update_dsmetadata(self, metadata_id, **kwargs):
         return self.dsmetadata_repository.update(metadata_id, **kwargs)
@@ -223,3 +232,17 @@ class SizeService:
             return f"{round(size / (1024 ** 2), 2)} MB"
         else:
             return f"{round(size / (1024 ** 3), 2)} GB"
+
+
+class IncidentService(BaseService):
+    def __init__(self):
+        from app.modules.dataset.repositories import IncidentRepository
+
+        super().__init__(IncidentRepository())
+
+    def list_for_dataset(self, dataset_id: int):
+        return self.repository.list_by_dataset(dataset_id)
+
+    def list_all(self):
+        """Get all incidents across all datasets, ordered by creation date (newest first)."""
+        return self.repository.list_all()
