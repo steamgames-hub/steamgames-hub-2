@@ -15,30 +15,33 @@ depends_on = None
 
 
 def upgrade():
-    inspector = sa.inspect(op.get_bind())
+    try:
+        inspector = sa.inspect(op.get_bind())
     
-    if 'dataset_type' in inspector.get_columns('ds_meta_data'):
-        with op.batch_alter_table('ds_meta_data') as batch_op:
-            batch_op.drop_column('dataset_type')
+        if 'dataset_type' in inspector.get_columns('ds_meta_data'):
+            with op.batch_alter_table('ds_meta_data') as batch_op:
+                batch_op.drop_column('dataset_type')
 
-    fm_columns = {col['name']: col for col in inspector.get_columns('fm_meta_data')}
-    
-    with op.batch_alter_table('fm_meta_data') as batch_op:
-        if 'uvl_filename' in fm_columns:
-            batch_op.alter_column(
-                'uvl_filename',
-                new_column_name='csv_filename',
-                existing_type=sa.String(length=120),
-                existing_nullable=False,
-            )
+        fm_columns = {col['name']: col for col in inspector.get_columns('fm_meta_data')}
         
-        if 'uvl_version' in fm_columns:
-            batch_op.alter_column(
-                'uvl_version',
-                new_column_name='csv_version',
-                existing_type=sa.String(length=120),
-                existing_nullable=True,
-            )
+        with op.batch_alter_table('fm_meta_data') as batch_op:
+            if 'uvl_filename' in fm_columns:
+                batch_op.alter_column(
+                    'uvl_filename',
+                    new_column_name='csv_filename',
+                    existing_type=sa.String(length=120),
+                    existing_nullable=False,
+                )
+            
+            if 'uvl_version' in fm_columns:
+                batch_op.alter_column(
+                    'uvl_version',
+                    new_column_name='csv_version',
+                    existing_type=sa.String(length=120),
+                    existing_nullable=True,
+                )
+    except Exception:
+        print("Migration unnecessary, skipping...")
 
 
 def downgrade():
