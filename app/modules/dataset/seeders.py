@@ -61,6 +61,7 @@ class DataSetSeeder(BaseSeeder):
                 user_id=user1.id if i % 2 == 0 else user2.id,
                 ds_meta_data_id=seeded_ds_meta_data[i].id,
                 created_at=datetime.now(timezone.utc),
+                draft_mode=True if i == 1 or 2 else False,
             )
             for i in range(4)
         ]

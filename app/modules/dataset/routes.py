@@ -8,6 +8,7 @@ import uuid
 from datetime import datetime, timezone
 from zipfile import ZipFile
 
+from app.modules.profile.services import UserProfileService
 from flask import (
     abort,
     jsonify,
@@ -31,6 +32,7 @@ from app.modules.dataset.services import (
     DSMetaDataService,
     DSViewRecordService,
 )
+from app.modules.auth.services import AuthenticationService
 from app.modules.hubfile.services import HubfileService
 from app.modules.zenodo.services import ZenodoService
 from app.modules.dataset.steamcsv_service import SteamCSVService
@@ -177,16 +179,20 @@ def upload():
     )
 
 
-@dataset_bp.route("/dataset/file/delete", methods=["POST"])
-def delete():
+@dataset_bp.route("/dataset/file/delete/<int:dataset_id>", methods=["POST"])
+def delete(dataset_id):
     data = request.get_json()
     filename = data.get("file")
     temp_folder = current_user.temp_folder()
     filepath = os.path.join(temp_folder, filename)
+    dataset = dataset_service.get_or_404(dataset_id)
 
     if os.path.exists(filepath):
-        os.remove(filepath)
-        return jsonify({"message": "File deleted successfully"})
+        if dataset.draft_mode is True:
+            os.remove(filepath)
+            return jsonify({"message": "File deleted successfully"})
+        else:
+            return jsonify({"message": "This dataset is not a draft"})
 
     return jsonify({"error": "Error: File not found"})
 
@@ -315,3 +321,26 @@ def preview_csv(file_id: int):
         return jsonify({"message": str(exc)}), 400
 
     return jsonify({"headers": headers, "rows": rows})
+
+
+@dataset_bp.route("/dataset/file/draft_mode/<int:dataset_id>/", methods=["PUT"])
+@login_required
+def change_draft_mode(dataset_id):
+    auth_service = AuthenticationService()
+    profile = auth_service.get_authenticated_user_profile
+    if not profile:
+        return redirect(url_for("public.index"))
+    dataset_service.change_draft_mode(dataset_id)
+    return list_dataset()
+
+
+@dataset_bp.route("/dataset/file/edit/<int:dataset_id>/", methods=["PUT"])
+@login_required
+def edit(dataset_id):
+    auth_service = AuthenticationService()
+    profile = auth_service.get_authenticated_user_profile
+    if not profile:
+        return redirect(url_for("public.index"))
+    current_user = UserProfileService().get_by_id(profile().id)
+    dataset_service.edit(dataset_id, current_user)
+    return list_dataset()

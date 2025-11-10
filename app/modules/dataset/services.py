@@ -141,6 +141,16 @@ class DataSetService(BaseService):
         domain = os.getenv("DOMAIN", "localhost")
         return f"http://{domain}/doi/{dataset.ds_meta_data.dataset_doi}"
 
+    def change_draft_mode(self, dataset_id):
+        dataset = self.get_by_id(dataset_id)
+        is_draft_mode = dataset.draft_mode
+        return self.update(self, dataset_id, **{"draft_mode": not is_draft_mode})
+
+    def edit(self, dataset_id, current_user):
+        dataset = self.get_by_id(dataset_id)
+        if dataset.draft_mode is True:
+            return self.update(self, dataset_id)
+
 
 class AuthorService(BaseService):
     def __init__(self):
