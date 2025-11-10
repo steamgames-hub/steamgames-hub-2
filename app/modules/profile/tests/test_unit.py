@@ -45,10 +45,12 @@ def test_change_preference_save_drafts(test_client):
     """
     Tests to modify the profile attribute "save_drafts" via a PUT request.
     """
-    login_response = login(test_client, "user@example.com", "test1234")
+    client, _ = test_client
+
+    login_response = login(client, "user@example.com", "test1234")
     assert login_response.status_code == 200, "Login was unsuccessful."
 
-    response = test_client.put("/profile/save_drafts")
+    response = client.put("/profile/save_drafts")
     assert response.status_code == 200, "The preference was changed succesfully"
 
-    logout(test_client)
+    logout(client)

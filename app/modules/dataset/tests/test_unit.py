@@ -376,6 +376,7 @@ def login_client(client, email=None, password=None):
 
 def test_get_upload_requires_login(test_client):
     # without login should redirect to login
+    test_client.get("/logout", follow_redirects=True)
     resp = test_client.get("/dataset/upload")
     assert resp.status_code in (302, 301)
 
