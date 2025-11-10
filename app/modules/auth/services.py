@@ -76,3 +76,9 @@ class AuthenticationService(BaseService):
 
     def temp_folder_by_user(self, user: User) -> str:
         return os.path.join(uploads_folder_name(), "temp", str(user.id))
+    
+    def get_profile_by_user_id(self, user_id: int) -> UserProfile | None:
+        user = self.repository.get_by_id(user_id)
+        if user:
+            return user.profile
+        return None

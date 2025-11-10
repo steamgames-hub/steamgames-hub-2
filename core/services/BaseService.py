@@ -26,6 +26,8 @@ class BaseService:
     def handle_service_response(self, result, errors, success_url_redirect, success_msg, error_template, form):
         if result:
             flash(success_msg, "success")
+            if isinstance(success_url_redirect, tuple):
+                return redirect(url_for(success_url_redirect[0], **success_url_redirect[1]))
             return redirect(url_for(success_url_redirect))
         else:
             for error_field, error_messages in errors.items():

@@ -21,21 +21,25 @@ def test_client(test_client):
         db.session.add(profile)
         db.session.commit()
 
-    yield test_client
+        user_id = user_test.id
+        
+    yield test_client, user_id
 
 
 def test_edit_profile_page_get(test_client):
     """
     Tests access to the profile editing page via a GET request.
     """
-    login_response = login(test_client, "user@example.com", "test1234")
+    client, user_test_id = test_client
+
+    login_response = login(client, "user@example.com", "test1234")
     assert login_response.status_code == 200, "Login was unsuccessful."
 
-    response = test_client.get("/profile/edit")
+    response = client.get(f"/profile/edit/{user_test_id}")
     assert response.status_code == 200, "The profile editing page could not be accessed."
     assert b"Edit profile" in response.data, "The expected content is not present on the page"
 
-    logout(test_client)
+    logout(client)
 
 def test_change_preference_save_drafts(test_client):
     """
