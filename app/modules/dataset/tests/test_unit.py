@@ -419,3 +419,43 @@ def test_download_dataset_route(test_client, tmp_path, monkeypatch):
     assert r.status_code == 200
     # content-type should be application/zip
     assert r.headers.get("Content-Type") in ("application/zip", "application/octet-stream")
+    
+def test_dataset_stats_route(monkeypatch, test_client):
+    fake_files = [
+        SimpleNamespace(name="a.uvl", download_count=2),
+        SimpleNamespace(name="b.uvl", download_count=5),
+    ]
+    fake_feature_model = SimpleNamespace(files=fake_files)
+    fake_dataset = SimpleNamespace(id=123, feature_models=[fake_feature_model])
+
+    fake_service = SimpleNamespace(get_or_404=lambda _id: fake_dataset)
+    import app.modules.dataset.routes as routes_mod
+    monkeypatch.setattr(routes_mod, "dataset_service", fake_service)
+
+    response = test_client.get("/dataset/123/stats")
+    assert response.status_code == 200
+
+    data = json.loads(response.data)
+
+    assert data["id"] == 123
+    assert data["downloads"]["a.uvl"] == 2
+    assert data["downloads"]["b.uvl"] == 5
+
+
+def test_dataset_stats_route_empty(monkeypatch, test_client):
+
+    from types import SimpleNamespace
+    import json
+    import app.modules.dataset.routes as routes_mod
+
+    fake_dataset = SimpleNamespace(id=99, feature_models=[])
+
+    fake_service = SimpleNamespace(get_or_404=lambda _id: fake_dataset)
+    monkeypatch.setattr(routes_mod, "dataset_service", fake_service)
+
+    r = test_client.get("/dataset/99/stats")
+    assert r.status_code == 200
+
+    data = json.loads(r.data)
+    assert data["id"] == 99
+    assert data["downloads"] == {}

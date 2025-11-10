@@ -38,6 +38,8 @@ def download_file(file_id):
             download_date=datetime.now(timezone.utc),
             download_cookie=user_cookie,
         )
+        HubfileDownloadRecordService().update_download_count(file_id)
+        db.session.commit()
 
     # Save the cookie to the user's browser
     resp = make_response(send_from_directory(directory=file_path, path=filename, as_attachment=True))
