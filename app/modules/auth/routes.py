@@ -1,4 +1,3 @@
-import logging
 from flask import redirect, render_template, abort, request, url_for, jsonify
 from flask_login import current_user, login_user, logout_user, login_required
 
@@ -10,6 +9,8 @@ from app.modules.auth.mail_util.token import confirm_token, generate_token
 from app.modules.auth.mail import send_email
 from app.modules.auth.models import User, UserRole
 from app import db
+
+import logging
 
 authentication_service = AuthenticationService()
 user_profile_service = UserProfileService()
@@ -115,6 +116,7 @@ def upgrade_user_role(user_id):
         logger.exception(f"Exception while upgrading user role {exc}")
         return jsonify({"Exception while upgrading user role: ": str(exc)}), 400
 
+
 @auth_bp.route("/user/downgrade/<int:user_id>", methods=['POST'])
 @login_required
 def downgrade_user_role(user_id):
@@ -129,3 +131,26 @@ def downgrade_user_role(user_id):
     except Exception as exc:
         logger.exception(f"Exception while downgrading user role {exc}")
         return jsonify({"Exception while downgrading user role: ": str(exc)}), 400
+
+
+@auth_bp.route("/users", methods=["GET"])
+@login_required
+def list_all_users():
+    if current_user.role != UserRole.ADMIN:
+        abort(403)
+    users = User.query.all()
+    return render_template("auth/list_users.html", users=users)
+
+
+@auth_bp.route("/user/delete/<int:user_id>", methods=["DELETE"])
+@login_required
+def delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+    if current_user.role != UserRole.ADMIN:
+        abort(403, description="Unauthorized")
+    try:
+        authentication_service.delete_user(user)
+        return jsonify({"message": f"User {user.email} deleted"}), 200
+    except Exception as exc:
+        logger.exception(f"Exception while deleting user {exc}")
+        return jsonify({"Exception while deleting user: ": str(exc)}), 400
