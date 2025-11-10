@@ -26,6 +26,12 @@ jobs:
       MARIADB_PASSWORD: uvlhub_password
       MARIADB_HOSTNAME: 127.0.0.1
       MARIADB_PORT: 3306
+      MAIL_SERVER: smtp.sendgrid.net
+      MAIL_PORT: 587
+      MAIL_USE_TLS: True
+      MAIL_USERNAME: apikey
+      MAIL_PASSWORD: ${{ secrets.SENDGRID_API_KEY }}
+      MAIL_DEFAULT_SENDER: "SteamGamesHub <mancalrod@alum.us.es>"
       FLASK_ENV: testing
 
     services:
