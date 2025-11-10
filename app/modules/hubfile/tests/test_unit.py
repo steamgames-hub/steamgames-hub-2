@@ -1,3 +1,8 @@
+from app.modules.dataset.models import DSMetaData, DataSet, PublicationType
+from app.modules.featuremodel.models import FeatureModel
+from app.modules.hubfile.models import Hubfile
+from app.modules.hubfile.services import HubfileDownloadRecordService
+from app import db
 import pytest
 
 
@@ -22,3 +27,50 @@ def test_sample_assertion(test_client):
     """
     greeting = "Hello, World!"
     assert greeting == "Hello, World!", "The greeting does not coincide with 'Hello, World!'"
+
+
+
+def test_download_count_increments(test_client):
+    with test_client.application.app_context():
+        try:
+            meta = DSMetaData(
+                title="dummy metadata",
+                description="test description",
+                publication_type=PublicationType.OTHER,
+            )
+            db.session.add(meta)
+            db.session.commit()
+
+            dataset = DataSet(user_id=1, ds_meta_data_id=meta.id)
+            db.session.add(dataset)
+            db.session.commit()
+
+            fm = FeatureModel(data_set_id=dataset.id)
+            db.session.add(fm)
+            db.session.commit()
+
+            hubfile = Hubfile(
+                name="test_file.txt",
+                checksum="abc123",
+                size=123,
+                feature_model_id=fm.id,
+                download_count=0,
+            )
+            db.session.add(hubfile)
+            db.session.commit()
+
+            service = HubfileDownloadRecordService()
+            service.update_download_count(hubfile.id)
+            service.update_download_count(hubfile.id)
+            db.session.commit()
+
+            db.session.refresh(hubfile)
+            assert hubfile.download_count == 2
+
+        finally:
+            db.session.rollback()
+            db.session.query(Hubfile).delete()
+            db.session.query(FeatureModel).delete()
+            db.session.query(DataSet).delete()
+            db.session.query(DSMetaData).delete()
+            db.session.commit()
