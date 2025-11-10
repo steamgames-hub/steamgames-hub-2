@@ -71,7 +71,7 @@ class DataSet(db.Model):
     ds_meta_data_id = db.Column(db.Integer, db.ForeignKey("ds_meta_data.id"), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
-    ds_meta_data = db.relationship("DSMetaData", backref=db.backref("data_set", uselist=False))
+    ds_meta_data = db.relationship("DSMetaData", backref=db.backref("data_set", uselist=False), cascade="all, delete")
     feature_models = db.relationship("FeatureModel", backref="data_set", lazy=True, cascade="all, delete")
 
     def name(self):
@@ -134,7 +134,7 @@ class DataSet(db.Model):
 class DSDownloadRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
-    dataset_id = db.Column(db.Integer, db.ForeignKey("data_set.id"))
+    dataset_id = db.Column(db.Integer, db.ForeignKey("data_set.id", ondelete="CASCADE"))
     download_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     download_cookie = db.Column(db.String(36), nullable=False)  # Assuming UUID4 strings
 
@@ -150,7 +150,7 @@ class DSDownloadRecord(db.Model):
 class DSViewRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
-    dataset_id = db.Column(db.Integer, db.ForeignKey("data_set.id"))
+    dataset_id = db.Column(db.Integer, db.ForeignKey("data_set.id", ondelete="CASCADE"))
     view_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     view_cookie = db.Column(db.String(36), nullable=False)  # Assuming UUID4 strings
 
