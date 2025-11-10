@@ -92,7 +92,7 @@ class DataSetService(BaseService):
     def total_dataset_views(self) -> int:
         return self.dsviewrecord_repostory.total_dataset_views()
 
-    def create_from_form(self, form, current_user) -> DataSet:
+    def create_from_form(self, form, current_user, draft_mode) -> DataSet:
         main_author = {
             "name": f"{current_user.profile.surname}, {current_user.profile.name}",
             "affiliation": current_user.profile.affiliation,
@@ -106,7 +106,7 @@ class DataSetService(BaseService):
                 author = self.author_repository.create(commit=False, ds_meta_data_id=dsmetadata.id, **author_data)
                 dsmetadata.authors.append(author)
 
-            dataset = self.create(commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id)
+            dataset = self.create(commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id, draft_mode=draft_mode)
 
             for feature_model in form.feature_models:
                 csv_filename = feature_model.csv_filename.data
@@ -133,11 +133,21 @@ class DataSetService(BaseService):
             self.repository.session.rollback()
             raise exc
         return dataset
-    
+
     def delete_dataset(self, dataset):
         try:
             self.repository.session.delete(dataset)
             self.repository.session.commit()
+        except Exception as exc:
+            logger.exception(f"Exception deleting dataset: {exc}")
+            self.repository.session.rollback()
+            raise exc
+
+    def delete_draft_dataset(self, dataset):
+        try:
+            if dataset.draft_mode is True:
+                self.repository.session.delete(dataset)
+                self.repository.session.commit()
         except Exception as exc:
             logger.exception(f"Exception deleting dataset: {exc}")
             self.repository.session.rollback()
@@ -155,7 +165,7 @@ class DataSetService(BaseService):
         is_draft_mode = dataset.draft_mode
         return self.update(self, dataset_id, **{"draft_mode": not is_draft_mode})
 
-    def edit(self, dataset_id, current_user):
+    def edit(self, dataset_id):
         dataset = self.get_by_id(dataset_id)
         if dataset.draft_mode is True:
             return self.update(self, dataset_id)

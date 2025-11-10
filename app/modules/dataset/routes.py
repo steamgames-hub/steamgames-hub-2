@@ -81,7 +81,7 @@ def create_dataset():
                 return jsonify({"message": str(verr)}), 400
 
             logger.info("Creating dataset...")
-            dataset = dataset_service.create_from_form(form=form, current_user=current_user)
+            dataset = dataset_service.create_from_form(form=form, current_user=current_user, draft_mode=False)
             logger.info(f"Created dataset: {dataset}")
             dataset_service.move_feature_models(dataset)
         except Exception as exc:
@@ -131,6 +131,45 @@ def create_dataset():
     user_preference = current_user.profile.save_drafts
 
     return render_template("dataset/upload_dataset.html", form=form, save_drafts=user_preference)
+
+
+@dataset_bp.route("/dataset/draft/upload", methods=["POST"])
+@login_required
+def save_draft_dataset():
+    form = DataSetForm()
+
+    dataset = None
+
+    if not form.validate_on_submit():
+        return jsonify({"message": form.errors}), 400
+
+    try:
+        # Validate pending files in temp folder (Steam CSV only)
+        # Diagnostics: log temp folder contents
+        try:
+            temp_dir = current_user.temp_folder()
+            dir_list = []
+            if os.path.isdir(temp_dir):
+                dir_list = sorted(os.listdir(temp_dir))
+            logger.info("[upload] temp_folder='%s', files=%s", temp_dir, dir_list)
+        except Exception as diag_exc:
+            logger.warning("[upload] Could not inspect temp folder for diagnostics: %s", diag_exc)
+        service = SteamCSVService()
+        try:
+            service.validate_folder(current_user.temp_folder())
+        except ValueError as verr:
+            return jsonify({"message": str(verr)}), 400
+
+        logger.info("Creating dataset...")
+        dataset = dataset_service.create_from_form(form=form, current_user=current_user, draft_mode=True)
+        logger.info(f"Created dataset: {dataset}")
+        dataset_service.move_feature_models(dataset)
+    except Exception as exc:
+        logger.exception(f"Exception while create dataset data in local {exc}")
+        return jsonify({"Exception while create dataset data in local: ": str(exc)}), 400
+        
+    msg = "Everything works!"
+    return jsonify({"message": msg}), 200
 
 
 @dataset_bp.route("/dataset/list", methods=["GET", "POST"])
@@ -196,22 +235,24 @@ def upload():
     )
 
 
-@dataset_bp.route("/dataset/file/delete/<int:dataset_id>", methods=["POST"])
-def delete(dataset_id):
+@dataset_bp.route("/dataset/file/delete", methods=["POST"])
+def delete():
     data = request.get_json()
     filename = data.get("file")
     temp_folder = current_user.temp_folder()
     filepath = os.path.join(temp_folder, filename)
-    dataset = dataset_service.get_or_404(dataset_id)
 
     if os.path.exists(filepath):
-        if dataset.draft_mode is True:
-            os.remove(filepath)
-            return jsonify({"message": "File deleted successfully"})
-        else:
-            return jsonify({"message": "This dataset is not a draft"})
+        os.remove(filepath)
+        return jsonify({"message": "File deleted successfully"})
 
     return jsonify({"error": "Error: File not found"})
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/delete", methods=["POST"])
+def delete_draft(dataset_id):
+    dataset = dataset_service.get_by_id(dataset_id)
+    dataset_service.delete_draft_dataset(dataset)
 
 
 @dataset_bp.route("/dataset/file/clean_temp", methods=["POST"])
@@ -307,6 +348,7 @@ def download_dataset(dataset_id):
 
     return resp
 
+
 @dataset_bp.route("/dataset/<int:dataset_id>/stats", methods=["GET"])
 def get_dataset_stats(dataset_id):
     dataset = dataset_service.get_or_404(dataset_id)
@@ -390,7 +432,7 @@ def preview_csv(file_id: int):
     return jsonify({"headers": headers, "rows": rows})
 
 
-@dataset_bp.route("/dataset/file/draft_mode/<int:dataset_id>/", methods=["PUT"])
+@dataset_bp.route("/dataset/<int:dataset_id>/draft_mode", methods=["PUT"])
 @login_required
 def change_draft_mode(dataset_id):
     auth_service = AuthenticationService()

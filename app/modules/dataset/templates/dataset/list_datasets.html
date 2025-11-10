@@ -18,6 +18,7 @@
                             <th>Description</th>
                             <th>Publication type</th>
                             <th>Dataset DOI</th>
+                            <th>Is Draft</th>
                             <th>Options</th>
                         </tr>
                         </thead>
@@ -33,6 +34,11 @@
                                 <td>{{ dataset.ds_meta_data.publication_type.name.replace('_', ' ').title() }}</td>
                                 <td><a href="{{ dataset.get_uvlhub_doi() }}"
                                        target="_blank">{{ dataset.get_uvlhub_doi() }}</a></td>
+                                {% if dataset.draft_mode == True %}       
+                                    <td>Yes</td>
+                                {% else %}
+                                    <td>No</td>
+                                {% endif %}
                                 <td>
                                     <a href="{{ dataset.get_uvlhub_doi() }}">
                                         <i data-feather="eye"></i>

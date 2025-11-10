@@ -273,6 +273,22 @@ function saveDraft() {
     if(document.getElementById("save_drafts_preference").checked === true){
         handleChangePreference();
     }
+    fetch('/dataset/draft/upload', {
+        method: 'POST'
+    })
+    .then(response => {
+        if (response.ok) {
+            console.log('SDraft saved succesfully');
+        } else {
+            response.then(data => {
+                console.error('Error: ' + data.message);
+
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error in POST request:', error);
+    });
 }
 
 function discardDraft() {
@@ -282,6 +298,5 @@ function discardDraft() {
         handleChangePreference();
     }
 }
-
 
 
