@@ -34,6 +34,7 @@ from app.modules.dataset.services import (
 from app.modules.hubfile.services import HubfileService
 from app.modules.zenodo.services import ZenodoService
 from app.modules.dataset.steamcsv_service import SteamCSVService
+from app.modules.auth.models import UserRole
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +139,22 @@ def list_dataset():
         datasets=dataset_service.get_synchronized(current_user.id),
         local_datasets=dataset_service.get_unsynchronized(current_user.id),
     )
+
+
+@dataset_bp.route("/dataset/delete/<int:dataset_id>", methods=["POST"])
+@login_required
+def delete_dataset(dataset_id):
+    dataset = dataset_service.get_or_404(dataset_id)
+
+    if current_user.role != UserRole.ADMIN:
+        abort(403, description="Unauthorized")
+
+    try:
+        dataset_service.delete_dataset(dataset)
+        return redirect(url_for("public.index"))
+    except Exception as exc:
+        logger.exception(f"Exception while deleting dataset {exc}")
+        return jsonify({"Exception while deleting dataset: ": str(exc)}), 400
 
 
 @dataset_bp.route("/dataset/file/upload", methods=["POST"])

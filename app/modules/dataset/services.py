@@ -133,6 +133,15 @@ class DataSetService(BaseService):
             self.repository.session.rollback()
             raise exc
         return dataset
+    
+    def delete_dataset(self, dataset):
+        try:
+            self.repository.session.delete(dataset)
+            self.repository.session.commit()
+        except Exception as exc:
+            logger.exception(f"Exception deleting dataset: {exc}")
+            self.repository.session.rollback()
+            raise exc
 
     def update_dsmetadata(self, metadata_id, **kwargs):
         return self.dsmetadata_repository.update(metadata_id, **kwargs)

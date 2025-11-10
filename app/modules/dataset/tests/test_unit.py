@@ -10,6 +10,10 @@ import pytest
 
 from flask import Flask
 
+from app import db
+from app.modules.auth.models import User, UserRole
+from app.modules.profile.models import UserProfile
+from app.modules.dataset.models import DSMetaData, PublicationType, DataSet
 from app.modules.dataset.steamcsv_service import SteamCSVService
 
 from app.modules.dataset.services import (
@@ -191,6 +195,73 @@ def test_create_from_form_with_mocks(tmp_path):
     assert hf.name == csv_name
     assert hf.checksum == expected_checksum
     assert hf.size == expected_size
+
+def test_delete_dataset_success(test_client):
+
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(email="test@example.com", password="test1234", verified=True)
+        db.session.add(user)
+        db.session.commit()
+
+    if not user.profile:
+        profile = UserProfile(user_id=user.id, name="Test", surname="User")
+        db.session.add(profile)
+        db.session.commit()
+
+    user.role = UserRole.ADMIN
+    db.session.commit()
+
+    md = DSMetaData(title="t", description="d", publication_type=PublicationType.NONE)
+    db.session.add(md)
+    db.session.commit()
+    ds = DataSet(user_id=user.id, ds_meta_data_id=md.id)
+    db.session.add(ds)
+    db.session.commit()
+
+    test_client.get("/logout", follow_redirects=True)
+    response = test_client.post("/login", data={"email": "test@example.com", "password": "test1234"}, follow_redirects=True)
+    assert response.status_code == 200
+
+    response = test_client.post(f"/dataset/delete/{ds.id}", follow_redirects=True)
+    assert response.status_code == 200, "Delete request failed"
+
+    deleted = db.session.get(DataSet, ds.id)
+    assert deleted is None, "Dataset was not deleted"
+
+def test_delete_dataset_unsuccessful(test_client):
+
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(email="test@example.com", password="test1234", verified=True)
+        db.session.add(user)
+        db.session.commit()
+
+    if not user.profile:
+        profile = UserProfile(user_id=user.id, name="Test", surname="User")
+        db.session.add(profile)
+        db.session.commit()
+
+    user.role = UserRole.USER
+    db.session.commit()
+
+    md = DSMetaData(title="t", description="d", publication_type=PublicationType.NONE)
+    db.session.add(md)
+    db.session.commit()
+    ds = DataSet(user_id=user.id, ds_meta_data_id=md.id)
+    db.session.add(ds)
+    db.session.commit()
+
+    test_client.get("/logout", follow_redirects=True)
+    response = test_client.post("/login", data={"email": "test@example.com", "password": "test1234"}, follow_redirects=True)
+    assert response.status_code == 200
+
+    response = test_client.post(f"/dataset/delete/{ds.id}", follow_redirects=True)
+    assert response.status_code == 403, "Delete request should have failed"
+
+    deleted = db.session.get(DataSet, ds.id)
+    assert deleted is not None, "Dataset was incorrectly deleted"
+
 
 def test_dataset_service_delegations():
     svc = DataSetService()
