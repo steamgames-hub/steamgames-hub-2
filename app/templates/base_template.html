@@ -69,6 +69,23 @@
                     </a>
                 </li>
 
+                {% if not current_user.is_anonymous and current_user.role.name == 'ADMIN' %}
+
+                <li class="sidebar-header">
+                    Administrator options
+                </li>
+
+                <li class="sidebar-item {{ 'active' if request.endpoint == 'dataset.list_all_incidents' else '' }}">
+                    <a class="sidebar-link" href="{{ url_for('dataset.list_all_incidents') }}">
+                        <i class="align-middle" data-feather="alert-triangle"></i> <span 
+                            class="align-middle">Dataset Issues</span>
+                    </a>
+                </li>
+
+
+                {% endif %}
+
+
                 {% if current_user.is_anonymous %}
 
                     <li class="sidebar-header">

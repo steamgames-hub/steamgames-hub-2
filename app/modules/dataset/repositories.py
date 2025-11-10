@@ -115,3 +115,7 @@ class IncidentRepository(BaseRepository):
 
     def list_by_dataset(self, dataset_id: int):
         return self.model.query.filter_by(dataset_id=dataset_id).order_by(Incident.created_at.desc()).all()
+
+    def list_all(self):
+        """Return all incidents across all datasets, ordered by creation date (newest first)."""
+        return self.model.query.order_by(Incident.created_at.desc()).all()

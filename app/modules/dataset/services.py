@@ -232,3 +232,7 @@ class IncidentService(BaseService):
 
     def list_for_dataset(self, dataset_id: int):
         return self.repository.list_by_dataset(dataset_id)
+
+    def list_all(self):
+        """Get all incidents across all datasets, ordered by creation date (newest first)."""
+        return self.repository.list_all()
