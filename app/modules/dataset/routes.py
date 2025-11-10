@@ -30,6 +30,7 @@ from app.modules.dataset.services import (
     DSDownloadRecordService,
     DSMetaDataService,
     DSViewRecordService,
+    IncidentService,
 )
 from app.modules.hubfile.services import HubfileService
 from app.modules.zenodo.services import ZenodoService
@@ -404,7 +405,6 @@ def create_incident():
         return jsonify({"message": "Forbidden"}), 403
 
     # create incident
-    from app.modules.dataset.services import IncidentService
 
     svc = IncidentService()
     incident = svc.create(commit=True, description=description, dataset_id=dataset_id, reporter_id=current_user.id)
@@ -420,7 +420,6 @@ def list_all_incidents():
     if current_user.role != UserRole.ADMIN:
         abort(403)
 
-    from app.modules.dataset.services import IncidentService
     incident_service = IncidentService()
     incidents = incident_service.list_all()
     return render_template("dataset/list_incidents.html", incidents=incidents)
@@ -439,3 +438,21 @@ def report_dataset(dataset_id: int):
 
     dataset = dataset_service.get_or_404(dataset_id)
     return render_template("dataset/notify_issue.html", dataset=dataset)
+
+
+@dataset_bp.route("/dataset/incidents/open/<int:issue_id>/", methods=["PUT"])
+@login_required
+def open_incident(issue_id):
+    """Endpoint para que un administrador abra o cierre una incidencia.
+
+    Only users with role == 'administrator' are allowed to create incidents.
+    """
+
+    # role check
+    if getattr(current_user, "role", "") != UserRole.ADMIN:
+        return jsonify({"message": "Forbidden"}), 403
+
+    incident_service = IncidentService()
+    incident_service.open_or_close(issue_id)
+    incidents = incident_service.list_all()
+    return render_template("dataset/list_incidents.html", incidents=incidents)

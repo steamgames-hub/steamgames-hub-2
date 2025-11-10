@@ -26,6 +26,7 @@ def upgrade():
             sa.Column('dataset_id', sa.Integer(), nullable=False),
             sa.Column('reporter_id', sa.Integer(), nullable=False),
             sa.Column('created_at', sa.DateTime(), nullable=False),
+            sa.Column('is_open', sa.Boolean(), nullable=False),
             sa.ForeignKeyConstraint(['dataset_id'], ['data_set.id'], ),
             sa.ForeignKeyConstraint(['reporter_id'], ['user.id'], ),
         )

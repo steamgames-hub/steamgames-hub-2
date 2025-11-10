@@ -102,6 +102,8 @@ document.addEventListener('click', function (event) {
     }
 });
 
+
+
 function show_loading() {
     document.getElementById("upload_button").style.display = "none";
     document.getElementById("loading").style.display = "block";
@@ -282,6 +284,3 @@ function discardDraft() {
         handleChangePreference();
     }
 }
-
-
-

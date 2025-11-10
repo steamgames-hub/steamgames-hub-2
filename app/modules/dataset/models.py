@@ -174,12 +174,14 @@ class Incident(db.Model):
     - dataset_id: FK a DataSet
     - reporter_id: FK a User (quién reporta)
     - created_at: timestamp de creación
+    - is_open: indica si la incidencia está abierta o cerrada
     """
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.Text, nullable=False)
     dataset_id = db.Column(db.Integer, db.ForeignKey("data_set.id"), nullable=False)
     reporter_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    is_open = db.Column(db.Boolean, nullable=False, default=True)
 
     dataset = db.relationship("DataSet", backref=db.backref("incidents", lazy=True, cascade="all, delete"))
     reporter = db.relationship("User", backref=db.backref("reported_incidents", lazy=True))

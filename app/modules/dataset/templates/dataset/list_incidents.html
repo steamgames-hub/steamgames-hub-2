@@ -6,7 +6,7 @@
 
 <div class="container-fluid p-0">
     <h1 class="h3 mb-3">
-        <b>Dataset</b> Issues
+        <b>Issues</b> for administrators
     </h1>
 
     {% if not incidents %}
@@ -25,11 +25,12 @@
                     <table class="table">
                         <thead>
                             <tr>
-                                <th>Dataset</th>
-                                <th>Issue Description</th>
+                                <th>Link</th>
+                                <th>Description</th>
                                 <th>Reported By</th>
                                 <th>Reported</th>
-                                <th>Actions</th>
+                                <th>Still open?</th>
+                                <th>Options</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -43,11 +44,15 @@
                                 <td>{{ incident.description }}</td>
                                 <td>{{ incident.reporter.profile.name }} {{ incident.reporter.profile.surname }}</td>
                                 <td>{{ incident.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ incident.is_open }}</td>
                                 <td>
-                                    <a href="{{ url_for('dataset.subdomain_index', doi=incident.dataset.ds_meta_data.dataset_doi) }}" 
-                                       class="btn btn-sm btn-outline-primary">
-                                        <i data-feather="eye"></i> View Dataset
-                                    </a>
+                                    <button id={{incident.id}} class="btn btn-primary open_incident">
+                                {% if incident.is_open %}
+                                        Close issue
+                                {% else %}
+                                        Reopen issue
+                                {% endif %}
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -59,5 +64,33 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+
+    document.getElementsByClassName('open_incident').forEach(
+        button => {
+            button.addEventListener('click', function () {
+        
+            
+                fetch('/dataset/incidents/open/' + button.id, {
+                    method: 'PUT'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('State of the incident changed succesfully');
+                        window.location.reload();
+                    } else {
+                        response.then(data => {
+                            console.error('Error: ' + data.message);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error in PUT request:', error);
+                });
+            });
+        }
+    )
+</script>
 
 {% endblock %}
