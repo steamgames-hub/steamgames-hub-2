@@ -54,3 +54,4 @@ jobs:
         MAIL_USERNAME: apikey
         MAIL_PASSWORD: ${{ secrets.SENDGRID_API_KEY }}
         MAIL_DEFAULT_SENDER: "SteamGamesHub <mancalrod@alum.us.es>"
+        CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}
