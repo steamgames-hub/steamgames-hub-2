@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-
 class FakenodoService(BaseService):
 
     def __init__(self):
@@ -37,36 +36,6 @@ class FakenodoService(BaseService):
         """
 
         logger.info("Dataset sending to Fakenodo...")
-        logger.info(f"Publication type...{dataset.ds_meta_data.publication_type.value}")
-
-        metadata = {
-            "title": dataset.ds_meta_data.title,
-            "upload_type": "dataset" if dataset.ds_meta_data.publication_type.value == "none" else "publication",
-            "publication_type": (
-                dataset.ds_meta_data.publication_type.value
-                if dataset.ds_meta_data.publication_type.value != "none"
-                else None
-            ),
-            "description": dataset.ds_meta_data.description,
-            "creators": [
-                {
-                    "name": author.name,
-                    **({"affiliation": author.affiliation} if author.affiliation else {}),
-                    **({"orcid": author.orcid} if author.orcid else {}),
-                }
-                for author in dataset.ds_meta_data.authors
-            ],
-            "keywords": (
-                ["steamgameshub"]
-                if not dataset.ds_meta_data.tags
-                else dataset.ds_meta_data.tags.split(", ") + ["steamgameshub"]
-            ),
-            "access_right": "open",
-            "license": "CC-BY-4.0",
-        }
-
-        data = {"metadata": metadata}
-
                 
         fakenodo_element = self.repository.create(commit=True)
 
@@ -99,22 +68,6 @@ class FakenodoService(BaseService):
         )
         files = {"file": open(file_path, "rb")}
         
-
-    def publish_deposition(self, deposition_id: int) -> dict:
-        """
-        Publish a deposition in Fakenodo.
-
-        Args:
-            deposition_id (int): The ID of the deposition in Fakenodo.
-
-        Returns:
-            dict: The response in JSON format with the details of the published deposition.
-        """
-        publish_url = f"{self.ZENODO_API_URL}/{deposition_id}/actions/publish"
-        response = requests.post(publish_url, params=self.params, headers=self.headers)
-        if response.status_code != 202:
-            raise Exception("Failed to publish deposition")
-        return response.json()
 
     def get_deposition(self, deposition_id: int) -> dict:
         """
