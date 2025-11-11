@@ -5,7 +5,6 @@ from app import db
 from app.modules.auth.services import AuthenticationService
 from app.modules.dataset.models import DataSet
 from app.modules.profile import profile_bp
-from app.modules.profile.models import UserProfile
 from app.modules.profile.forms import UserProfileForm
 from app.modules.profile.services import UserProfileService
 from app.modules.auth.models import UserRole
@@ -41,14 +40,15 @@ def edit_profile(user_id):
     if request.method == "POST":
         service = UserProfileService()
         result, errors = service.update_profile(profile.id, form)
-        return service.handle_service_response(
-            result,
-            errors,
-            ("profile.edit_profile", {"user_id": profile.user_id}),
-            "Profile updated successfully",
-            "profile/edit.html",
-            form,
-        )
+        if result:
+            from flask import flash
+            flash("Profile updated successfully", "success")
+            return redirect(url_for("profile.edit_profile", user_id=profile.user_id))
+        else:
+            # Si hay errores, renderizar el template pero siempre pasar profile
+            if profile.affiliation is None:
+                profile.affiliation = ""
+            return render_template("profile/edit.html", form=form, profile=profile)
 
     # Asegura que affiliation nunca sea None
     if profile.affiliation is None:
