@@ -1,8 +1,9 @@
-from flask import redirect, render_template, request, url_for
+from flask import redirect, render_template, request, url_for, flash
 from flask_login import current_user, login_user, logout_user
 
 from app.modules.auth import auth_bp
 from app.modules.auth.forms import LoginForm, SignupForm
+import app.modules.auth.services as auth_services
 from app.modules.auth.services import AuthenticationService
 from app.modules.profile.services import UserProfileService
 
@@ -52,3 +53,30 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for("public.index"))
+
+@auth_bp.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form.get("email")
+        print('Log desde routes', email)
+        authentication_service.generate_reset_token(email)
+        flash("If your email exists, a reset link was sent.", "info")
+        return render_template("auth/forgot_password.html")
+    return render_template("auth/forgot_password.html")
+
+@auth_bp.route("/reset-password", methods=["GET", "POST"])
+def reset_password_form():
+    token = request.args.get("token") or request.form.get("token")
+    if request.method == "GET":
+        if not authentication_service.validate_reset_token(token):
+            return render_template("auth/reset_invalid.html"), 400
+        return render_template("auth/reset_password.html", token=token)
+    new_password = request.form.get("password")
+    confirm = request.form.get("confirm")
+    if new_password != confirm:
+        flash("Passwords do not match.", "error")
+        return render_template("auth/reset_password.html", token=token)
+    if authentication_service.consume_reset_token(token, new_password):
+        flash("Password successfully updated. Please log in.", "success")
+        return redirect(url_for("auth.login"))
+    return render_template("auth/reset_invalid.html"), 400

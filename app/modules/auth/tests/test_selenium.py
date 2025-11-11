@@ -48,5 +48,29 @@ def test_login_and_check_element():
         close_driver(driver)
 
 
+def test_forgot_password_ui():
+    """Check that the forgot password page renders correctly."""
+    driver = initialize_driver()
+
+    try:
+        host = get_host_for_selenium_testing()
+        driver.get(f"{host}/forgot-password")
+        time.sleep(3)
+
+        email_input = driver.find_element(By.NAME, "email")
+        send_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']") 
+
+        email_input.send_keys("user1@example.com")
+        send_button.click()
+        time.sleep(2)
+
+        assert "reset" in driver.page_source.lower() or "email" in driver.page_source.lower()
+
+    except NoSuchElementException as e:
+        raise AssertionError(f"Missing element: {e}")
+    finally:
+        close_driver(driver)
+
 # Call the test function
 test_login_and_check_element()
+test_forgot_password_ui()

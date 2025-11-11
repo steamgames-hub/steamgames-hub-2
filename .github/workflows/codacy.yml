@@ -48,4 +48,10 @@ jobs:
         MARIADB_TEST_DATABASE: uvlhubdb_test
         MARIADB_USER: uvlhub_user
         MARIADB_PASSWORD: uvlhub_password
+        MAIL_SERVER: smtp.sendgrid.net
+        MAIL_PORT: 587
+        MAIL_USE_TLS: True
+        MAIL_USERNAME: apikey
+        MAIL_PASSWORD: ${{ secrets.SENDGRID_API_KEY }}
+        MAIL_DEFAULT_SENDER: "SteamGamesHub <mancalrod@alum.us.es>"
         CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_PROJECT_TOKEN }}

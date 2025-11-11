@@ -33,6 +33,7 @@ from app.modules.dataset.services import (
 )
 from app.modules.hubfile.services import HubfileService
 from app.modules.zenodo.services import ZenodoService
+from app.modules.fakenodo.services import FakenodoService
 from app.modules.dataset.steamcsv_service import SteamCSVService
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ dataset_service = DataSetService()
 author_service = AuthorService()
 dsmetadata_service = DSMetaDataService()
 zenodo_service = ZenodoService()
+fakenodo_service = FakenodoService() #MOD: Fakenodo
 doi_mapping_service = DOIMappingService()
 ds_view_record_service = DSViewRecordService()
 
@@ -107,13 +109,14 @@ def create_dataset():
         # send dataset as deposition to Zenodo
         data = {}
         try:
-            zenodo_response_json = zenodo_service.create_new_deposition(dataset)
-            response_data = json.dumps(zenodo_response_json)
+            #zenodo_response_json = zenodo_service.create_new_deposition(dataset) MOD: Fakenodo
+            fakenodo_response_json = fakenodo_service.create_new_deposition(dataset)
+            response_data = json.dumps(fakenodo_response_json)
             data = json.loads(response_data)
         except Exception as exc:
             data = {}
-            zenodo_response_json = {}
-            logger.exception(f"Exception while create dataset data in Zenodo {exc}")
+            fakenodo_response_json = {}
+            logger.exception(f"Exception while create dataset data in Fakenodo {exc}")
 
         if data.get("conceptrecid"):
             deposition_id = data.get("id")
@@ -121,16 +124,22 @@ def create_dataset():
             # update dataset with deposition id in Zenodo
             dataset_service.update_dsmetadata(dataset.ds_meta_data_id, deposition_id=deposition_id)
 
+            print("Patata1")
+
             try:
                 # iterate for each feature model (one feature model = one request to Zenodo)
-                for feature_model in dataset.feature_models:
-                    zenodo_service.upload_file(dataset, deposition_id, feature_model)
+                #for feature_model in dataset.feature_models:
+                #    zenodo_service.upload_file(dataset, deposition_id, feature_model)
 
                 # publish deposition
-                zenodo_service.publish_deposition(deposition_id)
+                #zenodo_service.publish_deposition(deposition_id)
 
                 # update DOI
-                deposition_doi = zenodo_service.get_doi(deposition_id)
+                #deposition_doi = zenodo_service.get_doi(deposition_id)
+                print("Patata2")
+                deposition_doi = fakenodo_service.get_doi(deposition_id)
+                print("DOI:")
+                print(deposition_doi)
                 dataset_service.update_dsmetadata(dataset.ds_meta_data_id, dataset_doi=deposition_doi)
             except Exception as e:
                 msg = f"it has not been possible upload feature models in Zenodo and update the DOI: {e}"
@@ -315,7 +324,8 @@ def subdomain_index(doi):
 
     # Save the cookie to the user's browser
     user_cookie = ds_view_record_service.create_cookie(dataset=dataset)
-    resp = make_response(render_template("dataset/view_dataset.html", dataset=dataset))
+    FAKENODO_URL = os.getenv("FAKENODO_URL")
+    resp = make_response(render_template("dataset/view_dataset.html", dataset=dataset, fakenodo_url=FAKENODO_URL))
     resp.set_cookie("view_cookie", user_cookie)
 
     return resp
@@ -330,8 +340,8 @@ def get_unsynchronized_dataset(dataset_id):
 
     if not dataset:
         abort(404)
-
-    return render_template("dataset/view_dataset.html", dataset=dataset)
+    FAKENODO_URL = os.getenv("FAKENODO_URL")
+    return render_template("dataset/view_dataset.html", dataset=dataset, fakenodo_url=FAKENODO_URL)
 
 
 @dataset_bp.route("/dataset/file/preview/<int:file_id>", methods=["GET"])
