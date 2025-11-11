@@ -34,7 +34,6 @@
 
 -   Se realizará al menos 1 reunión semanal (presenciales o virtuales).
 -   La asistencia es obligatoria salvo causa justificada.
--   Se elaborará un acta breve por cada reunión.
 
 ### 2. Comunicación
 
