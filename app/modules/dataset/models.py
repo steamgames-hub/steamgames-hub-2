@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from enum import Enum
 
@@ -175,17 +176,7 @@ class DOIMapping(db.Model):
     dataset_doi_new = db.Column(db.String(120))
 
 
-class Incident(db.Model):
-    """Incidencia reportada por un curator sobre un DataSet.
-
-    Campos:
-    - id: PK
-    - description: texto con la descripción de la incidencia
-    - dataset_id: FK a DataSet
-    - reporter_id: FK a User (quién reporta)
-    - created_at: timestamp de creación
-    - is_open: indica si la incidencia está abierta o cerrada
-    """
+class Issue(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.Text, nullable=False)
@@ -194,5 +185,5 @@ class Incident(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     is_open = db.Column(db.Boolean, nullable=False, default=True)
 
-    dataset = db.relationship("DataSet", backref=db.backref("incidents", lazy=True, cascade="all, delete"))
-    reporter = db.relationship("User", backref=db.backref("reported_incidents", lazy=True))
+    dataset = db.relationship("DataSet", backref=db.backref("issues", lazy=True, cascade="all, delete"))
+    reporter = db.relationship("User", backref=db.backref("reported_issues", lazy=True))

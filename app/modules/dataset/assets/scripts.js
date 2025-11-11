@@ -81,6 +81,36 @@ function check_title_and_description() {
     return (titleLength >= 3 && descriptionLength >= 3);
 }
 
+function check_name_and_surname() {
+    let nameInput = document.querySelector('input[name="name"]');
+    let surnameInput = document.querySelector('input[name="surname"]');
+
+    nameInput.classList.remove("error");
+    surnameInput.classList.remove("error");
+    clean_edit_profile_errors();
+
+    let nameLength = nameInput.value.trim().length;
+    let surnameLength = surnameInput.value.trim().length;
+
+    if (nameLength < 1) {
+        write_profile_error("the profile needs a name");
+        nameInput.classList.add("error");
+    }
+
+    if (surnameLength < 1) {
+        write_profile_error("the profile needs a surname");
+        surnameInput.classList.add("error");
+    }
+
+    return (nameLength >= 1 && surnameLength >= 1);
+}
+
+function clean_edit_profile_errors() {
+    let profile_error = document.getElementById("edit_profile_error");
+    profile_error.innerHTML = "";
+    profile_error.style.display = 'none';
+}
+
 
 document.getElementById('add_author').addEventListener('click', function () {
     let authors = document.getElementById('authors');
@@ -128,6 +158,16 @@ function write_upload_error(error_message) {
     alert.textContent = 'Upload error: ' + error_message;
     upload_error.appendChild(alert);
     upload_error.style.display = 'block';
+}
+
+function write_profile_error(error_message) {
+    let profile_error = document.getElementById("edit_profile_error");
+    let alert = document.createElement('p');
+    alert.style.margin = '0';
+    alert.style.padding = '0';
+    alert.textContent = 'Profile error: ' + error_message;
+    profile_error.appendChild(alert);
+    profile_error.style.display = 'block';
 }
 
 window.onload = function () {

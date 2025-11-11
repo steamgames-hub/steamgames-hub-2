@@ -9,7 +9,7 @@
         <b>Issues</b> for administrators
     </h1>
 
-    {% if not incidents %}
+    {% if not issues %}
     <div class="row">
         <div class="col-12">
             <div class="alert alert-info" role="alert">
@@ -34,20 +34,20 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for incident in incidents %}
+                            {% for issue in issues %}
                             <tr>
                                 <td>
-                                    <a href="{{ url_for('dataset.subdomain_index', doi=incident.dataset.ds_meta_data.dataset_doi) }}">
-                                        {{ incident.dataset.ds_meta_data.title }}
+                                    <a href="{{ url_for('dataset.subdomain_index', doi=issue.dataset.ds_meta_data.dataset_doi) }}">
+                                        {{ issue.dataset.ds_meta_data.title }}
                                     </a>
                                 </td>
-                                <td>{{ incident.description }}</td>
-                                <td>{{ incident.reporter.profile.name }} {{ incident.reporter.profile.surname }}</td>
-                                <td>{{ incident.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                                <td>{{ incident.is_open }}</td>
+                                <td>{{ issue.description }}</td>
+                                <td>{{ issue.reporter.profile.name }} {{ issue.reporter.profile.surname }}</td>
+                                <td>{{ issue.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ issue.is_open }}</td>
                                 <td>
-                                    <button id={{incident.id}} class="btn btn-primary open_incident">
-                                {% if incident.is_open %}
+                                    <button id={{issue.id}} class="btn btn-primary open_issue">
+                                {% if issue.is_open %}
                                         Close issue
                                 {% else %}
                                         Reopen issue
@@ -67,17 +67,17 @@
 
 <script>
 
-    document.getElementsByClassName('open_incident').forEach(
+    document.getElementsByClassName('open_issue').forEach(
         button => {
             button.addEventListener('click', function () {
         
             
-                fetch('/dataset/incidents/open/' + button.id, {
+                fetch('/dataset/issues/open/' + button.id, {
                     method: 'PUT'
                 })
                 .then(response => {
                     if (response.ok) {
-                        console.log('State of the incident changed succesfully');
+                        console.log('State of the issue changed succesfully');
                         window.location.reload();
                     } else {
                         response.then(data => {

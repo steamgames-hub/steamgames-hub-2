@@ -110,7 +110,7 @@ def test_service_create_with_profile_fail_no_password(clean_database):
     assert UserProfileRepository().count() == 0
 
 
-def test_curator_can_create_incident(test_client):
+def test_curator_can_create_issue(test_client):
     # ensure test user exists and make them a curator
     user = User.query.filter_by(email="test@example.com").first()
     if not user:
@@ -144,14 +144,14 @@ def test_curator_can_create_incident(test_client):
     db.session.commit()
 
     payload = {"dataset_id": ds.id, "description": "Something wrong with DB"}
-    r = test_client.post("/dataset/incidents", data=json.dumps(payload), content_type="application/json")
+    r = test_client.post("/dataset/issues", data=json.dumps(payload), content_type="application/json")
     assert r.status_code == 201
     body = json.loads(r.data)
     assert body.get("id") is not None
     assert body.get("dataset_id") == ds.id
 
 
-def test_non_curator_cannot_create_incident(test_client):
+def test_non_curator_cannot_create_issue(test_client):
     # ensure test user exists and is not a curator
     user = User.query.filter_by(email="test@example.com").first()
     if not user:
@@ -167,11 +167,11 @@ def test_non_curator_cannot_create_incident(test_client):
     assert resp.status_code == 200
 
     payload = {"dataset_id": 1, "description": "Do not allow"}
-    r = test_client.post("/dataset/incidents", data=json.dumps(payload), content_type="application/json")
+    r = test_client.post("/dataset/issues", data=json.dumps(payload), content_type="application/json")
     assert r.status_code == 403
 
 
-def test_curator_can_create_incident(test_client):
+def test_curator_can_create_issue(test_client):
     # ensure test user exists and make them a curator
     user = User.query.filter_by(email="test@example.com").first()
     if not user:
@@ -205,14 +205,14 @@ def test_curator_can_create_incident(test_client):
     db.session.commit()
 
     payload = {"dataset_id": ds.id, "description": "Something wrong with DB"}
-    r = test_client.post("/dataset/incidents", data=json.dumps(payload), content_type="application/json")
+    r = test_client.post("/dataset/issues", data=json.dumps(payload), content_type="application/json")
     assert r.status_code == 201
     body = json.loads(r.data)
     assert body.get("id") is not None
     assert body.get("dataset_id") == ds.id
 
 
-def test_non_curator_cannot_create_incident(test_client):
+def test_non_curator_cannot_create_issue(test_client):
     # ensure test user exists and is not a curator
     user = User.query.filter_by(email="test@example.com").first()
     if not user:
@@ -228,7 +228,7 @@ def test_non_curator_cannot_create_incident(test_client):
     assert resp.status_code == 200
 
     payload = {"dataset_id": 1, "description": "Do not allow"}
-    r = test_client.post("/dataset/incidents", data=json.dumps(payload), content_type="application/json")
+    r = test_client.post("/dataset/issues", data=json.dumps(payload), content_type="application/json")
     assert r.status_code == 403
 
 

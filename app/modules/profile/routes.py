@@ -35,14 +35,16 @@ def edit_profile(user_id):
     if request.method == "POST":
         service = UserProfileService()
         result, errors = service.update_profile(profile.id, form)
-        return service.handle_service_response(
-            result,
-            errors,
-            ("profile.edit_profile", {"user_id": profile.user_id}),
-            "Profile updated successfully",
-            "profile/edit.html",
-            form,
-        )
+        if result:
+            from flask import flash
+
+            flash("Profile updated successfully", "success")
+            return redirect(url_for("profile.edit_profile", user_id=profile.user_id))
+        else:
+            # Si hay errores, renderizar el template pero siempre pasar profile
+            if profile.affiliation is None:
+                profile.affiliation = ""
+            return render_template("profile/edit.html", form=form, profile=profile)
 
     # Asegura que affiliation nunca sea None
     if profile.affiliation is None:

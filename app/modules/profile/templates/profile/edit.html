@@ -4,6 +4,13 @@
 
 {% block content %}
 
+    <style>
+        .form-control.error {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+        }
+    </style>
+
     <h1 class="h3 mb-3">Edit profile</h1>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -33,7 +40,9 @@
 
         <div class="col-12 col-lg-6">
 
-            <form method="POST" action="{{ url_for('profile.edit_profile', user_id=profile.user_id) }}" class="needs-validation" novalidate>
+            <div id="edit_profile_error" style="display: none; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; padding: 12px; margin-bottom: 15px; color: #721c24;"></div>
+
+            <form method="POST" action="{{ url_for('profile.edit_profile', user_id=profile.user_id) }}" class="needs-validation" novalidate id="edit_profile_form">
                 {{ form.hidden_tag() }}
 
                 <div class="row form-group">
@@ -41,9 +50,6 @@
                         {{ form.surname.label(class="form-label") }}
                         {% set surname_value = form.surname.data if form.surname.data is not none and form.surname.data|length > 0 else (profile.surname if profile.surname else '') %}
                         {{ form.surname(class="form-control", placeholder="Enter your surname", required=true, value=surname_value, minlength=1) }}
-                        {% if form.surname.data is not none and form.surname.data|length == 0 %}
-                            <span style="color: red;">Surname cannot be empty.</span><br>
-                        {% endif %}
                         {% for error in form.surname.errors %}
                             <span style="color: red;">{{ error }}</span><br>
                         {% endfor %}
@@ -52,9 +58,6 @@
                         {{ form.name.label(class="form-label") }}
                         {% set name_value = form.name.data if form.name.data is not none and form.name.data|length > 0 else (profile.name if profile.name else '') %}
                         {{ form.name(class="form-control", placeholder="Enter your name", required=true, value=name_value, minlength=1) }}
-                        {% if form.name.data is not none and form.name.data|length == 0 %}
-                            <span style="color: red;">Name cannot be empty.</span><br>
-                        {% endif %}
                         {% for error in form.name.errors %}
                             <span style="color: red;">{{ error }}</span><br>
                         {% endfor %}
@@ -125,4 +128,11 @@
 
 {% block scripts %}
     <script src="{{ url_for('profile.scripts') }}"></script>
+    <script>
+        document.getElementById('edit_profile_form').addEventListener('submit', function (event) {
+            if (!check_name_and_surname()) {
+                event.preventDefault();
+            }
+        });
+    </script>
 {% endblock %}
