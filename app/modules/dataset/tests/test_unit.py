@@ -533,13 +533,13 @@ def test_dataset_stats_route_empty(monkeypatch, test_client):
     assert data["downloads"] == {}
 
 
-def test_list_all_incidents_requires_login(test_client):
+def test_list_all_issues_requires_login(test_client):
     test_client.get("/logout", follow_redirects=True)
-    response = test_client.get("/dataset/incidents")
+    response = test_client.get("/dataset/issues")
     assert response.status_code in (301, 302)  # Should redirect to login
 
 
-def test_list_all_incidents_requires_admin(test_client):
+def test_list_all_issues_requires_admin(test_client):
     # Create and login as non-admin user
     user = User.query.filter_by(email="test@example.com").first()
     if not user:
@@ -557,13 +557,13 @@ def test_list_all_incidents_requires_admin(test_client):
     response = login_client(test_client)
     assert response.status_code == 200
 
-    response = test_client.get("/dataset/incidents")
+    response = test_client.get("/dataset/issues")
     assert response.status_code == 403  # Should be forbidden for non-admin
 
 
-def test_list_all_incidents_success(test_client, monkeypatch):
+def test_list_all_issues_success(test_client, monkeypatch):
     from datetime import datetime, timezone
-    from app.modules.dataset.services import IncidentService
+    from app.modules.dataset.services import IssueService
 
     # Create and login as admin user
     user = User.query.filter_by(email="test@example.com").first()
@@ -582,11 +582,11 @@ def test_list_all_incidents_success(test_client, monkeypatch):
     response = login_client(test_client)
     assert response.status_code == 200
 
-    # Mock IncidentService to return test data with full object structure
-    fake_incidents = [
+    # Mock IssueService to return test data with full object structure
+    fake_issues = [
         SimpleNamespace(
             id=1,
-            description="Test incident 1",
+            description="Test issue 1",
             dataset_id=1,
             reporter_id=1,
             created_at=datetime.now(timezone.utc),
@@ -607,23 +607,23 @@ def test_list_all_incidents_success(test_client, monkeypatch):
         )
     ]
 
-    class FakeIncidentService:
+    class FakeIssueService:
         def list_all(self):
-            return fake_incidents
+            return fake_issues
 
-    # Patch the IncidentService used by the routes module so the view
-    # will receive our fake incidents list.
+    # Patch the IssueService used by the routes module so the view
+    # will receive our fake issues list.
     import app.modules.dataset.routes as routes_mod
-    monkeypatch.setattr(routes_mod, "IncidentService", lambda: FakeIncidentService())
+    monkeypatch.setattr(routes_mod, "IssueService", lambda: FakeIssueService())
 
-    response = test_client.get("/dataset/incidents")
+    response = test_client.get("/dataset/issues")
     assert response.status_code == 200
-    # Verify incident data is passed to template
-    assert b"Test incident 1" in response.data
+    # Verify issue data is passed to template
+    assert b"Test issue 1" in response.data
 
 
-def test_open_incident_requires_admin(test_client):
-    # Ensure non-admin cannot open/close incidents
+def test_open_issue_requires_admin(test_client):
+    # Ensure non-admin cannot open/close issues
     user = User.query.filter_by(email="test@example.com").first()
     if not user:
         user = User(email="test@example.com", password="test1234", verified=True)
@@ -636,11 +636,11 @@ def test_open_incident_requires_admin(test_client):
     response = login_client(test_client)
     assert response.status_code == 200
 
-    r = test_client.put("/dataset/incidents/open/1/")
+    r = test_client.put("/dataset/issues/open/1/")
     assert r.status_code == 403
 
 
-def test_open_incident_success(test_client, monkeypatch):
+def test_open_issue_success(test_client, monkeypatch):
     from datetime import datetime, timezone
 
     # Login as admin
@@ -656,11 +656,11 @@ def test_open_incident_success(test_client, monkeypatch):
     response = login_client(test_client)
     assert response.status_code == 200
 
-    # Prepare fake incidents to be returned after toggling
-    fake_incidents = [
+    # Prepare fake issues to be returned after toggling
+    fake_issues = [
         SimpleNamespace(
             id=1,
-            description="Toggled incident",
+            description="Toggled issue",
             dataset_id=1,
             reporter_id=1,
             created_at=datetime.now(timezone.utc),
@@ -679,17 +679,17 @@ def test_open_incident_success(test_client, monkeypatch):
         )
     ]
 
-    class FakeIncidentService2:
+    class FakeIssueService2:
         def open_or_close(self, issue_id):
             # pretend to toggle
             return True
 
         def list_all(self):
-            return fake_incidents
+            return fake_issues
 
     import app.modules.dataset.routes as routes_mod
-    monkeypatch.setattr(routes_mod, "IncidentService", lambda: FakeIncidentService2())
+    monkeypatch.setattr(routes_mod, "IssueService", lambda: FakeIssueService2())
 
-    r = test_client.put("/dataset/incidents/open/1/")
+    r = test_client.put("/dataset/issues/open/1/")
     assert r.status_code == 200
-    assert b"Toggled incident" in r.data
+    assert b"Toggled issue" in r.data

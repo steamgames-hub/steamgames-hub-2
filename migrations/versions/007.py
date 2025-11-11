@@ -1,4 +1,4 @@
-"""create incident table
+"""create issue table
 
 Revision ID: 007
 Revises: 006
@@ -17,10 +17,10 @@ depends_on = None
 
 
 def upgrade():
-    # create incident table
+    # create issue table
     try:
         op.create_table(
-            'incident',
+            'issue',
             sa.Column('id', sa.Integer(), primary_key=True),
             sa.Column('description', sa.Text(), nullable=False),
             sa.Column('dataset_id', sa.Integer(), nullable=False),
@@ -35,4 +35,4 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_table('incident')
+    op.drop_table('issue')

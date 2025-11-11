@@ -30,7 +30,7 @@ from app.modules.dataset.services import (
     DSDownloadRecordService,
     DSMetaDataService,
     DSViewRecordService,
-    IncidentService,
+    IssueService,
 )
 from app.modules.hubfile.services import HubfileService
 from app.modules.zenodo.services import ZenodoService
@@ -395,13 +395,13 @@ def preview_csv(file_id: int):
     return jsonify({"headers": headers, "rows": rows})
 
 
-@dataset_bp.route("/dataset/incidents", methods=["POST"])
+@dataset_bp.route("/dataset/issues", methods=["POST"])
 @login_required
-def create_incident():
-    """Endpoint para que un curator notifique una incidencia sobre un dataset.
+def create_issue():
+    """Endpoint for curators to report issues of datasets.
 
     JSON body expected: { "dataset_id": int, "description": str }
-    Only users with role == 'curator' are allowed to create incidents.
+    Only users with role == 'curator' are allowed to create issues.
     """
     data = request.get_json() or {}
     dataset_id = data.get("dataset_id")
@@ -414,25 +414,25 @@ def create_incident():
     if getattr(current_user, "role", "") != UserRole.CURATOR:
         return jsonify({"message": "Forbidden"}), 403
 
-    # create incident
+    # create issue
 
-    svc = IncidentService()
-    incident = svc.create(commit=True, description=description, dataset_id=dataset_id, reporter_id=current_user.id)
+    svc = IssueService()
+    issue = svc.create(commit=True, description=description, dataset_id=dataset_id, reporter_id=current_user.id)
 
-    return jsonify({"id": incident.id, "dataset_id": incident.dataset_id, "description": incident.description}), 201
+    return jsonify({"id": issue.id, "dataset_id": issue.dataset_id, "description": issue.description}), 201
 
 
-@dataset_bp.route("/dataset/incidents", methods=["GET"])
+@dataset_bp.route("/dataset/issues", methods=["GET"])
 @login_required
-def list_all_incidents():
-    """Admin-only page to list and review all dataset incidents."""
+def list_all_issues():
+    """Admin-only page to list and review all dataset issues."""
     # Only admins can access this page
     if current_user.role != UserRole.ADMIN:
         abort(403)
 
-    incident_service = IncidentService()
-    incidents = incident_service.list_all()
-    return render_template("dataset/list_incidents.html", incidents=incidents)
+    issue_service = IssueService()
+    issues = issue_service.list_all()
+    return render_template("dataset/list_issues.html", issues=issues)
 
 
 @dataset_bp.route("/dataset/report/<int:dataset_id>", methods=["GET"])
@@ -440,7 +440,7 @@ def list_all_incidents():
 def report_dataset(dataset_id: int):
     """Render a simple page where a curator can describe an issue for a dataset.
 
-    The form on this page will POST to `/dataset/incidents` (JSON) to create the incident.
+    The form on this page will POST to `/dataset/issues` (JSON) to create the issue.
     """
     # Only curators may access the report page
     if current_user.role != UserRole.CURATOR:
@@ -450,19 +450,19 @@ def report_dataset(dataset_id: int):
     return render_template("dataset/notify_issue.html", dataset=dataset)
 
 
-@dataset_bp.route("/dataset/incidents/open/<int:issue_id>/", methods=["PUT"])
+@dataset_bp.route("/dataset/issues/open/<int:issue_id>/", methods=["PUT"])
 @login_required
-def open_incident(issue_id):
-    """Endpoint para que un administrador abra o cierre una incidencia.
+def open_issue(issue_id):
+    """Endpoint for administrators to open or close issues.
 
-    Only users with role == 'administrator' are allowed to create incidents.
+    Only users with role == 'administrator' are allowed to create issues.
     """
 
     # role check
     if getattr(current_user, "role", "") != UserRole.ADMIN:
         return jsonify({"message": "Forbidden"}), 403
 
-    incident_service = IncidentService()
-    incident_service.open_or_close(issue_id)
-    incidents = incident_service.list_all()
-    return render_template("dataset/list_incidents.html", incidents=incidents)
+    issue_service = IssueService()
+    issue_service.open_or_close(issue_id)
+    issues = issue_service.list_all()
+    return render_template("dataset/list_issues.html", issues=issues)

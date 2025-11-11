@@ -224,24 +224,24 @@ class SizeService:
             return f"{round(size / (1024 ** 3), 2)} GB"
 
 
-class IncidentService(BaseService):
+class IssueService(BaseService):
     def __init__(self):
-        from app.modules.dataset.repositories import IncidentRepository
+        from app.modules.dataset.repositories import IssueRepository
 
-        super().__init__(IncidentRepository())
+        super().__init__(IssueRepository())
 
     def list_for_dataset(self, dataset_id: int):
         return self.repository.list_by_dataset(dataset_id)
 
     def list_all(self):
-        """Get all incidents across all datasets, ordered by creation date (newest first)."""
+        """Get all issues across all datasets, ordered by creation date (newest first)."""
         return self.repository.list_all()
 
     def open_or_close(self, issue_id: int):
-        incident = self.repository.get_by_id(issue_id)
-        if incident:
-            incident.is_open = not incident.is_open
+        issue = self.repository.get_by_id(issue_id)
+        if issue:
+            issue.is_open = not issue.is_open
             self.repository.session.commit()
-            return incident
+            return issue
         else:
             return None
