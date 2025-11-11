@@ -91,12 +91,15 @@ def test_upload_dataset():
         dropzone.send_keys(file1_path)
         wait_for_page_to_load(driver)
 
+        time.sleep(3)  # Force wait time
+
         # Subir el segundo archivo
         dropzone = driver.find_element(By.CLASS_NAME, "dz-hidden-input")
         dropzone.send_keys(file2_path)
         wait_for_page_to_load(driver)
 
         # Add authors in UVL models
+        time.sleep(2)  # Force wait time
         show_button = driver.find_element(By.ID, "0_button")
         show_button.send_keys(Keys.RETURN)
         add_author_uvl_button = driver.find_element(By.ID, "0_form_authors_button")
@@ -116,7 +119,7 @@ def test_upload_dataset():
         upload_btn = driver.find_element(By.ID, "upload_button")
         upload_btn.send_keys(Keys.RETURN)
         wait_for_page_to_load(driver)
-        time.sleep(2)  # Force wait time
+        time.sleep(5)  # Force wait time
 
         assert driver.current_url == f"{host}/dataset/list", "Test failed!"
 
