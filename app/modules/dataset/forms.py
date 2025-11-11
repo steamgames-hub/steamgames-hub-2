@@ -2,7 +2,7 @@ from flask_wtf import FlaskForm
 from wtforms import FieldList, FormField, SelectField, StringField, SubmitField, TextAreaField
 from wtforms.validators import URL, DataRequired, Optional
 
-from app.modules.dataset.models import PublicationType
+from app.modules.dataset.models import DataCategory
 
 
 class AuthorForm(FlaskForm):
@@ -26,9 +26,9 @@ class FeatureModelForm(FlaskForm):
     csv_filename = StringField("CSV Filename", validators=[DataRequired()])
     title = StringField("Title", validators=[Optional()])
     desc = TextAreaField("Description", validators=[Optional()])
-    publication_type = SelectField(
-        "Publication type",
-        choices=[(pt.value, pt.name.replace("_", " ").title()) for pt in PublicationType],
+    data_category = SelectField(
+        "Data category",
+        choices=[(pt.value, pt.name.replace("_", " ").title()) for pt in DataCategory],
         validators=[Optional()],
     )
     publication_doi = StringField("Publication DOI", validators=[Optional(), URL()])
@@ -47,7 +47,7 @@ class FeatureModelForm(FlaskForm):
             "csv_filename": self.csv_filename.data,
             "title": self.title.data,
             "description": self.desc.data,
-            "publication_type": self.publication_type.data,
+            "data_category": self.data_category.data,
             "publication_doi": self.publication_doi.data,
             "tags": self.tags.data,
             "csv_version": self.version.data,
@@ -57,9 +57,9 @@ class FeatureModelForm(FlaskForm):
 class DataSetForm(FlaskForm):
     title = StringField("Title", validators=[DataRequired()])
     desc = TextAreaField("Description", validators=[DataRequired()])
-    publication_type = SelectField(
-        "Publication type",
-        choices=[(pt.value, pt.name.replace("_", " ").title()) for pt in PublicationType],
+    data_category = SelectField(
+        "Data category",
+        choices=[(pt.value, pt.name.replace("_", " ").title()) for pt in DataCategory],
         validators=[DataRequired()],
     )
     publication_doi = StringField("Publication DOI", validators=[Optional(), URL()])
@@ -72,19 +72,19 @@ class DataSetForm(FlaskForm):
 
     def get_dsmetadata(self):
 
-        publication_type_converted = self.convert_publication_type(self.publication_type.data)
+        data_category_converted = self.convert_data_category(self.data_category.data)
 
         return {
             "title": self.title.data,
             "description": self.desc.data,
-            "publication_type": publication_type_converted,
+            "data_category": data_category_converted,
             "publication_doi": self.publication_doi.data,
             "dataset_doi": self.dataset_doi.data,
             "tags": self.tags.data,
         }
 
-    def convert_publication_type(self, value):
-        for pt in PublicationType:
+    def convert_data_category(self, value):
+        for pt in DataCategory:
             if pt.value == value:
                 return pt.name
         return "NONE"
