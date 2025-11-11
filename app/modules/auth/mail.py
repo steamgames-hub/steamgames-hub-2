@@ -1,5 +1,5 @@
-from flask_mail import Message
 from flask import current_app
+from flask_mail import Message
 
 # Use the central mail extension from the application package
 from app import mail

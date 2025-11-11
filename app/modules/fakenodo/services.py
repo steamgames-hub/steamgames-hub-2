@@ -1,20 +1,19 @@
 import logging
 import os
 
-import requests
 from dotenv import load_dotenv
-from flask import Response, jsonify
 from flask_login import current_user
 
 from app.modules.dataset.models import DataSet
-from app.modules.featuremodel.models import FeatureModel
 from app.modules.fakenodo.repositories import FakenodoRepository
+from app.modules.featuremodel.models import FeatureModel
 from core.configuration.configuration import uploads_folder_name
 from core.services.BaseService import BaseService
 
 logger = logging.getLogger(__name__)
 
 load_dotenv()
+
 
 class FakenodoService(BaseService):
 
@@ -36,15 +35,14 @@ class FakenodoService(BaseService):
         """
 
         logger.info("Dataset sending to Fakenodo...")
-                
+
         fakenodo_element = self.repository.create(commit=True)
 
-        fake_response = {
-            "conceptrecid": 1234,
-            "id": fakenodo_element.dataset_id 
-        }
+        fake_response = {"conceptrecid": 1234, "id": fakenodo_element.dataset_id}
 
-        self.repository.update(fakenodo_element.dataset_id, associated_doi=self.generate_doi(fakenodo_element.dataset_id))
+        self.repository.update(
+            fakenodo_element.dataset_id, associated_doi=self.generate_doi(fakenodo_element.dataset_id)
+        )
 
         return fake_response
 
@@ -63,11 +61,8 @@ class FakenodoService(BaseService):
         csv_filename = feature_model.fm_meta_data.csv_filename
         data = {"name": csv_filename}
         user_id = current_user.id if user is None else user.id
-        file_path = os.path.join(
-            uploads_folder_name(), f"user_{str(user_id)}", f"dataset_{dataset.id}/", csv_filename
-        )
+        file_path = os.path.join(uploads_folder_name(), f"user_{str(user_id)}", f"dataset_{dataset.id}/", csv_filename)
         files = {"file": open(file_path, "rb")}
-        
 
     def get_deposition(self, deposition_id: int) -> dict:
         """

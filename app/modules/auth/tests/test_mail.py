@@ -1,8 +1,8 @@
 import pytest
 
+from app import db
 from app.modules.auth.mail_util.token import generate_token
 from app.modules.auth.models import User
-from app import db
 
 
 @pytest.fixture(scope="module")
@@ -25,9 +25,7 @@ def test_send_verification_email_authenticated(test_client):
         db.session.add(u)
         db.session.commit()
 
-    test_client.post(
-        "/login", data=dict(email="verify@example.com", password="verify1234"), follow_redirects=True
-    )
+    test_client.post("/login", data=dict(email="verify@example.com", password="verify1234"), follow_redirects=True)
 
     response = test_client.get("/verify", follow_redirects=True)
 
@@ -41,10 +39,8 @@ def test_verify_token_success(test_client, clean_database):
         db.session.add(u)
         db.session.commit()
 
-    test_client.post(
-        "/login", data=dict(email="verify@example.com", password="verify1234"), follow_redirects=True
-    )
-    
+    test_client.post("/login", data=dict(email="verify@example.com", password="verify1234"), follow_redirects=True)
+
     token = generate_token("verify@example.com")
     response = test_client.get(f"/verify/{str(token)}", follow_redirects=True)
 
@@ -62,9 +58,7 @@ def test_verify_token_invalid(test_client, clean_database):
         db.session.add(u)
         db.session.commit()
 
-    test_client.post(
-        "/login", data=dict(email="verify@example.com", password="verify1234"), follow_redirects=True
-    )
+    test_client.post("/login", data=dict(email="verify@example.com", password="verify1234"), follow_redirects=True)
 
     invalid_token = "invalid-token"
     response = test_client.get(f"/verify/{invalid_token}", follow_redirects=True)

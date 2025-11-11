@@ -1,31 +1,29 @@
 import hashlib
-import os
 import io
 import json
+import os
 import shutil
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
-
 from flask import Flask
 
 from app import db
 from app.modules.auth.models import User, UserRole
-from app.modules.profile.models import UserProfile
-from app.modules.dataset.models import DSMetaData, PublicationType, DataSet
-from app.modules.dataset.steamcsv_service import SteamCSVService
-
+from app.modules.dataset.models import DataSet, DSMetaData, PublicationType
 from app.modules.dataset.services import (
-    calculate_checksum_and_size,
+    AuthorService,
     DataSetService,
+    DOIMappingService,
+    DSDownloadRecordService,
     DSMetaDataService,
     DSViewRecordService,
-    DOIMappingService,
-    AuthorService,
-    DSDownloadRecordService,
     SizeService,
+    calculate_checksum_and_size,
 )
+from app.modules.dataset.steamcsv_service import SteamCSVService
+from app.modules.profile.models import UserProfile
 
 CSV_EXAMPLES_DIR = Path(__file__).parent.parent / "csv_examples"
 CSV_FAILURE_DIR = Path(__file__).parent.parent / "csv_examples_failure"
@@ -79,6 +77,7 @@ def test_validate_folder_missing_data_rows(tmp_path):
         svc.validate_folder(str(tmp_dir))
 
     assert "must contain at least one data row" in str(exc.value).lower()
+
 
 def test_calculate_checksum_and_size(tmp_path):
     p = tmp_path / "sample.bin"
@@ -134,6 +133,9 @@ def test_create_from_form_with_mocks(tmp_path):
     form.get_authors = lambda: []
     form.feature_models = [FakeFM(csv_name)]
 
+    # Fake draftmode
+    draft_mode = False
+
     # Helpers to generate objects with ids and lists
     counter = {"v": 1}
 
@@ -153,7 +155,9 @@ def test_create_from_form_with_mocks(tmp_path):
         return create
 
     fake_dsmeta_repo = SimpleNamespace(create=make_create("dsmetadata"))
-    fake_author_repo = SimpleNamespace(create=lambda **kwargs: SimpleNamespace(**{k: v for k, v in kwargs.items() if not k.startswith("commit")}))
+    fake_author_repo = SimpleNamespace(
+        create=lambda **kwargs: SimpleNamespace(**{k: v for k, v in kwargs.items() if not k.startswith("commit")})
+    )
     fake_fmmeta_repo = SimpleNamespace(create=make_create("fmmetadata"))
     fake_feature_repo = SimpleNamespace(create=make_create("fm"))
 
@@ -178,13 +182,13 @@ def test_create_from_form_with_mocks(tmp_path):
     svc.repository = fake_repository
 
     # stub create method to return dataset with id
-    def fake_create(commit=False, user_id=None, ds_meta_data_id=None):
+    def fake_create(commit=False, user_id=None, ds_meta_data_id=None, draft_mode=draft_mode):
         return SimpleNamespace(id=55)
 
     svc.create = fake_create
 
     # Run
-    dataset = svc.create_from_form(form=form, current_user=current_user)
+    dataset = svc.create_from_form(form=form, current_user=current_user, draft_mode=draft_mode)
 
     assert dataset.id == 55
 
@@ -195,6 +199,7 @@ def test_create_from_form_with_mocks(tmp_path):
     assert hf.name == csv_name
     assert hf.checksum == expected_checksum
     assert hf.size == expected_size
+
 
 def test_delete_dataset_success(test_client):
 
@@ -220,7 +225,9 @@ def test_delete_dataset_success(test_client):
     db.session.commit()
 
     test_client.get("/logout", follow_redirects=True)
-    response = test_client.post("/login", data={"email": "test@example.com", "password": "test1234"}, follow_redirects=True)
+    response = test_client.post(
+        "/login", data={"email": "test@example.com", "password": "test1234"}, follow_redirects=True
+    )
     assert response.status_code == 200
 
     response = test_client.post(f"/dataset/delete/{ds.id}", follow_redirects=True)
@@ -228,6 +235,7 @@ def test_delete_dataset_success(test_client):
 
     deleted = db.session.get(DataSet, ds.id)
     assert deleted is None, "Dataset was not deleted"
+
 
 def test_delete_dataset_unsuccessful(test_client):
 
@@ -253,7 +261,9 @@ def test_delete_dataset_unsuccessful(test_client):
     db.session.commit()
 
     test_client.get("/logout", follow_redirects=True)
-    response = test_client.post("/login", data={"email": "test@example.com", "password": "test1234"}, follow_redirects=True)
+    response = test_client.post(
+        "/login", data={"email": "test@example.com", "password": "test1234"}, follow_redirects=True
+    )
     assert response.status_code == 200
 
     response = test_client.post(f"/dataset/delete/{ds.id}", follow_redirects=True)
@@ -412,7 +422,9 @@ def test_upload_and_delete_csv_flow(test_client, tmp_path, monkeypatch):
     assert os.path.exists(file_path)
 
     # call delete endpoint
-    resp = test_client.post("/dataset/file/delete", data=json.dumps({"file": filename}), content_type="application/json")
+    resp = test_client.post(
+        "/dataset/file/delete", data=json.dumps({"file": filename}), content_type="application/json"
+    )
     assert resp.status_code == 200
     body = json.loads(resp.data)
     assert body.get("message") == "File deleted successfully"
@@ -442,7 +454,6 @@ def test_clean_temp_endpoint(test_client, tmp_path, monkeypatch):
     # call clean_temp
     resp = test_client.post("/dataset/file/clean_temp")
     assert resp.status_code == 302
-
 
 
 def test_preview_csv_route(test_client, tmp_path, monkeypatch):
@@ -478,10 +489,14 @@ def test_download_dataset_route(test_client, tmp_path, monkeypatch):
     import app.modules.dataset.routes as routes_mod
 
     # monkeypatch dataset_service.get_or_404
-    monkeypatch.setattr(routes_mod, "dataset_service", SimpleNamespace(get_or_404=lambda dsid: SimpleNamespace(user_id=1, id=9)))
+    monkeypatch.setattr(
+        routes_mod, "dataset_service", SimpleNamespace(get_or_404=lambda dsid: SimpleNamespace(user_id=1, id=9))
+    )
 
     # monkeypatch DSDownloadRecord and DSDownloadRecordService to avoid DB
-    routes_mod.DSDownloadRecord = SimpleNamespace(query=SimpleNamespace(filter_by=lambda **kw: SimpleNamespace(first=lambda: None)))
+    routes_mod.DSDownloadRecord = SimpleNamespace(
+        query=SimpleNamespace(filter_by=lambda **kw: SimpleNamespace(first=lambda: None))
+    )
     monkeypatch.setattr(routes_mod, "DSDownloadRecordService", lambda: SimpleNamespace(create=lambda **kw: None))
 
     # set WORKING_DIR so uploads path resolves
@@ -491,7 +506,8 @@ def test_download_dataset_route(test_client, tmp_path, monkeypatch):
     assert r.status_code == 200
     # content-type should be application/zip
     assert r.headers.get("Content-Type") in ("application/zip", "application/octet-stream")
-    
+
+
 def test_dataset_stats_route(monkeypatch, test_client):
     fake_files = [
         SimpleNamespace(name="a.uvl", download_count=2),
@@ -502,6 +518,7 @@ def test_dataset_stats_route(monkeypatch, test_client):
 
     fake_service = SimpleNamespace(get_or_404=lambda _id: fake_dataset)
     import app.modules.dataset.routes as routes_mod
+
     monkeypatch.setattr(routes_mod, "dataset_service", fake_service)
 
     response = test_client.get("/dataset/123/stats")
@@ -516,8 +533,9 @@ def test_dataset_stats_route(monkeypatch, test_client):
 
 def test_dataset_stats_route_empty(monkeypatch, test_client):
 
-    from types import SimpleNamespace
     import json
+    from types import SimpleNamespace
+
     import app.modules.dataset.routes as routes_mod
 
     fake_dataset = SimpleNamespace(id=99, feature_models=[])
@@ -543,14 +561,10 @@ def test_list_all_incidents_requires_admin(test_client):
     # Create and login as non-admin user
     user = User.query.filter_by(email="test@example.com").first()
     if not user:
-        user = User(
-            email="test@example.com",
-            password="test1234",
-            verified=True
-        )
+        user = User(email="test@example.com", password="test1234", verified=True)
         db.session.add(user)
         db.session.commit()
-    
+
     user.role = UserRole.USER
     db.session.commit()
 
@@ -563,19 +577,14 @@ def test_list_all_incidents_requires_admin(test_client):
 
 def test_list_all_incidents_success(test_client, monkeypatch):
     from datetime import datetime, timezone
-    from app.modules.dataset.services import IncidentService
 
     # Create and login as admin user
     user = User.query.filter_by(email="test@example.com").first()
     if not user:
-        user = User(
-            email="test@example.com",
-            password="test1234",
-            verified=True
-        )
+        user = User(email="test@example.com", password="test1234", verified=True)
         db.session.add(user)
         db.session.commit()
-    
+
     user.role = UserRole.ADMIN
     db.session.commit()
 
@@ -591,19 +600,9 @@ def test_list_all_incidents_success(test_client, monkeypatch):
             reporter_id=1,
             created_at=datetime.now(timezone.utc),
             dataset=SimpleNamespace(
-                id=1,
-                ds_meta_data=SimpleNamespace(
-                    dataset_doi="10.5281/zenodo.123456",
-                    title="Test Dataset"
-                )
+                id=1, ds_meta_data=SimpleNamespace(dataset_doi="10.5281/zenodo.123456", title="Test Dataset")
             ),
-            reporter=SimpleNamespace(
-                id=1,
-                profile=SimpleNamespace(
-                    name="Test",
-                    surname="User"
-                )
-            )
+            reporter=SimpleNamespace(id=1, profile=SimpleNamespace(name="Test", surname="User")),
         )
     ]
 
@@ -614,6 +613,7 @@ def test_list_all_incidents_success(test_client, monkeypatch):
     # Patch the IncidentService used by the routes module so the view
     # will receive our fake incidents list.
     import app.modules.dataset.routes as routes_mod
+
     monkeypatch.setattr(routes_mod, "IncidentService", lambda: FakeIncidentService())
 
     response = test_client.get("/dataset/incidents")
@@ -665,16 +665,9 @@ def test_open_incident_success(test_client, monkeypatch):
             reporter_id=1,
             created_at=datetime.now(timezone.utc),
             dataset=SimpleNamespace(
-                id=1,
-                ds_meta_data=SimpleNamespace(
-                    dataset_doi="10.5281/zenodo.654321",
-                    title="Toggled Dataset"
-                )
+                id=1, ds_meta_data=SimpleNamespace(dataset_doi="10.5281/zenodo.654321", title="Toggled Dataset")
             ),
-            reporter=SimpleNamespace(
-                id=1,
-                profile=SimpleNamespace(name="Admin", surname="User")
-            ),
+            reporter=SimpleNamespace(id=1, profile=SimpleNamespace(name="Admin", surname="User")),
             is_open=False,
         )
     ]
@@ -688,6 +681,7 @@ def test_open_incident_success(test_client, monkeypatch):
             return fake_incidents
 
     import app.modules.dataset.routes as routes_mod
+
     monkeypatch.setattr(routes_mod, "IncidentService", lambda: FakeIncidentService2())
 
     r = test_client.put("/dataset/incidents/open/1/")

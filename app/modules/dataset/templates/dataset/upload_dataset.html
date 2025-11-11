@@ -12,7 +12,7 @@
                 You can now decide whether your dataset will be saved as a draft or not. If you check the box, every dataset you leave without uploading will be saved as draft.
             </p>
             <div class="modal-buttons-container">
-                <button class="btn btn-primary mt-2" onclick="saveDraft()">Save as draft</button>
+                <button class="btn btn-primary mt-2" onclick="saveDraft(true)">Save as draft</button>
                 <div class="checkbox-container">
                     <input type="checkbox" id="save_drafts_preference">
                     <label for="save_drafts_preference" class="checkbox-label">Always save next drafts</label>
@@ -36,8 +36,13 @@
         });
     </script>
     {% else %}
-    <script>
-        saveDraft()
+    <script>document.querySelectorAll('a').forEach(link => {
+            if(link.getAttribute("class") === 'sidebar-link' || link.getAttribute("class") === 'sidebar-brand'){
+                link.addEventListener('click', function(event) {
+                    saveDraft(false)
+                });
+            }
+        });
     </script>
     {% endif %}
     <h1 class="h2 mb-3"><b>Upload</b> dataset</h1>

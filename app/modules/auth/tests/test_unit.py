@@ -1,16 +1,15 @@
-import pytest
 import json
+
+import pytest
 from flask import url_for
 
 from app import db
+from app.modules.auth.models import User, UserRole
 from app.modules.auth.repositories import UserRepository
 from app.modules.auth.services import AuthenticationService
-from app.modules.profile.repositories import UserProfileRepository
-
-from app import db
-from app.modules.auth.models import User, UserRole
+from app.modules.dataset.models import DataSet, DSMetaData, PublicationType
 from app.modules.profile.models import UserProfile
-from app.modules.dataset.models import DSMetaData, DataSet, PublicationType
+from app.modules.profile.repositories import UserProfileRepository
 
 
 @pytest.fixture(scope="module")
@@ -79,7 +78,7 @@ def test_signup_user_successful(test_client):
         data=dict(name="Foo", surname="Example", email="foo@example.com", password="foo1234"),
         follow_redirects=True,
     )
-    assert (b"Please, verify your account" in response.data), "Signup was unsuccessful"
+    assert b"Please, verify your account" in response.data, "Signup was unsuccessful"
 
 
 def test_service_create_with_profie_success(clean_database):
@@ -264,7 +263,9 @@ def test_upgrade_user_role_success(test_client):
     db.session.commit()
 
     test_client.get("/logout", follow_redirects=True)
-    response = test_client.post("/login", data={"email": "admin_test@example.com", "password": "test1234"}, follow_redirects=True)
+    response = test_client.post(
+        "/login", data={"email": "admin_test@example.com", "password": "test1234"}, follow_redirects=True
+    )
     assert response.status_code == 200
 
     response = test_client.post(f"/user/upgrade/{user.id}", follow_redirects=True)
@@ -272,6 +273,7 @@ def test_upgrade_user_role_success(test_client):
 
     db.session.refresh(user)
     assert user.role == UserRole.CURATOR, "User role was not upgraded"
+
 
 def test_upgrade_user_role_unsuccessful(test_client):
 
@@ -304,7 +306,9 @@ def test_upgrade_user_role_unsuccessful(test_client):
     db.session.commit()
 
     test_client.get("/logout", follow_redirects=True)
-    response = test_client.post("/login", data={"email": "user1_test@example.com", "password": "test1234"}, follow_redirects=True)
+    response = test_client.post(
+        "/login", data={"email": "user1_test@example.com", "password": "test1234"}, follow_redirects=True
+    )
     assert response.status_code == 200
 
     response = test_client.post(f"/user/upgrade/{user2.id}", follow_redirects=True)
@@ -345,7 +349,9 @@ def test_downgrade_user_role_success(test_client):
     db.session.commit()
 
     test_client.get("/logout", follow_redirects=True)
-    response = test_client.post("/login", data={"email": "admin_test@example.com", "password": "test1234"}, follow_redirects=True)
+    response = test_client.post(
+        "/login", data={"email": "admin_test@example.com", "password": "test1234"}, follow_redirects=True
+    )
     assert response.status_code == 200
 
     response = test_client.post(f"/user/downgrade/{user.id}", follow_redirects=True)
@@ -353,6 +359,7 @@ def test_downgrade_user_role_success(test_client):
 
     db.session.refresh(user)
     assert user.role == UserRole.USER, "User role was not downgraded"
+
 
 def test_downgrade_user_role_unsuccessful(test_client):
 
@@ -385,7 +392,9 @@ def test_downgrade_user_role_unsuccessful(test_client):
     db.session.commit()
 
     test_client.get("/logout", follow_redirects=True)
-    response = test_client.post("/login", data={"email": "user1_test@example.com", "password": "test1234"}, follow_redirects=True)
+    response = test_client.post(
+        "/login", data={"email": "user1_test@example.com", "password": "test1234"}, follow_redirects=True
+    )
     assert response.status_code == 200
 
     response = test_client.post(f"/user/downgrade/{user2.id}", follow_redirects=True)

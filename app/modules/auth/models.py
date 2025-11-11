@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
 from enum import Enum
-from sqlalchemy import Enum as SQLAlchemyEnum
 
 from flask_login import UserMixin
+from sqlalchemy import Enum as SQLAlchemyEnum
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db
@@ -12,6 +12,7 @@ class UserRole(Enum):
     ADMIN = "admin"
     CURATOR = "curator"
     USER = "user"
+
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -29,7 +30,7 @@ class User(db.Model, UserMixin):
         super(User, self).__init__(**kwargs)
         if "password" in kwargs:
             self.set_password(kwargs["password"])
-            
+
         if "verified" in kwargs:
             self.verified = kwargs["verified"]
 
@@ -46,7 +47,7 @@ class User(db.Model, UserMixin):
         from app.modules.auth.services import AuthenticationService
 
         return AuthenticationService().temp_folder_by_user(self)
-    
+
     def verify_user(self):
         self.verified = True
 
@@ -56,7 +57,7 @@ class User(db.Model, UserMixin):
         elif self.role == UserRole.CURATOR:
             return UserRole.ADMIN
         return self.role
-    
+
     def get_previous_role(self):
         if self.role == UserRole.ADMIN:
             return UserRole.CURATOR

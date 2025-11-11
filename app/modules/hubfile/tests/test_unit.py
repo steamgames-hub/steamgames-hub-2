@@ -1,9 +1,10 @@
-from app.modules.dataset.models import DSMetaData, DataSet, PublicationType
+import pytest
+
+from app import db
+from app.modules.dataset.models import DataSet, DSMetaData, PublicationType
 from app.modules.featuremodel.models import FeatureModel
 from app.modules.hubfile.models import Hubfile
 from app.modules.hubfile.services import HubfileDownloadRecordService
-from app import db
-import pytest
 
 
 @pytest.fixture(scope="module")
@@ -27,7 +28,6 @@ def test_sample_assertion(test_client):
     """
     greeting = "Hello, World!"
     assert greeting == "Hello, World!", "The greeting does not coincide with 'Hello, World!'"
-
 
 
 def test_download_count_increments(test_client):

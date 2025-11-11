@@ -106,7 +106,9 @@ class DataSetService(BaseService):
                 author = self.author_repository.create(commit=False, ds_meta_data_id=dsmetadata.id, **author_data)
                 dsmetadata.authors.append(author)
 
-            dataset = self.create(commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id, draft_mode=draft_mode)
+            dataset = self.create(
+                commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id, draft_mode=draft_mode
+            )
 
             for feature_model in form.feature_models:
                 csv_filename = feature_model.csv_filename.data

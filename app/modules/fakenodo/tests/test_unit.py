@@ -1,27 +1,24 @@
-import pytest
+from types import SimpleNamespace
 
-from app import db
-from app.modules.fakenodo.services import FakenodoService
 from app.modules.dataset.models import DataSet
 from app.modules.fakenodo.models import Fakenodo
+from app.modules.fakenodo.services import FakenodoService
 
-from types import SimpleNamespace
 
 def test_fakenodo_create_deposition():
     """
     Test create new deposition via service
     """
 
-    
     fk = FakenodoService()
 
     def create(**kwargs):
         fakenodo = Fakenodo()
         fakenodo.conceptrecid = 1234
         fakenodo.id = 1234
-    
+
         return fakenodo
-    
+
     def update(id, **kwargs):
         return None
 
@@ -35,6 +32,3 @@ def test_fakenodo_create_deposition():
     assert response["conceptrecid"] == 1234, "Conceptrecid should be 1234 (default placeholder)"
 
     assert "id" in response, "The expected response should have an id"
-
-
-

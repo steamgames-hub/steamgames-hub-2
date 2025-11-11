@@ -1,12 +1,15 @@
+import os
+
 from locust import HttpUser, TaskSet, task
+
 from core.environment.host import get_host_for_locust_testing
 from core.locust.common import get_csrf_token
-import os
 
 # Adjust to a valid path in your environment
 locust_file_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(locust_file_dir, '..'))
+project_root = os.path.abspath(os.path.join(locust_file_dir, ".."))
 CSV_FILE_PATH = os.path.join(project_root, "csv_examples/file1.csv")
+
 
 class DatasetBehavior(TaskSet):
 
@@ -55,7 +58,7 @@ class DatasetBehavior(TaskSet):
     @task
     def dataset_clean_temp(self):
         """Cleans the user's temporary directory"""
-        
+
         response = self.client.post("/dataset/file/clean_temp")
         if response.status_code != 200:
             print("Error cleaning temp folder:", response.text)

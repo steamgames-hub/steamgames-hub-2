@@ -269,10 +269,10 @@ function showModal(event) {
     document.getElementById("myModal").style.display = "flex";
 }
 
-function saveDraft() {
+function saveDraft(isPopup) {
     window.location.href = urlToLeave;
     document.getElementById("myModal").style.display = "none";
-    if(document.getElementById("save_drafts_preference").checked === true){
+    if(isPopup && document.getElementById("save_drafts_preference").checked === true){
         handleChangePreference();
     }
     fetch('/dataset/draft/upload', {
@@ -280,7 +280,7 @@ function saveDraft() {
     })
     .then(response => {
         if (response.ok) {
-            console.log('SDraft saved succesfully');
+            console.log('Draft saved succesfully');
         } else {
             response.then(data => {
                 console.error('Error: ' + data.message);
@@ -301,3 +301,40 @@ function discardDraft() {
     }
 }
 
+function deleteDraft() {
+    fetch('/dataset/<int:dataset_id>/draft/delete', {
+        method: 'DELETE'
+    })
+    .then(response => {
+        if (response.ok) {
+            console.log('Draft deleted succesfully');
+        } else {
+            response.then(data => {
+                console.error('Error: ' + data.message);
+
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error in POST request:', error);
+    });
+}
+
+function editDraft() {
+    fetch('/dataset/<int:dataset_id>/draft/edit', {
+        method: 'PUT'
+    })
+    .then(response => {
+        if (response.ok) {
+            console.log('Draft modified succesfully');
+        } else {
+            response.then(data => {
+                console.error('Error: ' + data.message);
+
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error in PUT request:', error);
+    });
+}

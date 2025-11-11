@@ -2,13 +2,12 @@ from flask import redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app import db
+from app.modules.auth.models import UserRole
 from app.modules.auth.services import AuthenticationService
 from app.modules.dataset.models import DataSet
 from app.modules.profile import profile_bp
-from app.modules.profile.models import UserProfile
 from app.modules.profile.forms import UserProfileForm
 from app.modules.profile.services import UserProfileService
-from app.modules.auth.models import UserRole
 
 
 @profile_bp.route("/profile/edit/<int:user_id>", methods=["GET", "POST"])
@@ -22,15 +21,10 @@ def edit_profile(user_id):
 
     # If profile does not exist, create a blank one for the user (including empty affiliation)
     if not profile:
-        user = (
-            auth_service.repository.get_by_id(user_id)
-            if current_user.role == UserRole.ADMIN else current_user
-        )
+        user = auth_service.repository.get_by_id(user_id) if current_user.role == UserRole.ADMIN else current_user
         if user:
             # Crea el perfil en la base de datos si no existe
-            auth_service.user_profile_repository.create(
-                user_id=user.id, name="", surname="", affiliation=""
-            )
+            auth_service.user_profile_repository.create(user_id=user.id, name="", surname="", affiliation="")
             auth_service.repository.session.commit()
             # Recupera el perfil recién creado desde la base de datos
             profile = auth_service.get_profile_by_user_id(user.id)

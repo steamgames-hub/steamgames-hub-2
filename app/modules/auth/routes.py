@@ -1,21 +1,22 @@
-from flask import redirect, render_template, abort, request, url_for, jsonify
-from flask_login import current_user, login_user, logout_user, login_required
+import logging
 
+from flask import abort, jsonify, redirect, render_template, request, url_for
+from flask_login import current_user, login_required, login_user, logout_user
+
+from app import db
 from app.modules.auth import auth_bp
 from app.modules.auth.forms import LoginForm, SignupForm
+from app.modules.auth.mail import send_email
+from app.modules.auth.mail_util.token import confirm_token, generate_token
+from app.modules.auth.models import User, UserRole
 from app.modules.auth.services import AuthenticationService
 from app.modules.profile.services import UserProfileService
-from app.modules.auth.mail_util.token import confirm_token, generate_token
-from app.modules.auth.mail import send_email
-from app.modules.auth.models import User, UserRole
-from app import db
-
-import logging
 
 authentication_service = AuthenticationService()
 user_profile_service = UserProfileService()
 
 logger = logging.getLogger(__name__)
+
 
 @auth_bp.route("/signup/", methods=["GET", "POST"])
 def show_signup_form():
@@ -35,7 +36,11 @@ def show_signup_form():
 
         login_user(user, remember=True)
         send_verification_email()
-        return render_template("auth/verification_lockscreen.html", show_modal=True, modal_message="A verification email has been sent to your address.")
+        return render_template(
+            "auth/verification_lockscreen.html",
+            show_modal=True,
+            modal_message="A verification email has been sent to your address.",
+        )
 
     return render_template("auth/signup_form.html", form=form)
 
@@ -44,7 +49,7 @@ def show_signup_form():
 def login():
     if current_user.is_authenticated:
         return redirect_checks_verified(url_for("public.index"), current_user.verified)
-    
+
     form = LoginForm()
     if request.method == "POST" and form.validate_on_submit():
         if authentication_service.login(form.email.data, form.password.data):
@@ -59,7 +64,8 @@ def logout():
     logout_user()
     return redirect(url_for("public.index"))
 
-@auth_bp.route("/verify", methods=['GET', 'POST'])
+
+@auth_bp.route("/verify", methods=["GET", "POST"])
 @login_required
 def send_verification_email(email=None):
     if email is None:
@@ -71,16 +77,25 @@ def send_verification_email(email=None):
     subject = "Please confirm your email"
 
     send_email(email, subject, html)
-    return render_template("auth/verification_lockscreen.html", show_modal=True, modal_message="A verification email has been sent to your address.")
-    
-@auth_bp.route("/verify/<token>", methods=['GET', 'POST'])
+    return render_template(
+        "auth/verification_lockscreen.html",
+        show_modal=True,
+        modal_message="A verification email has been sent to your address.",
+    )
+
+
+@auth_bp.route("/verify/<token>", methods=["GET", "POST"])
 @login_required
 def verify(token):
     if current_user.verified:
         return redirect(url_for("public.index"))
     email = confirm_token(token)
     if not email:
-        return render_template("auth/verification_lockscreen.html", show_modal=True, modal_message="The confirmation link is invalid or has expired.")
+        return render_template(
+            "auth/verification_lockscreen.html",
+            show_modal=True,
+            modal_message="The confirmation link is invalid or has expired.",
+        )
 
     user = User.query.filter_by(email=current_user.email).first_or_404()
     if user.email == email:
@@ -90,10 +105,17 @@ def verify(token):
             db.session.commit()
         except Exception as exc:
             db.session.rollback()
-            return render_template("auth/verification_lockscreen.html", show_modal=True, modal_message=f"Error verifying account: {exc}")
+            return render_template(
+                "auth/verification_lockscreen.html", show_modal=True, modal_message=f"Error verifying account: {exc}"
+            )
         return render_template("auth/verification_success.html")
 
-    return render_template("auth/verification_lockscreen.html", show_modal=True, modal_message="The confirmation link is invalid or has expired.")
+    return render_template(
+        "auth/verification_lockscreen.html",
+        show_modal=True,
+        modal_message="The confirmation link is invalid or has expired.",
+    )
+
 
 def redirect_checks_verified(url, verified):
     if verified:
@@ -101,13 +123,14 @@ def redirect_checks_verified(url, verified):
     else:
         return render_template("auth/verification_lockscreen.html")
 
-@auth_bp.route("/user/upgrade/<int:user_id>", methods=['POST'])
+
+@auth_bp.route("/user/upgrade/<int:user_id>", methods=["POST"])
 @login_required
 def upgrade_user_role(user_id):
     user = User.query.get_or_404(user_id)
 
     if not current_user.role == UserRole.ADMIN:
-        abort(403, description="Unauthorized")  
+        abort(403, description="Unauthorized")
     try:
         authentication_service.upgrade_user_role(user)
         msg = f"User {user.email} upgraded to role {user.role.value}"
@@ -117,13 +140,13 @@ def upgrade_user_role(user_id):
         return jsonify({"Exception while upgrading user role: ": str(exc)}), 400
 
 
-@auth_bp.route("/user/downgrade/<int:user_id>", methods=['POST'])
+@auth_bp.route("/user/downgrade/<int:user_id>", methods=["POST"])
 @login_required
 def downgrade_user_role(user_id):
     user = User.query.get_or_404(user_id)
 
     if not current_user.role == UserRole.ADMIN:
-        abort(403, description="Unauthorized")  
+        abort(403, description="Unauthorized")
     try:
         authentication_service.downgrade_user_role(user)
         msg = f"User {user.email} downgraded to role {user.role.value}"

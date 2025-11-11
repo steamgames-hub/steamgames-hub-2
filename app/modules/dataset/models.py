@@ -5,7 +5,6 @@ from flask import request
 from sqlalchemy import Enum as SQLAlchemyEnum
 
 from app import db
-from app.modules.auth.models import User
 
 
 class PublicationType(Enum):
@@ -95,7 +94,11 @@ class DataSet(db.Model):
 
     def get_fakenodo_url(self):
         FAKENODO_URL = os.getenv("FAKENODO_URL")
-        return f"https://{FAKENODO_URL}/record/{self.ds_meta_data.deposition_id}" if self.ds_meta_data.dataset_doi else None
+        return (
+            f"https://{FAKENODO_URL}/record/{self.ds_meta_data.deposition_id}"
+            if self.ds_meta_data.dataset_doi
+            else None
+        )
 
     def get_files_count(self):
         return sum(len(fm.files) for fm in self.feature_models)
@@ -127,7 +130,7 @@ class DataSet(db.Model):
             "tags": self.ds_meta_data.tags.split(",") if self.ds_meta_data.tags else [],
             "url": self.get_uvlhub_doi(),
             "download": f'{request.host_url.rstrip("/")}/dataset/download/{self.id}',
-            #"zenodo": self.get_zenodo_url(), MOD: Fakenodo
+            # "zenodo": self.get_zenodo_url(), MOD: Fakenodo
             "zenodo": self.get_fakenodo_url(),
             "files": [file.to_dict() for fm in self.feature_models for file in fm.files],
             "files_count": self.get_files_count(),
@@ -183,6 +186,7 @@ class Incident(db.Model):
     - created_at: timestamp de creación
     - is_open: indica si la incidencia está abierta o cerrada
     """
+
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.Text, nullable=False)
     dataset_id = db.Column(db.Integer, db.ForeignKey("data_set.id"), nullable=False)

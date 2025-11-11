@@ -13,7 +13,7 @@ class AuthSeeder(BaseSeeder):
         users = [
             User(email="user1@example.com", password="1234", role=UserRole.ADMIN, verified=True),
             User(email="user2@example.com", password="1234", role=UserRole.CURATOR, verified=True),
-            User(email="user3@example.com", password="1234", verified=True)
+            User(email="user3@example.com", password="1234", verified=True),
         ]
 
         # Inserted users with their assigned IDs are returned by `self.seed`.
@@ -30,7 +30,7 @@ class AuthSeeder(BaseSeeder):
                 "affiliation": "Some University",
                 "name": profile[0],
                 "surname": profile[1],
-                "save_drafts": profile[2]
+                "save_drafts": profile[2],
             }
             user_profile = UserProfile(**profile_data)
             user_profiles.append(user_profile)

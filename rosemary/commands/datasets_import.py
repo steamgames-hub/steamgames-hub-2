@@ -1,18 +1,18 @@
+import hashlib
 import os
 import shutil
-import hashlib
 from datetime import datetime, timezone
 
 import click
-from flask.cli import with_appcontext
 from dotenv import load_dotenv
+from flask.cli import with_appcontext
 
 from app import create_app, db
 from app.modules.auth.models import User
 from app.modules.dataset.models import (
+    DataSet,
     DSMetaData,
     DSMetrics,
-    DataSet,
     PublicationType,
 )
 from app.modules.featuremodel.models import FeatureModel, FMMetaData
@@ -81,9 +81,7 @@ def _collect_csv_files(csv_dir: str) -> list[str]:
 
 def _ensure_dest_folder(user_id: int, dataset_id: int) -> str:
     working_dir = os.getenv("WORKING_DIR", "")
-    dest_folder = os.path.join(
-        working_dir, "uploads", f"user_{user_id}", f"dataset_{dataset_id}"
-    )
+    dest_folder = os.path.join(working_dir, "uploads", f"user_{user_id}", f"dataset_{dataset_id}")
     os.makedirs(dest_folder, exist_ok=True)
     return dest_folder
 
@@ -149,9 +147,7 @@ def _attach_csv_files(
         db.session.add(fm_md)
         db.session.flush()
 
-        feature_model = FeatureModel(
-            data_set_id=dataset.id, fm_meta_data_id=fm_md.id
-        )
+        feature_model = FeatureModel(data_set_id=dataset.id, fm_meta_data_id=fm_md.id)
         db.session.add(feature_model)
         db.session.flush()
 
@@ -182,9 +178,7 @@ def _import_for_user(
 ) -> tuple[DataSet, int]:
     csv_files = _collect_csv_files(csv_dir)
     if not csv_files:
-        raise click.ClickException(
-            "No .csv files found in the provided directory"
-        )
+        raise click.ClickException("No .csv files found in the provided directory")
 
     dataset = _create_dataset(
         user,
@@ -226,9 +220,7 @@ def datasets_import(
         load_dotenv()
         user = User.query.filter_by(email=user_email).first()
         if not user:
-            raise click.ClickException(
-                f"User with email '{user_email}' not found"
-            )
+            raise click.ClickException(f"User with email '{user_email}' not found")
 
         _, count = _import_for_user(
             user,

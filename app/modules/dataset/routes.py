@@ -1,5 +1,5 @@
-import json
 import csv
+import json
 import logging
 import os
 import shutil
@@ -8,7 +8,6 @@ import uuid
 from datetime import datetime, timezone
 from zipfile import ZipFile
 
-from app.modules.profile.services import UserProfileService
 from flask import (
     abort,
     jsonify,
@@ -21,6 +20,8 @@ from flask import (
 )
 from flask_login import current_user, login_required
 
+from app.modules.auth.models import UserRole
+from app.modules.auth.services import AuthenticationService
 from app.modules.dataset import dataset_bp
 from app.modules.dataset.forms import DataSetForm
 from app.modules.dataset.models import DSDownloadRecord
@@ -33,12 +34,10 @@ from app.modules.dataset.services import (
     DSViewRecordService,
     IncidentService,
 )
-from app.modules.auth.services import AuthenticationService
+from app.modules.dataset.steamcsv_service import SteamCSVService
+from app.modules.fakenodo.services import FakenodoService
 from app.modules.hubfile.services import HubfileService
 from app.modules.zenodo.services import ZenodoService
-from app.modules.fakenodo.services import FakenodoService
-from app.modules.dataset.steamcsv_service import SteamCSVService
-from app.modules.auth.models import UserRole
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +45,7 @@ logger = logging.getLogger(__name__)
 author_service = AuthorService()
 dsmetadata_service = DSMetaDataService()
 zenodo_service = ZenodoService()
-fakenodo_service = FakenodoService() #MOD: Fakenodo
+fakenodo_service = FakenodoService()  # MOD: Fakenodo
 doi_mapping_service = DOIMappingService()
 dataset_service = DataSetService()
 ds_view_record_service = DSViewRecordService()
@@ -94,7 +93,7 @@ def create_dataset():
         # send dataset as deposition to Zenodo
         data = {}
         try:
-            #zenodo_response_json = zenodo_service.create_new_deposition(dataset) MOD: Fakenodo
+            # zenodo_response_json = zenodo_service.create_new_deposition(dataset) MOD: Fakenodo
             fakenodo_response_json = fakenodo_service.create_new_deposition(dataset)
             response_data = json.dumps(fakenodo_response_json)
             data = json.loads(response_data)
@@ -113,14 +112,14 @@ def create_dataset():
 
             try:
                 # iterate for each feature model (one feature model = one request to Zenodo)
-                #for feature_model in dataset.feature_models:
+                # for feature_model in dataset.feature_models:
                 #    zenodo_service.upload_file(dataset, deposition_id, feature_model)
 
                 # publish deposition
-                #zenodo_service.publish_deposition(deposition_id)
+                # zenodo_service.publish_deposition(deposition_id)
 
                 # update DOI
-                #deposition_doi = zenodo_service.get_doi(deposition_id)
+                # deposition_doi = zenodo_service.get_doi(deposition_id)
                 print("Patata2")
                 deposition_doi = fakenodo_service.get_doi(deposition_id)
                 print("DOI:")
@@ -177,7 +176,7 @@ def save_draft_dataset():
     except Exception as exc:
         logger.exception(f"Exception while create dataset data in local {exc}")
         return jsonify({"Exception while create dataset data in local: ": str(exc)}), 400
-        
+
     msg = "Everything works!"
     return jsonify({"message": msg}), 200
 
@@ -259,7 +258,7 @@ def delete():
     return jsonify({"error": "Error: File not found"})
 
 
-@dataset_bp.route("/dataset/<int:dataset_id>/delete", methods=["POST"])
+@dataset_bp.route("/dataset/<int:dataset_id>/draft/delete", methods=["DELETE"])
 def delete_draft(dataset_id):
     dataset = dataset_service.get_by_id(dataset_id)
     dataset_service.delete_draft_dataset(dataset)
@@ -363,16 +362,9 @@ def download_dataset(dataset_id):
 def get_dataset_stats(dataset_id):
     dataset = dataset_service.get_or_404(dataset_id)
 
-    downloads = {
-        hubfile.name: hubfile.download_count or 0
-        for fm in dataset.feature_models
-        for hubfile in fm.files
-    }
+    downloads = {hubfile.name: hubfile.download_count or 0 for fm in dataset.feature_models for hubfile in fm.files}
 
-    response = {
-        "id": dataset.id,
-        "downloads": downloads
-    }
+    response = {"id": dataset.id, "downloads": downloads}
 
     return jsonify(response), 200
 
@@ -454,15 +446,15 @@ def change_draft_mode(dataset_id):
     return list_dataset()
 
 
-@dataset_bp.route("/dataset/file/edit/<int:dataset_id>/", methods=["PUT"])
+@dataset_bp.route("/dataset/<int:dataset_id>/draft/edit", methods=["PUT"])
 @login_required
-def edit(dataset_id):
-    auth_service = AuthenticationService()
-    profile = auth_service.get_authenticated_user_profile
-    if not profile:
-        return redirect(url_for("public.index"))
-    current_user = UserProfileService().get_by_id(profile().id)
-    dataset_service.edit(dataset_id, current_user)
+def edit(dataset_id):  # Arreglar
+    # auth_service = AuthenticationService()
+    # profile = auth_service.get_authenticated_user_profile
+    # if not profile:
+    #     return redirect(url_for("public.index"))
+    # current_user = UserProfileService().get_by_id(profile().id)
+    # dataset_service.edit(dataset_id, current_user)
     return list_dataset()
 
 

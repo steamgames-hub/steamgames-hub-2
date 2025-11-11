@@ -3,22 +3,23 @@ from flask.cli import with_appcontext
 
 from app import create_app, db
 from app.modules.dataset.models import (
+    Author,
     DataSet,
-    DSDownloadRecord,
-    DSViewRecord,
     DOIMapping,
+    DSDownloadRecord,
+    DSMetaData,
+    DSMetrics,
+    DSViewRecord,
 )
-from app.modules.hubfile.models import Hubfile, HubfileDownloadRecord, HubfileViewRecord
 from app.modules.featuremodel.models import FeatureModel, FMMetaData, FMMetrics
-from app.modules.dataset.models import DSMetaData, DSMetrics, Author
+from app.modules.hubfile.models import Hubfile, HubfileDownloadRecord, HubfileViewRecord
 from rosemary.commands.clear_uploads import clear_uploads
 
 
 @click.command(
     "datasets:purge",
     help=(
-        "Delete ALL datasets and related records "
-        "(views/downloads/files/metadata) and clear the uploads directory."
+        "Delete ALL datasets and related records " "(views/downloads/files/metadata) and clear the uploads directory."
     ),
 )
 @click.option(
@@ -41,18 +42,10 @@ def datasets_purge(yes):
             return
 
         # Remove view/download records first (FKs to files/datasets)
-        file_dl = db.session.query(HubfileDownloadRecord).delete(
-            synchronize_session=False
-        )
-        file_view = db.session.query(HubfileViewRecord).delete(
-            synchronize_session=False
-        )
-        ds_dl = db.session.query(DSDownloadRecord).delete(
-            synchronize_session=False
-        )
-        ds_view = db.session.query(DSViewRecord).delete(
-            synchronize_session=False
-        )
+        file_dl = db.session.query(HubfileDownloadRecord).delete(synchronize_session=False)
+        file_view = db.session.query(HubfileViewRecord).delete(synchronize_session=False)
+        ds_dl = db.session.query(DSDownloadRecord).delete(synchronize_session=False)
+        ds_view = db.session.query(DSViewRecord).delete(synchronize_session=False)
         doi = db.session.query(DOIMapping).delete(synchronize_session=False)
 
         # Now remove dependent tables in FK-safe order using bulk deletes

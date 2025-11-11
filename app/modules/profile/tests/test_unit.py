@@ -22,7 +22,7 @@ def test_client(test_client):
         db.session.commit()
 
         user_id = user_test.id
-        
+
     yield test_client, user_id
 
 
@@ -40,6 +40,7 @@ def test_edit_profile_page_get(test_client):
     assert b"Edit profile" in response.data, "The expected content is not present on the page"
 
     logout(client)
+
 
 def test_change_preference_save_drafts(test_client):
     """
