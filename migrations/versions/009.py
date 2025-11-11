@@ -1,7 +1,7 @@
 """Add two_factor_code to User
 
-Revision ID: 61185a58d401
-Revises: 003_csv_only_refactor
+Revision ID: 009
+Revises: 008
 Create Date: 2025-11-08 22:33:23.075205
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '61185a58d401'
-down_revision = '003_csv_only_refactor'
+revision = '009'
+down_revision = '008'
 branch_labels = None
 depends_on = None
 
