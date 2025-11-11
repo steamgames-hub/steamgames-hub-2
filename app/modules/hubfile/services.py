@@ -46,3 +46,11 @@ class HubfileService(BaseService):
 class HubfileDownloadRecordService(BaseService):
     def __init__(self):
         super().__init__(HubfileDownloadRecordRepository())
+
+    def update_download_count(self, file_id: int):
+        hubfile = Hubfile.query.get(file_id)
+        if not hubfile:
+            return None
+
+        hubfile.download_count = (hubfile.download_count or 0) + 1
+        return hubfile.download_count
