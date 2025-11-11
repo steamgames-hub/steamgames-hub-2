@@ -9,13 +9,16 @@ from app.modules.hubfile.repositories import (
     HubfileViewRecordRepository,
 )
 from core.services.BaseService import BaseService
+from core.configuration.configuration import uploads_folder_name
 
 
 class HubfileService(BaseService):
     def __init__(self):
         super().__init__(HubfileRepository())
         self.hubfile_view_record_repository = HubfileViewRecordRepository()
-        self.hubfile_download_record_repository = HubfileDownloadRecordRepository()
+        self.hubfile_download_record_repository = (
+            HubfileDownloadRecordRepository()
+        )
 
     def get_owner_user_by_hubfile(self, hubfile: Hubfile) -> User:
         return self.repository.get_owner_user_by_hubfile(hubfile)
@@ -24,15 +27,17 @@ class HubfileService(BaseService):
         return self.repository.get_dataset_by_hubfile(hubfile)
 
     def get_path_by_hubfile(self, hubfile: Hubfile) -> str:
-
         hubfile_user = self.get_owner_user_by_hubfile(hubfile)
         hubfile_dataset = self.get_dataset_by_hubfile(hubfile)
-        working_dir = os.getenv("WORKING_DIR")
-
+        # Fallback to relative path when WORKING_DIR is not set
+        working_dir = os.getenv("WORKING_DIR", "")
         path = os.path.join(
-            working_dir, "uploads", f"user_{hubfile_user.id}", f"dataset_{hubfile_dataset.id}", hubfile.name
+            working_dir,
+            uploads_folder_name(),
+            f"user_{hubfile_user.id}",
+            f"dataset_{hubfile_dataset.id}",
+            hubfile.name,
         )
-
         return path
 
     def total_hubfile_views(self) -> int:
