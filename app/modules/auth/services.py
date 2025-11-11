@@ -1,7 +1,7 @@
 import os
 from flask_mail import Message
 from flask_login import current_user, login_user
-from flask import url_for
+from flask import url_for, current_app
 import secrets
 import hashlib
 from datetime import datetime, timedelta, timezone
@@ -13,7 +13,7 @@ from app.modules.profile.repositories import UserProfileRepository
 from core.configuration.configuration import uploads_folder_name
 from core.services.BaseService import BaseService
 from werkzeug.security import generate_password_hash
-
+from threading import Thread
 class AuthenticationService(BaseService):
     def __init__(self):
         super().__init__(UserRepository())
@@ -104,8 +104,18 @@ class AuthenticationService(BaseService):
             body=f"Use this link to reset your password: {reset_link}"
         )
     def send_email(self,to: str, subject: str, body: str):
-        msg = Message(subject, recipients=[to], body=body)
-        mail.send(msg)
+        app = current_app._get_current_object()
+
+        def _send(app, to, subject, body):
+            try:
+                with app.app_context():
+                    msg = Message(subject, recipients=[to], body=body)
+                    mail.send(msg)
+            except Exception as e:
+                app.logger.exception("Error enviando correo de recuperación: %s", e)
+
+        Thread(target=_send, args=(app, to, subject, body), daemon=True).start()
+
 
     def validate_reset_token(self,raw_token: str):
         hashed = self._hash_token(raw_token)
