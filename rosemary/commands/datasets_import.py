@@ -13,7 +13,7 @@ from app.modules.dataset.models import (
     DSMetaData,
     DSMetrics,
     DataSet,
-    PublicationType,
+    DataCategory,
 )
 from app.modules.featuremodel.models import FeatureModel, FMMetaData
 from app.modules.hubfile.models import Hubfile
@@ -58,15 +58,15 @@ def sha256_of_file(path: str) -> str:
 )
 @click.option(
     "--dataset-publication",
-    type=click.Choice([t.name for t in PublicationType]),
-    default=PublicationType.DATA_MANAGEMENT_PLAN.name,
+    type=click.Choice([t.name for t in DataCategory]),
+    default=DataCategory.SALES.name,
     show_default=True,
     help="Publication type for the dataset metadata",
 )
 @click.option(
     "--file-publication",
-    type=click.Choice([t.name for t in PublicationType]),
-    default=PublicationType.SOFTWARE_DOCUMENTATION.name,
+    type=click.Choice([t.name for t in DataCategory]),
+    default=DataCategory.USER_REVIEWS.name,
     show_default=True,
     help="Publication type for each CSV file metadata",
 )
@@ -104,7 +104,7 @@ def _create_dataset(
         deposition_id=None,
         title=title,
         description=description,
-        publication_type=PublicationType[dataset_publication],
+        data_category=DataCategory[dataset_publication],
         publication_doi=None,
         dataset_doi=None,
         tags=tags,
@@ -141,7 +141,7 @@ def _attach_csv_files(
             csv_filename=name,
             title=os.path.splitext(name)[0],
             description=f"CSV file {name}",
-            publication_type=PublicationType[file_publication],
+            data_category=DataCategory[file_publication],
             publication_doi=None,
             tags=tags,
             csv_version=(version or None),

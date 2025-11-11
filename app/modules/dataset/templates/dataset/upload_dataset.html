@@ -72,8 +72,8 @@
 
                             <div class="col-lg-6 col-6">
                                 <div class="mb-3">
-                                    {{ form.publication_type.label(class="form-label") }}
-                                    {{ form.publication_type(class="form-control") }}
+                                    {{ form.data_category.label(class="form-label") }}
+                                    {{ form.data_category(class="form-control") }}
                                 </div>
 
                             </div>
@@ -407,8 +407,8 @@
                                                 </div>
                                                 <div class="col-lg-6 col-12">
                                                     <div class="mb-3">
-                                                        <label class="form-label" for="publication_type">Publication type</label>
-                                                        <select class="form-control" name="feature_models-${formUniqueId}-publication_type">
+                                                        <label class="form-label" for="data_category">Publication type</label>
+                                                        <select class="form-control" name="feature_models-${formUniqueId}-data_category">
                                                             <option value="none">None</option>
                                                             <option value="annotationcollection">Annotation Collection</option>
                                                             <option value="book">Book</option>
@@ -563,6 +563,5 @@
 {% endblock %}
 
 {% block scripts %}
-    <script src="{{ url_for('zenodo.scripts') }}"></script>
     <script src="{{ url_for('dataset.scripts') }}"></script>
 {% endblock %}
