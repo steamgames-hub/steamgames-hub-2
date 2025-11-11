@@ -69,4 +69,4 @@ Los WIs/Issues seguirán un flujo de trabajo con cuatro estados principales:
 
 ## 4. Issues de integración
 - **Como asignar**: Si las issues tienen la etiqueta de integration, el otro equipo asignará dos de sus miembros al tablero kanban de nuestro equipo para la issue de integración y seguirá el flujo de desarrollo que ellos tengan acordado. Una vez la terminen la marcaran como closed en nuestro tablero y asvisarán de ello.
-- **Como integrar los cambios**: Una vez la issue de integración este marcada como closed, un miembro de nuestro equipo hará una pull request de su rama de desarrollo a nuestra rama Trunk para integrar sus cambios directamente en nuestra rama de desarrollo principal. 
+- **Como integrar los cambios**: Una vez la issue de integración este marcada como closed, un miembro de nuestro equipo hará una pull request de su rama de desarrollo a nuestra rama Trunk para integrar sus cambios directamente en nuestra rama de desarrollo principal. También si por cuestiones de como esté de repartido entre commits el trabajo del otro se podrá hacer la integración mediante cherry picks a los commits donde se encuentre repartido el trabajo del otro equipo.
