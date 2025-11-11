@@ -17,8 +17,20 @@ depends_on = None
 
 
 def upgrade():
-    pass
+    # Agregar columna download_count a la tabla file (Hubfile)
+    op.add_column(
+        'file',
+        sa.Column(
+            'download_count',
+            sa.Integer(),
+            nullable=False,
+            server_default='0'  # Asegura que los registros existentes tengan valor 0
+        )
+    )
+    # Quitar el server_default después de poblar registros existentes (opcional)
+    op.alter_column('file', 'download_count', server_default=None)
 
 
 def downgrade():
-    pass
+    # Eliminar columna download_count
+    op.drop_column('file', 'download_count')

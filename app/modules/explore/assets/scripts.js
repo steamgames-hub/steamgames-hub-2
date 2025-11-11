@@ -24,7 +24,7 @@ function updateURL(params) {
 
     // limpia primero los que gestionamos
     const managed = [
-        "query","sorting",
+        "query","sorting", "data_category",
         "author","tags","community",
         "date_from","date_to","min_downloads","min_views"
     ];
@@ -43,6 +43,11 @@ function hydrateFromURL() {
 
     const query = p.get("query");
     if (query && get('query')) get('query').value = query;
+    
+    
+    const pt = p.get("data_category");
+    if (pt && get('data_category')) get('data_category').value = pt;
+
 
     const sorting = p.get("sorting");
     if (sorting) {
@@ -83,6 +88,7 @@ function collectSearchCriteria() {
 
     // existentes
     const query = get('query')?.value || "";
+    const data_category = get('data_category')?.value || "any";
     const sorting = document.querySelector('[name="sorting"]:checked')?.value || "newest";
 
     // avanzados
@@ -98,6 +104,7 @@ function collectSearchCriteria() {
     const searchCriteria = {
         csrf_token: csrfToken,
         query: query,
+        data_category: data_category,
         sorting: sorting
     };
 
@@ -117,7 +124,7 @@ function collectSearchCriteria() {
 
     // sincroniza URL 
     updateURL({
-        query, sorting,
+        query, data_category, sorting,
         author, tags, filenames, community, date_from, date_to,
         min_downloads: searchCriteria.min_downloads,
         min_views: searchCriteria.min_views
@@ -186,9 +193,14 @@ function send_query() {
                         <div class="card-body">
                             <div class="d-flex align-items-center justify-content-between">
                                 <h3><a href="${dataset.url}">${escapeHtml(dataset.title)}</a></h3>
+                                <div>
+                                    <span class="badge bg-primary" style="cursor: pointer;"
+                                          onclick="set_data_category_as_query('${dataset.data_category}')">
+                                          ${dataset.data_category}
+                                    </span>
+                                </div>
                             </div>
                             <p class="text-secondary">${formatDate(dataset.created_at)}</p>
-
                             <div class="row mb-2">
                                 <div class="col-md-4 col-12">
                                     <span class=" text-secondary">Description</span>
@@ -247,6 +259,16 @@ function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleString('en-US', options);
 }
+function set_data_category_as_query(DataCategory) {
+    const DataCategorySelect = document.getElementById('data_category');
+    for (let i = 0; i < DataCategorySelect.options.length; i++) {
+        if (DataCategorySelect.options[i].text === DataCategory.trim()) {
+            DataCategorySelect.value = DataCategorySelect.options[i].value;
+            break;
+        }
+    }
+    DataCategorySelect.dispatchEvent(new Event('input', {bubbles: true}));
+}
 
 function set_tag_as_query(tagName) {
     const queryInput = document.getElementById('query');
@@ -260,7 +282,8 @@ function clearFilters() {
     // Reset filtros "clásicos"
     let queryInput = document.querySelector('#query');
     queryInput.value = "";
-
+    let DataCategorySelect = document.querySelector('#data_category');
+    DataCategorySelect.value = "any";
     let sortingOptions = document.querySelectorAll('[name="sorting"]');
     sortingOptions.forEach(option => {
         option.checked = option.value == "newest";

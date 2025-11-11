@@ -7,25 +7,13 @@ from sqlalchemy import Enum as SQLAlchemyEnum
 from app import db
 
 
-class PublicationType(Enum):
+class DataCategory(Enum):
     NONE = "none"
-    ANNOTATION_COLLECTION = "annotationcollection"
-    BOOK = "book"
-    BOOK_SECTION = "section"
-    CONFERENCE_PAPER = "conferencepaper"
-    DATA_MANAGEMENT_PLAN = "datamanagementplan"
-    JOURNAL_ARTICLE = "article"
-    PATENT = "patent"
-    PREPRINT = "preprint"
-    PROJECT_DELIVERABLE = "deliverable"
-    PROJECT_MILESTONE = "milestone"
-    PROPOSAL = "proposal"
-    REPORT = "report"
-    SOFTWARE_DOCUMENTATION = "softwaredocumentation"
-    TAXONOMIC_TREATMENT = "taxonomictreatment"
-    TECHNICAL_NOTE = "technicalnote"
-    THESIS = "thesis"
-    WORKING_PAPER = "workingpaper"
+    GENERAL = "general"
+    SALES = "sales"
+    USER_REVIEWS = "user_reviews"
+    ACHIEVEMENTS = "achievements"
+    PLAYTIME = "playtime"
     OTHER = "other"
 
 
@@ -55,7 +43,7 @@ class DSMetaData(db.Model):
     deposition_id = db.Column(db.Integer)
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    publication_type = db.Column(SQLAlchemyEnum(PublicationType), nullable=False)
+    data_category = db.Column(SQLAlchemyEnum(DataCategory), nullable=False)
     publication_doi = db.Column(db.String(120))
     dataset_doi = db.Column(db.String(120))
     tags = db.Column(db.String(120))
@@ -84,8 +72,8 @@ class DataSet(db.Model):
         db.session.delete(self)
         db.session.commit()
 
-    def get_cleaned_publication_type(self):
-        return self.ds_meta_data.publication_type.name.replace("_", " ").title()
+    def get_cleaned_data_category(self):
+        return self.ds_meta_data.data_category.name.replace("_", " ").title()
 
     def get_zenodo_url(self):
         return f"https://zenodo.org/record/{self.ds_meta_data.deposition_id}" if self.ds_meta_data.dataset_doi else None
@@ -118,13 +106,13 @@ class DataSet(db.Model):
             "created_at_timestamp": int(self.created_at.timestamp()),
             "description": self.ds_meta_data.description,
             "authors": [author.to_dict() for author in self.ds_meta_data.authors],
-            "publication_type": self.get_cleaned_publication_type(),
+            "data_category": self.get_cleaned_data_category(),
             "publication_doi": self.ds_meta_data.publication_doi,
             "dataset_doi": self.ds_meta_data.dataset_doi,
             "tags": self.ds_meta_data.tags.split(",") if self.ds_meta_data.tags else [],
             "url": self.get_uvlhub_doi(),
             "download": f'{request.host_url.rstrip("/")}/dataset/download/{self.id}',
-            #"zenodo": self.get_zenodo_url(), MOD: Fakenodo
+            # "zenodo": self.get_zenodo_url(), MOD: Fakenodo
             "zenodo": self.get_fakenodo_url(),
             "files": [file.to_dict() for fm in self.feature_models for file in fm.files],
             "files_count": self.get_files_count(),

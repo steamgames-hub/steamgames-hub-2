@@ -1,4 +1,4 @@
-from app.modules.dataset.models import DSMetaData, DataSet, PublicationType
+from app.modules.dataset.models import DSMetaData, DataSet, DataCategory
 from app.modules.featuremodel.models import FeatureModel
 from app.modules.hubfile.models import Hubfile
 from app.modules.hubfile.services import HubfileDownloadRecordService
@@ -29,14 +29,13 @@ def test_sample_assertion(test_client):
     assert greeting == "Hello, World!", "The greeting does not coincide with 'Hello, World!'"
 
 
-
 def test_download_count_increments(test_client):
     with test_client.application.app_context():
         try:
             meta = DSMetaData(
                 title="dummy metadata",
                 description="test description",
-                publication_type=PublicationType.OTHER,
+                data_category=DataCategory.GENERAL,
             )
             db.session.add(meta)
             db.session.commit()

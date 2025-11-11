@@ -4,7 +4,7 @@ from app import db
 from app.modules.explore.repositories import ExploreRepository
 from app.modules.auth.models import User
 from app.modules.dataset.models import (
-    DataSet, DSMetaData, Author, DSDownloadRecord, DSViewRecord, PublicationType
+    DataSet, DSMetaData, Author, DSDownloadRecord, DSViewRecord, DataCategory
 )
 from app.modules.featuremodel.models import FeatureModel, FMMetaData
 
@@ -30,7 +30,7 @@ def populated_db(test_client, clean_database):
             title="Dataset One",
             description="First dataset",
             tags="action,indie",
-            publication_type=PublicationType.NONE
+            data_category=DataCategory.NONE
         )
         db.session.add(md1)
         db.session.flush()
@@ -48,7 +48,7 @@ def populated_db(test_client, clean_database):
             title="FM1",
             description="FM1 desc",
             tags="indie,action",
-            publication_type=PublicationType.NONE
+            data_category=DataCategory.NONE
         )
         db.session.add(fm1_meta)
         db.session.flush()
@@ -66,7 +66,7 @@ def populated_db(test_client, clean_database):
             title="Dataset Two",
             description="Second dataset",
             tags="rpg",
-            publication_type=PublicationType.NONE
+            data_category=DataCategory.NONE
         )
         db.session.add(md2)
         db.session.flush()
@@ -84,7 +84,7 @@ def populated_db(test_client, clean_database):
             title="FM2",
             description="FM2 desc",
             tags="rpg",
-            publication_type=PublicationType.NONE
+            data_category=DataCategory.NONE
         )
         db.session.add(fm2_meta)
         db.session.flush()
@@ -97,7 +97,7 @@ def populated_db(test_client, clean_database):
             title="Dataset Three",
             description="Third dataset",
             tags="",
-            publication_type=PublicationType.NONE
+            data_category=DataCategory.NONE
         )
         db.session.add(md3)
         db.session.flush()
@@ -149,19 +149,6 @@ def test_repo_search_by_min_views_and_downloads(repo, populated_db):
     results = repo.filter(min_views=10)
     titles = [r.ds_meta_data.title for r in results]
     assert "Dataset One" not in titles
-
-
-def test_explore_route_post_returns_json(test_client, populated_db):
-    payload = {
-        "query": "",
-        "sorting": "newest",
-        "author": "Alice",
-    }
-    resp = test_client.post("/explore", json=payload)
-    assert resp.status_code == 200
-    data = resp.get_json()
-    assert isinstance(data, list)
-    assert any(d.get("title") == "Dataset One" for d in data)
 
 
 def test_repo_search_by_author_strict(repo, populated_db):

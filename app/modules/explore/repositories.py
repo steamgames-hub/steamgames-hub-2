@@ -4,7 +4,7 @@ import unidecode
 from sqlalchemy import any_, or_, and_, func
 from app import db
 
-from app.modules.dataset.models import DataSet, DSMetaData, Author, DSDownloadRecord, DSViewRecord
+from app.modules.dataset.models import DataSet, DSMetaData, Author, DSDownloadRecord, DSViewRecord, DataCategory
 from app.modules.featuremodel.models import FeatureModel, FMMetaData
 from core.repositories.BaseRepository import BaseRepository
 
@@ -13,7 +13,7 @@ class ExploreRepository(BaseRepository):
     def __init__(self):
         super().__init__(DataSet)
 
-    def filter(self, query="", sorting="newest",
+    def filter(self, query="", data_category="any",sorting="newest",
                author=None, tags=None, filenames=None, community=None,
                date_from=None, date_to=None, min_downloads=None, min_views=None,
                limit=50, offset=0, **kwargs):
@@ -39,7 +39,17 @@ class ExploreRepository(BaseRepository):
                 filters.append(DSMetaData.tags.ilike(like))
             if filters:
                 q = q.filter(or_(*filters))
-              
+
+        if data_category != "any":
+            matching_type = None
+            for member in DataCategory:
+                if member.value.lower() == data_category.lower():
+                    matching_type = member
+                    break
+
+            if matching_type is not None:
+                q = q.filter(DSMetaData.data_category == matching_type.value)
+        
         if author:
             a = f"%{author}%"
             q = q.filter(or_(Author.name.ilike(a), Author.affiliation.ilike(a), Author.orcid.ilike(a)))

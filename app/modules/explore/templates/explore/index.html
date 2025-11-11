@@ -54,7 +54,24 @@
                                        value="" autofocus>
                             </div>
                         </div>
-
+                        <div class="col-lg-6">
+                            <div class="mb-3">
+                                <label class="form-label" for="data_category">Filter by data category
+                                    type</label>
+                                <select class="form-control" id="data_category" name="data_category"
+                                        required="">
+                                    <option value="any">Any</option>
+                                    <option value="none">None</option>
+                                    <option value="general">General</option>
+                                    <option value="sales">Sales</option>
+                                    <option value="user_reviews">User Reviews</option>
+                                    <option value="achievements">Achievements</option>
+                                    <option value="playtime">Playtime</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                     <div class="row">
 
                         <div class="col-6">
@@ -107,7 +124,7 @@
                     <div class="mb-3">
                         <label class="form-label" for="author">Author</label>
                         <input id="author" class="form-control form-control-sm" type="text"
-                            placeholder="Author name">
+                            placeholder="Author name or ORCID">
                     </div>
 
                     <div class="mb-3">
