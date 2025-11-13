@@ -9,6 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from core.environment.host import get_host_for_selenium_testing
 from core.selenium.common import close_driver, initialize_driver
+from selenium.common.exceptions import TimeoutException
 
 @pytest.fixture
 def driver():
@@ -16,14 +17,7 @@ def driver():
     yield drv
 
     close_driver(drv)
-import time
-import re
-import pytest
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+
 
 # ------------------------------------------
 # Función para extraer el código 2FA de Yopmail
