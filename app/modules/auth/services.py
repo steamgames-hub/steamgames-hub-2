@@ -3,7 +3,7 @@ import random
 import secrets
 import hashlib
 from datetime import datetime, timedelta
-from flask import url_for
+from flask import url_for, current_app
 from flask_mail import Message
 from flask_login import current_user, login_user
 from werkzeug.security import generate_password_hash
@@ -14,6 +14,7 @@ from app.modules.profile.models import UserProfile
 from app.modules.profile.repositories import UserProfileRepository
 from core.configuration.configuration import uploads_folder_name
 from core.services.BaseService import BaseService
+
 
 
 class AuthenticationService(BaseService):
@@ -48,12 +49,18 @@ class AuthenticationService(BaseService):
 
 
     # --- Login y autenticación ---
+
+
     def login(self, email, password):
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
-            self.generate_2fa(user)
+            if current_app.config.get("TWO_FACTOR_ENABLED", True):
+                self.generate_2fa(user)
+            else:
+                login_user(user)  # login directo en tests
             return user
         return None
+
 
     # --- Doble factor ---
     def generate_2fa(self, user):
