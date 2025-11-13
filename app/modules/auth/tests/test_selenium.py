@@ -10,7 +10,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from core.environment.host import get_host_for_selenium_testing
 from core.selenium.common import close_driver, initialize_driver
 
-
 @pytest.fixture
 def driver():
     drv = initialize_driver()
