@@ -13,6 +13,7 @@ class Hubfile(db.Model):
     name = db.Column(db.String(120), nullable=False)
     checksum = db.Column(db.String(120), nullable=False)
     size = db.Column(db.Integer, nullable=False)
+    download_count = db.Column(db.Integer, nullable=False, default=0)
     feature_model_id = db.Column(db.Integer, db.ForeignKey("feature_model.id"), nullable=False)
 
     def get_formatted_size(self):
@@ -44,6 +45,23 @@ class Hubfile(db.Model):
             "size_in_human_format": self.get_formatted_size(),
             "url": f'{request.host_url.rstrip("/")}/file/download/{self.id}',
         }
+
+    def get_version_label(self) -> str | None:
+        """Return an explicit version if set in metadata, otherwise a short checksum fallback.
+        This mirrors UVL behavior and is reused for CSV files for consistency.
+        """
+        try:
+            fmmd = self.feature_model.fm_meta_data if self.feature_model else None
+            version = getattr(fmmd, "csv_version", None)
+            if version:
+                return str(version)
+            # Fallback: short hash from checksum
+            if self.checksum:
+                return str(self.checksum)[:7]
+        except Exception:
+            # Be resilient: no version label
+            return None
+        return None
 
     def __repr__(self):
         return f"File<{self.id}>"

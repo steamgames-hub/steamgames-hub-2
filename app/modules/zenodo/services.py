@@ -144,14 +144,14 @@ class ZenodoService(BaseService):
         """
 
         logger.info("Dataset sending to Zenodo...")
-        logger.info(f"Publication type...{dataset.ds_meta_data.publication_type.value}")
+        logger.info(f"Publication type...{dataset.ds_meta_data.data_category.value}")
 
         metadata = {
             "title": dataset.ds_meta_data.title,
-            "upload_type": "dataset" if dataset.ds_meta_data.publication_type.value == "none" else "publication",
-            "publication_type": (
-                dataset.ds_meta_data.publication_type.value
-                if dataset.ds_meta_data.publication_type.value != "none"
+            "upload_type": "dataset" if dataset.ds_meta_data.data_category.value == "none" else "publication",
+            "data_category": (
+                dataset.ds_meta_data.data_category.value
+                if dataset.ds_meta_data.data_category.value != "none"
                 else None
             ),
             "description": dataset.ds_meta_data.description,
@@ -164,7 +164,9 @@ class ZenodoService(BaseService):
                 for author in dataset.ds_meta_data.authors
             ],
             "keywords": (
-                ["uvlhub"] if not dataset.ds_meta_data.tags else dataset.ds_meta_data.tags.split(", ") + ["uvlhub"]
+                ["steamgameshub"]
+                if not dataset.ds_meta_data.tags
+                else dataset.ds_meta_data.tags.split(", ") + ["steamgameshub"]
             ),
             "access_right": "open",
             "license": "CC-BY-4.0",
@@ -190,10 +192,12 @@ class ZenodoService(BaseService):
         Returns:
             dict: The response in JSON format with the details of the uploaded file.
         """
-        uvl_filename = feature_model.fm_meta_data.uvl_filename
-        data = {"name": uvl_filename}
+        csv_filename = feature_model.fm_meta_data.csv_filename
+        data = {"name": csv_filename}
         user_id = current_user.id if user is None else user.id
-        file_path = os.path.join(uploads_folder_name(), f"user_{str(user_id)}", f"dataset_{dataset.id}/", uvl_filename)
+        file_path = os.path.join(
+            uploads_folder_name(), f"user_{str(user_id)}", f"dataset_{dataset.id}/", csv_filename
+        )
         files = {"file": open(file_path, "rb")}
 
         publish_url = f"{self.ZENODO_API_URL}/{deposition_id}/files"

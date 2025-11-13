@@ -1,4 +1,5 @@
 import json
+import csv
 import logging
 import os
 import shutil
@@ -30,7 +31,11 @@ from app.modules.dataset.services import (
     DSMetaDataService,
     DSViewRecordService,
 )
+from app.modules.hubfile.services import HubfileService
 from app.modules.zenodo.services import ZenodoService
+from app.modules.fakenodo.services import FakenodoService
+from app.modules.dataset.steamcsv_service import SteamCSVService
+from core.configuration.configuration import uploads_folder_name
 
 logger = logging.getLogger(__name__)
 
@@ -39,14 +44,37 @@ dataset_service = DataSetService()
 author_service = AuthorService()
 dsmetadata_service = DSMetaDataService()
 zenodo_service = ZenodoService()
+fakenodo_service = FakenodoService() #MOD: Fakenodo
 doi_mapping_service = DOIMappingService()
 ds_view_record_service = DSViewRecordService()
+
+
+# Dataset type selection removed: Steam CSV only
 
 
 @dataset_bp.route("/dataset/upload", methods=["GET", "POST"])
 @login_required
 def create_dataset():
     form = DataSetForm()
+    # Cleanup: if user has no CSV files in their temp folder, remove the temp folder
+    try:
+        # Only run cleanup on GET (when not posting the form)
+        if request.method != "POST":
+            try:
+                temp_dir = current_user.temp_folder()
+                if os.path.isdir(temp_dir):
+                    csv_files = [f for f in os.listdir(temp_dir) if f.lower().endswith('.csv')]
+                    if not csv_files:
+                        try:
+                            shutil.rmtree(temp_dir)
+                            logger.info("[upload][cleanup] Removed empty temp folder for user %s: %s", current_user.id, temp_dir)
+                        except Exception as cleanup_exc:
+                            logger.warning("[upload][cleanup] Could not remove temp folder %s: %s", temp_dir, cleanup_exc)
+            except Exception as diag_exc:
+                logger.warning("[upload][cleanup] Could not inspect temp folder for diagnostics: %s", diag_exc)
+    except Exception:
+        # Be defensive: never let cleanup prevent rendering the page
+        pass
     if request.method == "POST":
 
         dataset = None
@@ -55,6 +83,22 @@ def create_dataset():
             return jsonify({"message": form.errors}), 400
 
         try:
+            # Validate pending files in temp folder (Steam CSV only)
+            # Diagnostics: log temp folder contents
+            try:
+                temp_dir = current_user.temp_folder()
+                dir_list = []
+                if os.path.isdir(temp_dir):
+                    dir_list = sorted(os.listdir(temp_dir))
+                logger.info("[upload] temp_folder='%s', files=%s", temp_dir, dir_list)
+            except Exception as diag_exc:
+                logger.warning("[upload] Could not inspect temp folder for diagnostics: %s", diag_exc)
+            service = SteamCSVService()
+            try:
+                service.validate_folder(current_user.temp_folder())
+            except ValueError as verr:
+                return jsonify({"message": str(verr)}), 400
+
             logger.info("Creating dataset...")
             dataset = dataset_service.create_from_form(form=form, current_user=current_user)
             logger.info(f"Created dataset: {dataset}")
@@ -66,13 +110,14 @@ def create_dataset():
         # send dataset as deposition to Zenodo
         data = {}
         try:
-            zenodo_response_json = zenodo_service.create_new_deposition(dataset)
-            response_data = json.dumps(zenodo_response_json)
+            #zenodo_response_json = zenodo_service.create_new_deposition(dataset) MOD: Fakenodo
+            fakenodo_response_json = fakenodo_service.create_new_deposition(dataset)
+            response_data = json.dumps(fakenodo_response_json)
             data = json.loads(response_data)
         except Exception as exc:
             data = {}
-            zenodo_response_json = {}
-            logger.exception(f"Exception while create dataset data in Zenodo {exc}")
+            fakenodo_response_json = {}
+            logger.exception(f"Exception while create dataset data in Fakenodo {exc}")
 
         if data.get("conceptrecid"):
             deposition_id = data.get("id")
@@ -80,16 +125,22 @@ def create_dataset():
             # update dataset with deposition id in Zenodo
             dataset_service.update_dsmetadata(dataset.ds_meta_data_id, deposition_id=deposition_id)
 
+            print("Patata1")
+
             try:
                 # iterate for each feature model (one feature model = one request to Zenodo)
-                for feature_model in dataset.feature_models:
-                    zenodo_service.upload_file(dataset, deposition_id, feature_model)
+                #for feature_model in dataset.feature_models:
+                #    zenodo_service.upload_file(dataset, deposition_id, feature_model)
 
                 # publish deposition
-                zenodo_service.publish_deposition(deposition_id)
+                #zenodo_service.publish_deposition(deposition_id)
 
                 # update DOI
-                deposition_doi = zenodo_service.get_doi(deposition_id)
+                #deposition_doi = zenodo_service.get_doi(deposition_id)
+                print("Patata2")
+                deposition_doi = fakenodo_service.get_doi(deposition_id)
+                print("DOI:")
+                print(deposition_doi)
                 dataset_service.update_dsmetadata(dataset.ds_meta_data_id, dataset_doi=deposition_doi)
             except Exception as e:
                 msg = f"it has not been possible upload feature models in Zenodo and update the DOI: {e}"
@@ -122,7 +173,7 @@ def upload():
     file = request.files["file"]
     temp_folder = current_user.temp_folder()
 
-    if not file or not file.filename.endswith(".uvl"):
+    if not file or not (file.filename.endswith(".csv")):
         return jsonify({"message": "No valid file"}), 400
 
     # create temp folder
@@ -148,12 +199,7 @@ def upload():
         return jsonify({"message": str(e)}), 500
 
     return (
-        jsonify(
-            {
-                "message": "UVL uploaded and validated successfully",
-                "filename": new_filename,
-            }
-        ),
+        jsonify({"message": "File uploaded and validated successfully", "filename": new_filename}),
         200,
     )
 
@@ -172,17 +218,50 @@ def delete():
     return jsonify({"error": "Error: File not found"})
 
 
+@dataset_bp.route("/dataset/file/clean_temp", methods=["POST"])
+@login_required
+def clean_temp():
+    """Delete all contents of the current user's temp folder (used when starting a new CSV upload).
+
+    Returns JSON with a message and HTTP 200 on success. Any errors are logged and returned with 500.
+    """
+    try:
+        temp_folder = current_user.temp_folder()
+        if os.path.isdir(temp_folder):
+            # remove all files and directories inside temp_folder, but keep the folder itself
+            for entry in os.listdir(temp_folder):
+                path = os.path.join(temp_folder, entry)
+                try:
+                    if os.path.isfile(path) or os.path.islink(path):
+                        os.remove(path)
+                    elif os.path.isdir(path):
+                        shutil.rmtree(path)
+                except Exception as e:
+                    logger.warning("[clean_temp] Could not remove %s: %s", path, e)
+        return jsonify({"message": "Temp folder cleaned"}), 200
+    except Exception as exc:
+        logger.exception("[clean_temp] Exception cleaning temp folder: %s", exc)
+        return jsonify({"error": str(exc)}), 500
+
+
 @dataset_bp.route("/dataset/download/<int:dataset_id>", methods=["GET"])
 def download_dataset(dataset_id):
     dataset = dataset_service.get_or_404(dataset_id)
 
-    file_path = f"uploads/user_{dataset.user_id}/dataset_{dataset.id}/"
+    # Build absolute directory to dataset files in a way consistent with HubfileService
+    working_dir = os.getenv("WORKING_DIR", "")
+    file_path = os.path.join(
+        working_dir,
+        uploads_folder_name(),
+        f"user_{dataset.user_id}",
+        f"dataset_{dataset.id}",
+    )
 
     temp_dir = tempfile.mkdtemp()
     zip_path = os.path.join(temp_dir, f"dataset_{dataset_id}.zip")
 
     with ZipFile(zip_path, "w") as zipf:
-        for subdir, dirs, files in os.walk(file_path):
+        for subdir, _, files in os.walk(file_path):
             for file in files:
                 full_path = os.path.join(subdir, file)
 
@@ -253,7 +332,8 @@ def subdomain_index(doi):
 
     # Save the cookie to the user's browser
     user_cookie = ds_view_record_service.create_cookie(dataset=dataset)
-    resp = make_response(render_template("dataset/view_dataset.html", dataset=dataset))
+    FAKENODO_URL = os.getenv("FAKENODO_URL")
+    resp = make_response(render_template("dataset/view_dataset.html", dataset=dataset, fakenodo_url=FAKENODO_URL))
     resp.set_cookie("view_cookie", user_cookie)
 
     return resp
@@ -268,5 +348,31 @@ def get_unsynchronized_dataset(dataset_id):
 
     if not dataset:
         abort(404)
+    FAKENODO_URL = os.getenv("FAKENODO_URL")
+    return render_template("dataset/view_dataset.html", dataset=dataset, fakenodo_url=FAKENODO_URL)
 
-    return render_template("dataset/view_dataset.html", dataset=dataset)
+
+@dataset_bp.route("/dataset/file/preview/<int:file_id>", methods=["GET"])
+def preview_csv(file_id: int):
+    """Return a small preview (headers + up to 50 rows) for a CSV file."""
+    hubfile_service = HubfileService()
+    hubfile = hubfile_service.repository.get_or_404(file_id)
+    file_path = hubfile.get_path()
+
+    headers = []
+    rows = []
+    try:
+        with open(file_path, "r", encoding="utf-8", newline="") as f:
+            reader = csv.reader(f)
+            for i, row in enumerate(reader):
+                if i == 0:
+                    headers = row
+                else:
+                    rows.append(row)
+                if len(rows) >= 50:
+                    break
+    except Exception as exc:
+        logger.exception("Error generating CSV preview: %s", exc)
+        return jsonify({"message": str(exc)}), 400
+
+    return jsonify({"headers": headers, "rows": rows})

@@ -25,7 +25,7 @@
 
                             </h2>
                             <div>
-                                <span class="badge bg-secondary">{{ dataset.get_cleaned_publication_type() }}</span>
+                                <span class="badge bg-secondary">{{ dataset.get_cleaned_data_category() }}</span>
                             </div>
                         </div>
                         <p class="text-secondary">{{ dataset.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
@@ -77,7 +77,8 @@
                         <div class="row mb-2">
 
                             <div class="col-12">
-                                {% for tag in dataset.ds_meta_data.tags.split(',') %}
+                                {% set tag_list = dataset.ds_meta_data.tags.split(',') if dataset.ds_meta_data.tags else [] %}
+                                {% for tag in tag_list %}
                                     <span class="badge bg-secondary">{{ tag.strip() }}</span>
                                 {% endfor %}
                             </div>

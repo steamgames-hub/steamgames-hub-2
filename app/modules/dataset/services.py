@@ -32,8 +32,8 @@ def calculate_checksum_and_size(file_path):
     file_size = os.path.getsize(file_path)
     with open(file_path, "rb") as file:
         content = file.read()
-        hash_md5 = hashlib.md5(content).hexdigest()
-        return hash_md5, file_size
+        hash_sha256 = hashlib.sha256(content).hexdigest()
+        return hash_sha256, file_size
 
 
 class DataSetService(BaseService):
@@ -54,13 +54,19 @@ class DataSetService(BaseService):
         source_dir = current_user.temp_folder()
 
         working_dir = os.getenv("WORKING_DIR", "")
-        dest_dir = os.path.join(working_dir, "uploads", f"user_{current_user.id}", f"dataset_{dataset.id}")
+        from core.configuration.configuration import uploads_folder_name
+        dest_dir = os.path.join(
+            working_dir,
+            uploads_folder_name(),
+            f"user_{current_user.id}",
+            f"dataset_{dataset.id}",
+        )
 
         os.makedirs(dest_dir, exist_ok=True)
 
         for feature_model in dataset.feature_models:
-            uvl_filename = feature_model.fm_meta_data.uvl_filename
-            shutil.move(os.path.join(source_dir, uvl_filename), dest_dir)
+            csv_filename = feature_model.fm_meta_data.csv_filename
+            shutil.move(os.path.join(source_dir, csv_filename), dest_dir)
 
     def get_synchronized(self, current_user_id: int) -> DataSet:
         return self.repository.get_synchronized(current_user_id)
@@ -100,7 +106,8 @@ class DataSetService(BaseService):
         }
         try:
             logger.info(f"Creating dsmetadata...: {form.get_dsmetadata()}")
-            dsmetadata = self.dsmetadata_repository.create(**form.get_dsmetadata())
+            dsmetadata_data = form.get_dsmetadata()
+            dsmetadata = self.dsmetadata_repository.create(**dsmetadata_data)
             for author_data in [main_author] + form.get_authors():
                 author = self.author_repository.create(commit=False, ds_meta_data_id=dsmetadata.id, **author_data)
                 dsmetadata.authors.append(author)
@@ -108,7 +115,7 @@ class DataSetService(BaseService):
             dataset = self.create(commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id)
 
             for feature_model in form.feature_models:
-                uvl_filename = feature_model.uvl_filename.data
+                csv_filename = feature_model.csv_filename.data
                 fmmetadata = self.fmmetadata_repository.create(commit=False, **feature_model.get_fmmetadata())
                 for author_data in feature_model.get_authors():
                     author = self.author_repository.create(commit=False, fm_meta_data_id=fmmetadata.id, **author_data)
@@ -119,11 +126,11 @@ class DataSetService(BaseService):
                 )
 
                 # associated files in feature model
-                file_path = os.path.join(current_user.temp_folder(), uvl_filename)
+                file_path = os.path.join(current_user.temp_folder(), csv_filename)
                 checksum, size = calculate_checksum_and_size(file_path)
 
                 file = self.hubfilerepository.create(
-                    commit=False, name=uvl_filename, checksum=checksum, size=size, feature_model_id=fm.id
+                    commit=False, name=csv_filename, checksum=checksum, size=size, feature_model_id=fm.id
                 )
                 fm.files.append(file)
             self.repository.session.commit()
@@ -133,8 +140,8 @@ class DataSetService(BaseService):
             raise exc
         return dataset
 
-    def update_dsmetadata(self, id, **kwargs):
-        return self.dsmetadata_repository.update(id, **kwargs)
+    def update_dsmetadata(self, metadata_id, **kwargs):
+        return self.dsmetadata_repository.update(metadata_id, **kwargs)
 
     def get_uvlhub_doi(self, dataset: DataSet) -> str:
         domain = os.getenv("DOMAIN", "localhost")
@@ -155,8 +162,8 @@ class DSMetaDataService(BaseService):
     def __init__(self):
         super().__init__(DSMetaDataRepository())
 
-    def update(self, id, **kwargs):
-        return self.repository.update(id, **kwargs)
+    def update(self, metadata_id, **kwargs):
+        return self.repository.update(metadata_id, **kwargs)
 
     def filter_by_doi(self, doi: str) -> Optional[DSMetaData]:
         return self.repository.filter_by_doi(doi)
