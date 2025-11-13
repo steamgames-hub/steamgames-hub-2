@@ -38,7 +38,7 @@ Existen dos ramas principales con roles y restricciones específicas:
     3.  Tras la fusión, la rama `feature` se elimina.
 
 ### Rama de Corrección de Emergencia (`bugfix`)
--   **Propósito**: Solucionar errores críticos ("emergencias") detectados en el **entorno de producción**.
+-   **Propósito**: Solucionar errores críticos detectados en el **entorno de producción**.
 -   **Flujo de trabajo**:
     1.  Se actualiza a partir de la rama `main`.
     2.  Una vez aplicada la corrección, se fusiona directamente en `main` y se crea una nueva etiqueta de versión **PATCH** (ej. `v1.2.2` -> `v1.2.3`).

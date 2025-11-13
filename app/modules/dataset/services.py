@@ -54,7 +54,13 @@ class DataSetService(BaseService):
         source_dir = current_user.temp_folder()
 
         working_dir = os.getenv("WORKING_DIR", "")
-        dest_dir = os.path.join(working_dir, "uploads", f"user_{current_user.id}", f"dataset_{dataset.id}")
+        from core.configuration.configuration import uploads_folder_name
+        dest_dir = os.path.join(
+            working_dir,
+            uploads_folder_name(),
+            f"user_{current_user.id}",
+            f"dataset_{dataset.id}",
+        )
 
         os.makedirs(dest_dir, exist_ok=True)
 

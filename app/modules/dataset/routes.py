@@ -35,6 +35,7 @@ from app.modules.hubfile.services import HubfileService
 from app.modules.zenodo.services import ZenodoService
 from app.modules.fakenodo.services import FakenodoService
 from app.modules.dataset.steamcsv_service import SteamCSVService
+from core.configuration.configuration import uploads_folder_name
 
 logger = logging.getLogger(__name__)
 
@@ -247,7 +248,14 @@ def clean_temp():
 def download_dataset(dataset_id):
     dataset = dataset_service.get_or_404(dataset_id)
 
-    file_path = f"uploads/user_{dataset.user_id}/dataset_{dataset.id}/"
+    # Build absolute directory to dataset files in a way consistent with HubfileService
+    working_dir = os.getenv("WORKING_DIR", "")
+    file_path = os.path.join(
+        working_dir,
+        uploads_folder_name(),
+        f"user_{dataset.user_id}",
+        f"dataset_{dataset.id}",
+    )
 
     temp_dir = tempfile.mkdtemp()
     zip_path = os.path.join(temp_dir, f"dataset_{dataset_id}.zip")
