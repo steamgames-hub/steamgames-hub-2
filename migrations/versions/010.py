@@ -1,7 +1,7 @@
 """Add password reset token table
 
-Revision ID: f056930e1519
-Revises: 003_csv_only_refactor
+Revision ID: 010
+Revises: 009
 Create Date: 2025-11-09 14:16:03.717796
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
-revision = 'f056930e1519'
-down_revision = '003_csv_only_refactor'
+revision = '010'
+down_revision = '009'
 branch_labels = None
 depends_on = None
 

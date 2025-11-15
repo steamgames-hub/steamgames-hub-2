@@ -1,0 +1,16 @@
+{% extends "base_template.html" %}
+{% block title %}Two Factor Authentication{% endblock %}
+{% block content %}
+<h1 class="h2 mb-3">Two Factor Authentication</h1>
+
+<form method="POST">
+    {{ form.hidden_tag() }}
+    {{ form.code.label }} 
+    {{ form.code(class="form-control") }}
+    {{ form.submit(class="btn btn-primary mt-2") }}
+    {% if error %}
+        <div class="text-danger mt-2">{{ error }}</div>
+    {% endif %}
+</form>
+
+{% endblock %}

@@ -40,7 +40,7 @@ def test_upload_dataset():
         email_field = driver.find_element(By.NAME, "email")
         password_field = driver.find_element(By.NAME, "password")
 
-        email_field.send_keys("user1@example.com")
+        email_field.send_keys("user1@yopmail.com")
         password_field.send_keys("1234")
 
         # Send the form
