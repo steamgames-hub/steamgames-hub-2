@@ -31,6 +31,8 @@ from app.modules.dataset.services import (
     DSMetaDataService,
     DSViewRecordService,
 )
+from app.modules.community.services import CommunityService
+from app.modules.community.repositories import CommunityProposalRepository
 from app.modules.hubfile.services import HubfileService
 from app.modules.zenodo.services import ZenodoService
 from app.modules.fakenodo.services import FakenodoService
@@ -47,6 +49,8 @@ zenodo_service = ZenodoService()
 fakenodo_service = FakenodoService()  # MOD: Fakenodo
 doi_mapping_service = DOIMappingService()
 ds_view_record_service = DSViewRecordService()
+community_service = CommunityService()
+community_proposal_repo = CommunityProposalRepository()
 
 
 # Dataset type selection removed: Steam CSV only
@@ -366,7 +370,19 @@ def subdomain_index(doi):
     # Save the cookie to the user's browser
     user_cookie = ds_view_record_service.create_cookie(dataset=dataset)
     FAKENODO_URL = os.getenv("FAKENODO_URL")
-    resp = make_response(render_template("dataset/view_dataset.html", dataset=dataset, fakenodo_url=FAKENODO_URL))
+    accepted_proposal = community_proposal_repo.get_accepted_for_dataset(dataset.id)
+    accepted_community = accepted_proposal.community if accepted_proposal else None
+    can_propose = accepted_proposal is None
+    resp = make_response(
+        render_template(
+            "dataset/view_dataset.html",
+            dataset=dataset,
+            fakenodo_url=FAKENODO_URL,
+            communities=community_service.list_all(),
+            accepted_community=accepted_community,
+            can_propose=can_propose,
+        )
+    )
     resp.set_cookie("view_cookie", user_cookie)
 
     return resp
@@ -382,7 +398,17 @@ def get_unsynchronized_dataset(dataset_id):
     if not dataset:
         abort(404)
     FAKENODO_URL = os.getenv("FAKENODO_URL")
-    return render_template("dataset/view_dataset.html", dataset=dataset, fakenodo_url=FAKENODO_URL)
+    accepted_proposal = community_proposal_repo.get_accepted_for_dataset(dataset.id)
+    accepted_community = accepted_proposal.community if accepted_proposal else None
+    can_propose = accepted_proposal is None
+    return render_template(
+        "dataset/view_dataset.html",
+        dataset=dataset,
+        fakenodo_url=FAKENODO_URL,
+        communities=community_service.list_all(),
+        accepted_community=accepted_community,
+        can_propose=can_propose,
+    )
 
 
 @dataset_bp.route("/dataset/file/preview/<int:file_id>", methods=["GET"])
