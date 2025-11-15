@@ -1,5 +1,5 @@
 from app.modules.dataset.models import DSMetaData, DataSet, DataCategory
-from app.modules.featuremodel.models import FeatureModel
+from app.modules.featuremodel.models import FeatureModel, FMMetaData
 from app.modules.hubfile.models import Hubfile
 from app.modules.hubfile.services import HubfileDownloadRecordService
 from app import db
@@ -27,6 +27,30 @@ def test_sample_assertion(test_client):
     """
     greeting = "Hello, World!"
     assert greeting == "Hello, World!", "The greeting does not coincide with 'Hello, World!'"
+
+
+def test_get_version_label_prefers_manual_version():
+    hf = Hubfile()
+    hf.name = "x.csv"
+    hf.checksum = "abcdef1234567890"
+    hf.size = 10
+    fm = FeatureModel()
+    fm.fm_meta_data = FMMetaData(csv_version="1.2.3")
+    hf.feature_model = fm
+
+    assert hf.get_version_label() == "1.2.3"
+
+
+def test_get_version_label_falls_back_to_short_checksum():
+    hf = Hubfile()
+    hf.name = "x.csv"
+    hf.checksum = "abcdef1234567890"
+    hf.size = 10
+    fm = FeatureModel()
+    fm.fm_meta_data = FMMetaData(csv_version=None)
+    hf.feature_model = fm
+
+    assert hf.get_version_label() == "abcdef1"
 
 
 def test_download_count_increments(test_client):
@@ -73,3 +97,4 @@ def test_download_count_increments(test_client):
             db.session.query(DataSet).delete()
             db.session.query(DSMetaData).delete()
             db.session.commit()
+    

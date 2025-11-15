@@ -368,21 +368,8 @@
                                     xhr.send(JSON.stringify({file: filenameToDelete}));
                                 }.bind(this));
 
-                                /*
-                                    ##########################################
-                                    APPEND BUTTONS
-                                    ##########################################
-                                */
                                 listItem.appendChild(formButton);
                                 listItem.appendChild(removeButton);
-
-                                /*
-                                    ##########################################
-                                    FILE INFO FORM (CSV)
-                                    ##########################################
-                                */
-
-                                // create specific form for file metadata
                                 let formContainer = document.createElement('div');
                                 formContainer.id = formUniqueId + "_form";
                                 formContainer.classList.add('file_form', "mt-3");
@@ -445,8 +432,13 @@
                                                 </div>
                                                 <div class="col-6">
                                                     <div class="mb-3">
-                                                        <label class="form-label">File version</label>
-                                                        <input type="text" class="form-control" name="feature_models-${formUniqueId}-csv_version">
+                                <label class="form-label">File version</label>
+                                <input type="text"
+                                    class="form-control"
+                                    name="feature_models-${formUniqueId}-version"
+                                    placeholder="e.g., 1.2.3"
+                                    pattern="^\\d+\\.\\d+\\.\\d+$"
+                                    title="Version must follow x.y.z format (e.g., 1.2.3)">
                                                     </div>
                                                 </div>
                                                 <div class="col-12">

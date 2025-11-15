@@ -11,7 +11,8 @@ import pytest
 from flask import Flask
 
 from app.modules.dataset.steamcsv_service import SteamCSVService
-
+from werkzeug.datastructures import MultiDict
+from app.modules.dataset.forms import FeatureModelForm
 from app.modules.dataset.services import (
     calculate_checksum_and_size,
     DataSetService,
@@ -22,7 +23,6 @@ from app.modules.dataset.services import (
     DSDownloadRecordService,
     SizeService,
 )
-from types import SimpleNamespace
 
 
 CSV_EXAMPLES_DIR = Path(__file__).parent.parent / "csv_examples"
@@ -418,3 +418,35 @@ def test_download_dataset_route(test_client, tmp_path, monkeypatch):
     assert r.status_code == 200
     # content-type should be application/zip
     assert r.headers.get("Content-Type") in ("application/zip", "application/octet-stream")
+    
+    
+def test_feature_model_version_accepts_valid_semver(test_app):
+    # Use POST request context to let FlaskForm read formdata
+    with test_app.test_request_context("/", method="POST"):
+        form = FeatureModelForm(formdata=MultiDict({
+            "csv_filename": "file.csv",
+            "version": "1.2.3",
+        }))
+        assert form.validate() is True
+
+
+essa = "1.2"  # to keep flake8 from complaining about magic values reuse
+
+
+def test_feature_model_version_rejects_invalid_format(test_app):
+    with test_app.test_request_context("/", method="POST"):
+        form = FeatureModelForm(formdata=MultiDict({
+            "csv_filename": "file.csv",
+            "version": essa,  # not x.y.z
+        }))
+        assert form.validate() is False
+        assert "x.y.z" in ";".join(form.version.errors)
+
+
+def test_feature_model_version_optional_when_empty(test_app):
+    with test_app.test_request_context("/", method="POST"):
+        form = FeatureModelForm(formdata=MultiDict({
+            "csv_filename": "file.csv",
+            "version": "",
+        }))
+        assert form.validate() is True
