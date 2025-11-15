@@ -7,7 +7,7 @@
 Revision ID: 005
 
 
-Revises: f056930e1519
+Revises: 003_csv_only_refactor
 
 
 Create Date: 2025-11-09 16:39:50.875509
@@ -37,7 +37,7 @@ import sqlalchemy as sa
 revision = '005'
 
 
-down_revision = 'f056930e1519'
+down_revision = '003_csv_only_refactor'
 
 
 branch_labels = None

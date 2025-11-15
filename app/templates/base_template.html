@@ -70,6 +70,25 @@
                     </a>
                 </li>
 
+                <li class="sidebar-header">Communities</li>
+                <li class="sidebar-item {{ 'active' if request.endpoint == 'community.list_communities' else '' }}">
+                    <a class="sidebar-link" href="{{ url_for('community.list_communities') }}">
+                        <i class="align-middle" data-feather="grid"></i> <span class="align-middle">Explore communities</span>
+                    </a>
+                </li>
+                {% if current_user.is_authenticated %}
+                <li class="sidebar-item {{ 'active' if request.endpoint == 'community.create_community' else '' }}">
+                    <a class="sidebar-link" href="{{ url_for('community.create_community') }}">
+                        <i class="align-middle" data-feather="plus-square"></i> <span class="align-middle">Create community</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {{ 'active' if request.endpoint == 'community.my_communities' else '' }}">
+                    <a class="sidebar-link" href="{{ url_for('community.my_communities') }}">
+                        <i class="align-middle" data-feather="layers"></i> <span class="align-middle">My communities</span>
+                    </a>
+                </li>
+                {% endif %}
+
                 {% if current_user.is_anonymous %}
 
                     <li class="sidebar-header">
@@ -108,6 +127,8 @@
                                 class="align-middle">My datasets</span>
                         </a>
                     </li>
+
+                    
 
                     <li class="sidebar-header">
                         Options

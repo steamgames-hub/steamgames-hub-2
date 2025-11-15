@@ -1,0 +1,69 @@
+{% extends "base_template.html" %}
+
+{% block title %}Community · {{ community.name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <div class="card mb-3">
+  {% if community.icon_path %}
+  <img src="{{ url_for('community.community_icon', community_id=community.id) }}" class="card-img-top" alt="{{ community.name }} icon" style="object-fit: cover; max-height: 220px;">
+  {% endif %}
+      <div class="card-body">
+        <h3 class="card-title">{{ community.name }}</h3>
+        <p class="card-text">{{ community.description }}</p>
+        <p class="card-text text-muted">Created by {{ community.responsible.profile.surname }}, {{ community.responsible.profile.name }}</p>
+      </div>
+    </div>
+
+    {% if accepted_proposals and current_user.is_authenticated and current_user.id == community.responsible_user_id %}
+    <div class="card mb-3">
+      <div class="card-header">Datasets in this community</div>
+      <ul class="list-group list-group-flush">
+        {% for p in accepted_proposals %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span>{{ p.dataset.ds_meta_data.title }}</span>
+          {% if p.dataset.ds_meta_data.dataset_doi %}
+            <a href="{{ url_for('dataset.subdomain_index', doi=p.dataset.ds_meta_data.dataset_doi) }}" class="btn btn-sm btn-outline-secondary">Open</a>
+          {% else %}
+            <a href="{{ url_for('dataset.get_unsynchronized_dataset', dataset_id=p.dataset.id) }}" class="btn btn-sm btn-outline-secondary">Open</a>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-md-4">
+    {% if current_user.is_authenticated and current_user.id == community.responsible_user_id %}
+    <div class="card mb-3">
+      <div class="card-header">Pending proposals</div>
+      <div class="card-body">
+        {% if pending_proposals %}
+          {% for p in pending_proposals %}
+          <div class="mb-2 d-flex justify-content-between align-items-center">
+            <div>
+              <div><strong>{{ p.dataset.ds_meta_data.title }}</strong></div>
+              <small class="text-muted">Proposed by user #{{ p.proposed_by_user_id }}</small>
+            </div>
+            <div>
+              <form method="post" action="{{ url_for('community.accept_proposal', community_id=community.id, proposal_id=p.id) }}" class="d-inline">
+                <button class="btn btn-sm btn-success">Accept</button>
+              </form>
+              <form method="post" action="{{ url_for('community.reject_proposal', community_id=community.id, proposal_id=p.id) }}" class="d-inline">
+                <button class="btn btn-sm btn-outline-danger">Reject</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted">No pending proposals.</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
