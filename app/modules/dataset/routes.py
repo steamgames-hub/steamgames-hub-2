@@ -44,7 +44,7 @@ dataset_service = DataSetService()
 author_service = AuthorService()
 dsmetadata_service = DSMetaDataService()
 zenodo_service = ZenodoService()
-fakenodo_service = FakenodoService() #MOD: Fakenodo
+fakenodo_service = FakenodoService()  # MOD: Fakenodo
 doi_mapping_service = DOIMappingService()
 ds_view_record_service = DSViewRecordService()
 
@@ -67,9 +67,17 @@ def create_dataset():
                     if not csv_files:
                         try:
                             shutil.rmtree(temp_dir)
-                            logger.info("[upload][cleanup] Removed empty temp folder for user %s: %s", current_user.id, temp_dir)
+                            logger.info(
+                                "[upload][cleanup] Removed empty temp folder for user %s: %s",
+                                current_user.id,
+                                temp_dir,
+                            )
                         except Exception as cleanup_exc:
-                            logger.warning("[upload][cleanup] Could not remove temp folder %s: %s", temp_dir, cleanup_exc)
+                            logger.warning(
+                                "[upload][cleanup] Could not remove temp folder %s: %s",
+                                temp_dir,
+                                cleanup_exc,
+                            )
             except Exception as diag_exc:
                 logger.warning("[upload][cleanup] Could not inspect temp folder for diagnostics: %s", diag_exc)
     except Exception:
@@ -80,7 +88,32 @@ def create_dataset():
         dataset = None
 
         if not form.validate_on_submit():
-            return jsonify({"message": form.errors}), 400
+            # Build user-friendly error message, especially for version field in files
+            messages = []
+            try:
+                # Iterate FeatureModel subforms to collect version-specific errors with filenames
+                for subform in getattr(form, "feature_models", []) or []:
+                    version_errors = getattr(subform, "version", None).errors if hasattr(subform, "version") else []
+                    if version_errors:
+                        filename = getattr(getattr(subform, "csv_filename", None), "data", None) or "file"
+                        messages.append(
+                            f"Invalid version for '{filename}': must follow x.y.z (e.g., 1.2.3)"
+                        )
+            except Exception:
+                # be defensive; fall back to generic errors
+                pass
+
+            # Fallback: include any remaining form.errors in a readable way
+            if not messages and isinstance(form.errors, dict):
+                for field, errs in form.errors.items():
+                    if isinstance(errs, (list, tuple)):
+                        for e in errs:
+                            messages.append(f"{field}: {e}")
+                    else:
+                        messages.append(f"{field}: {errs}")
+
+            message_text = "; ".join(messages) if messages else "Validation error"
+            return jsonify({"message": message_text}), 400
 
         try:
             # Validate pending files in temp folder (Steam CSV only)
@@ -110,7 +143,7 @@ def create_dataset():
         # send dataset as deposition to Zenodo
         data = {}
         try:
-            #zenodo_response_json = zenodo_service.create_new_deposition(dataset) MOD: Fakenodo
+            # zenodo_response_json = zenodo_service.create_new_deposition(dataset) MOD: Fakenodo
             fakenodo_response_json = fakenodo_service.create_new_deposition(dataset)
             response_data = json.dumps(fakenodo_response_json)
             data = json.loads(response_data)
@@ -129,14 +162,14 @@ def create_dataset():
 
             try:
                 # iterate for each feature model (one feature model = one request to Zenodo)
-                #for feature_model in dataset.feature_models:
-                #    zenodo_service.upload_file(dataset, deposition_id, feature_model)
+                # for feature_model in dataset.feature_models:
+                #     zenodo_service.upload_file(dataset, deposition_id, feature_model)
 
                 # publish deposition
-                #zenodo_service.publish_deposition(deposition_id)
+                # zenodo_service.publish_deposition(deposition_id)
 
                 # update DOI
-                #deposition_doi = zenodo_service.get_doi(deposition_id)
+                # deposition_doi = zenodo_service.get_doi(deposition_id)
                 print("Patata2")
                 deposition_doi = fakenodo_service.get_doi(deposition_id)
                 print("DOI:")

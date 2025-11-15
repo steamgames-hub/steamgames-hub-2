@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import FieldList, FormField, SelectField, StringField, SubmitField, TextAreaField
-from wtforms.validators import URL, DataRequired, Optional
+from wtforms.validators import URL, DataRequired, Optional, Regexp
 
 from app.modules.dataset.models import DataCategory
 
@@ -33,7 +33,13 @@ class FeatureModelForm(FlaskForm):
     )
     publication_doi = StringField("Publication DOI", validators=[Optional(), URL()])
     tags = StringField("Tags (separated by commas)")
-    version = StringField("CSV Version")
+    version = StringField(
+        "CSV Version",
+        validators=[
+            Optional(),
+            Regexp(r"^\d+\.\d+\.\d+$", message="Version must follow x.y.z format (e.g., 1.2.3)")
+        ],
+    )
     authors = FieldList(FormField(AuthorForm))
 
     class Meta:
