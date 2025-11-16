@@ -3,12 +3,16 @@ import logging
 import os
 import shutil
 import uuid
-from typing import Optional
+from datetime import datetime
+from typing import List, Optional, Set
 
 from flask import request
+from sqlalchemy import func, or_
+
+from app import db
 
 from app.modules.auth.services import AuthenticationService
-from app.modules.dataset.models import DataSet, DSMetaData, DSViewRecord
+from app.modules.dataset.models import Author, DataSet, DSMetaData, DSDownloadRecord, DSViewRecord
 from app.modules.dataset.repositories import (
     AuthorRepository,
     DataSetRepository,
@@ -23,6 +27,7 @@ from app.modules.hubfile.repositories import (
     HubfileRepository,
     HubfileViewRecordRepository,
 )
+from app.modules.community.models import CommunityDatasetProposal, ProposalStatus
 from core.services.BaseService import BaseService
 
 logger = logging.getLogger(__name__)
@@ -146,6 +151,142 @@ class DataSetService(BaseService):
     def get_uvlhub_doi(self, dataset: DataSet) -> str:
         domain = os.getenv("DOMAIN", "localhost")
         return f"http://{domain}/doi/{dataset.ds_meta_data.dataset_doi}"
+
+    def get_related_datasets(self, dataset: DataSet, limit: int = 3) -> List[dict]:
+        if not dataset or not dataset.ds_meta_data:
+            return []
+
+        ds_metadata = dataset.ds_meta_data
+        author_names = self._normalize_values(author.name for author in ds_metadata.authors)
+        author_orcids = self._normalize_values(author.orcid for author in ds_metadata.authors)
+        tags = self._normalize_tags(ds_metadata.tags)
+        community_ids = self._accepted_community_ids(dataset.id)
+
+        candidate_ids = set()
+        candidate_ids |= self._fetch_author_related_ids(dataset.id, author_names, author_orcids)
+        candidate_ids |= self._fetch_tag_related_ids(dataset.id, tags)
+        candidate_ids |= self._fetch_community_related_ids(dataset.id, community_ids)
+
+        if not candidate_ids:
+            return []
+
+        return self._build_related_dataset_payload(candidate_ids, limit)
+
+    def _normalize_values(self, values) -> Set[str]:
+        return {value.strip().lower() for value in values if value and value.strip()}
+
+    def _normalize_tags(self, tags: Optional[str]) -> Set[str]:
+        if not tags:
+            return set()
+        return self._normalize_values(tag for tag in tags.split(","))
+
+    def _accepted_community_ids(self, dataset_id: int) -> Set[int]:
+        proposals = CommunityDatasetProposal.query.filter(
+            CommunityDatasetProposal.dataset_id == dataset_id,
+            CommunityDatasetProposal.status == ProposalStatus.ACCEPTED,
+        ).all()
+        return {proposal.community_id for proposal in proposals}
+
+    def _fetch_author_related_ids(
+        self, dataset_id: int, author_names: Set[str], author_orcids: Set[str]
+    ) -> Set[int]:
+        if not (author_names or author_orcids):
+            return set()
+
+        author_filters = []
+        if author_names:
+            author_filters.append(func.lower(Author.name).in_(author_names))
+        if author_orcids:
+            author_filters.append(func.lower(Author.orcid).in_(author_orcids))
+
+        query = (
+            db.session.query(DataSet.id)
+            .join(DSMetaData, DataSet.ds_meta_data_id == DSMetaData.id)
+            .join(Author, Author.ds_meta_data_id == DSMetaData.id)
+            .filter(DataSet.id != dataset_id, DSMetaData.dataset_doi.isnot(None))
+            .filter(or_(*author_filters))
+        )
+        return {row[0] for row in query.distinct().all()}
+
+    def _fetch_tag_related_ids(self, dataset_id: int, tags: Set[str]) -> Set[int]:
+        if not tags:
+            return set()
+
+        tag_filters = [func.lower(DSMetaData.tags).like(f"%{tag}%") for tag in tags]
+        query = (
+            db.session.query(DataSet.id)
+            .join(DSMetaData, DataSet.ds_meta_data_id == DSMetaData.id)
+            .filter(DataSet.id != dataset_id, DSMetaData.dataset_doi.isnot(None))
+            .filter(or_(*tag_filters))
+        )
+        return {row[0] for row in query.distinct().all()}
+
+    def _fetch_community_related_ids(self, dataset_id: int, community_ids: Set[int]) -> Set[int]:
+        if not community_ids:
+            return set()
+
+        query = (
+            db.session.query(DataSet.id)
+            .join(CommunityDatasetProposal, CommunityDatasetProposal.dataset_id == DataSet.id)
+            .join(DSMetaData, DataSet.ds_meta_data_id == DSMetaData.id)
+            .filter(
+                DataSet.id != dataset_id,
+                DSMetaData.dataset_doi.isnot(None),
+                CommunityDatasetProposal.status == ProposalStatus.ACCEPTED,
+                CommunityDatasetProposal.community_id.in_(community_ids),
+            )
+        )
+        return {row[0] for row in query.distinct().all()}
+
+    def _build_related_dataset_payload(self, candidate_ids: Set[int], limit: int) -> List[dict]:
+        if not candidate_ids:
+            return []
+
+        datasets = (
+            DataSet.query.join(DSMetaData)
+            .filter(DataSet.id.in_(candidate_ids), DSMetaData.dataset_doi.isnot(None))
+            .all()
+        )
+
+        download_counts = {
+            dataset_id: count
+            for dataset_id, count in (
+                db.session.query(DSDownloadRecord.dataset_id, func.count(DSDownloadRecord.id))
+                .filter(DSDownloadRecord.dataset_id.in_(candidate_ids))
+                .group_by(DSDownloadRecord.dataset_id)
+                .all()
+            )
+        }
+
+        accepted_map = {
+            proposal.dataset_id: proposal.community
+            for proposal in CommunityDatasetProposal.query.filter(
+                CommunityDatasetProposal.dataset_id.in_(candidate_ids),
+                CommunityDatasetProposal.status == ProposalStatus.ACCEPTED,
+            ).all()
+        }
+
+        datasets.sort(
+            key=lambda ds: (
+                download_counts.get(ds.id, 0),
+                ds.created_at or datetime.min,
+            ),
+            reverse=True,
+        )
+
+        limit_value = limit if isinstance(limit, int) and limit > 0 else 3
+
+        related_items = []
+        for related in datasets[:limit_value]:
+            related_items.append(
+                {
+                    "dataset": related,
+                    "download_count": download_counts.get(related.id, 0),
+                    "accepted_community": accepted_map.get(related.id),
+                }
+            )
+
+        return related_items
 
 
 class AuthorService(BaseService):
