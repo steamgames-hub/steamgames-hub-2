@@ -2,7 +2,7 @@ name: Auto Release
 
 on:
   push:
-    branches: [ Trunk ]
+    branches: [ main ]
 
 permissions:
   contents: write
@@ -16,7 +16,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Create or bump semver tag
+      - name: Create tag
         id: tag
         uses: anothrNick/github-tag-action@4ed44965e0db8dab2b466a16da04aec3cc312fd8 
         env:
