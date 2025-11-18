@@ -51,7 +51,7 @@ jobs:
         MAIL_USE_TLS: True
         MAIL_USERNAME: apikey
         MAIL_PASSWORD: ${{ secrets.SENDGRID_API_KEY }}
-        MAIL_DEFAULT_SENDER: "SteamGamesHub <mancalrod@alum.us.es>"
+        MAIL_DEFAULT_SENDER: "noreply.steamgameshub1@gmail.com"
       run: |
         pytest app/modules/ --ignore-glob='*selenium*'
 
