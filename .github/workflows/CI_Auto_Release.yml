@@ -18,13 +18,14 @@ jobs:
 
       - name: Create or bump semver tag
         id: tag
-        uses: anothrNick/github-tag-action@v2
+        uses: anothrNick/github-tag-action@4ed44965e0db8dab2b466a16da04aec3cc312fd8 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true                
 
       - name: Show tag
-        run: echo "New tag: ${{ steps.tag.outputs.new_tag }}"
+        run: |
+          echo "New tag: ${{ steps.tag.outputs.new_tag }}"
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
