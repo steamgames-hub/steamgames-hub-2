@@ -37,7 +37,7 @@ from app.modules.hubfile.services import HubfileService
 from app.modules.zenodo.services import ZenodoService
 from app.modules.fakenodo.services import FakenodoService
 from app.modules.dataset.steamcsv_service import SteamCSVService
-from core.configuration.configuration import uploads_folder_name
+from core.storage import storage_service
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,22 @@ community_service = CommunityService()
 community_proposal_repo = CommunityProposalRepository()
 
 
-# Dataset type selection removed: Steam CSV only
+def _write_dataset_zip(dataset, zip_path: str):
+    dataset_dir = storage_service.dataset_subdir(dataset.user_id, dataset.id)
+    stored_files = storage_service.list_files(dataset_dir)
+    if not stored_files:
+        raise FileNotFoundError("Dataset files not found")
+    dataset_prefix = dataset_dir.replace("\\", "/")
+    with ZipFile(zip_path, "w") as zipf:
+        for stored_key in stored_files:
+            normalized_key = stored_key.replace("\\", "/")
+            if normalized_key.startswith(dataset_prefix):
+                inner = normalized_key[len(dataset_prefix):].lstrip("/")
+            else:
+                inner = normalized_key
+            arcname = os.path.join(f"dataset_{dataset.id}", inner)
+            with storage_service.as_local_path(normalized_key) as local_file:
+                zipf.write(local_file, arcname=arcname)
 
 
 @dataset_bp.route("/dataset/upload", methods=["GET", "POST"])
@@ -285,29 +300,13 @@ def clean_temp():
 def download_dataset(dataset_id):
     dataset = dataset_service.get_or_404(dataset_id)
 
-    # Build absolute directory to dataset files in a way consistent with HubfileService
-    working_dir = os.getenv("WORKING_DIR", "")
-    file_path = os.path.join(
-        working_dir,
-        uploads_folder_name(),
-        f"user_{dataset.user_id}",
-        f"dataset_{dataset.id}",
-    )
-
     temp_dir = tempfile.mkdtemp()
     zip_path = os.path.join(temp_dir, f"dataset_{dataset_id}.zip")
-
-    with ZipFile(zip_path, "w") as zipf:
-        for subdir, _, files in os.walk(file_path):
-            for file in files:
-                full_path = os.path.join(subdir, file)
-
-                relative_path = os.path.relpath(full_path, file_path)
-
-                zipf.write(
-                    full_path,
-                    arcname=os.path.join(os.path.basename(zip_path[:-4]), relative_path),
-                )
+    try:
+        _write_dataset_zip(dataset, zip_path)
+    except FileNotFoundError:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        abort(404)
 
     user_cookie = request.cookies.get("download_cookie")
     if not user_cookie:
