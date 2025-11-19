@@ -1,12 +1,12 @@
 <div style="text-align: center;">
   <strong>SteamGamesHub</strong>
   <br/>
-  CSV dataset repository for Steam games, integrated with Zenodo.
+  CSV dataset repository for Steam games, integrated with Fakenodo.
 </div>
 
 # SteamGamesHub
 
-CSV dataset repository for Steam games. Upload, preview, and publish CSV datasets with Zenodo integration.
+CSV dataset repository for Steam games. Upload, preview, and publish CSV datasets with Fakenodo integration.
 
 > Note: This project is a CSV-only refactor; prior UVL/UVLHub references have been removed.
 
