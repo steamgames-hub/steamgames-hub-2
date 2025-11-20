@@ -158,6 +158,38 @@
                 </div>
             </div>
 
+                {% if user_metrics %}
+                <div class="col-12 mt-3">
+
+                    <div class="card">
+
+                        <div class="card-body">
+
+                            <h2> <b>My activity</b> </h2>
+
+                            <h1 class="h2 mb-3">
+
+                                <h4 class="h4 mb-3" class="stats-color">
+                                    <i data-feather="upload" class="align-middle mr-2 stats-color"></i>&nbsp;{{ user_metrics.uploaded_datasets }} uploaded datasets
+                                </h4>
+
+                                <h4 class="h4 mb-3" class="stats-color">
+                                    <i data-feather="download" class="align-middle mr-2 stats-color"></i>&nbsp;{{ user_metrics.downloads }} downloads
+                                </h4>
+
+                                <h4 class="h4 mb-3" class="stats-color">
+                                    <i data-feather="refresh-cw" class="align-middle mr-2 stats-color"></i>&nbsp;{{ user_metrics.synchronizations }} synchronizations
+                                </h4>
+
+                            </h1>
+
+                        </div>
+
+                    </div>
+
+                </div>
+                {% endif %}
+
                 <div class="col-12">
 
                     <div class="card">

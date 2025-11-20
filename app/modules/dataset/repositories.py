@@ -24,6 +24,19 @@ class DSDownloadRecordRepository(BaseRepository):
         max_id = self.model.query.with_entities(func.max(self.model.id)).scalar()
         return max_id if max_id is not None else 0
 
+    def count_downloads_for_user(self, user_id: int) -> int:
+        """Count total dataset downloads for datasets owned by the given user.
+
+        This aggregates the number of download records for all DataSets where
+        DataSet.user_id == user_id. It counts download events regardless of who
+        performed the download.
+        """
+        return (
+            self.model.query.join(DataSet, self.model.dataset_id == DataSet.id)
+            .filter(DataSet.user_id == user_id)
+            .count()
+        )
+
 
 class DSMetaDataRepository(BaseRepository):
     def __init__(self):
@@ -97,6 +110,16 @@ class DataSetRepository(BaseRepository):
             .order_by(desc(self.model.id))
             .limit(5)
             .all()
+        )
+
+    def count_by_user(self, user_id: int) -> int:
+        return self.model.query.filter(self.model.user_id == user_id).count()
+
+    def count_synchronized_by_user(self, user_id: int) -> int:
+        return (
+            self.model.query.join(DSMetaData)
+            .filter(self.model.user_id == user_id, DSMetaData.dataset_doi.isnot(None))
+            .count()
         )
 
 

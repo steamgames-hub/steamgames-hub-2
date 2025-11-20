@@ -98,6 +98,16 @@ class DataSetService(BaseService):
     def total_dataset_views(self) -> int:
         return self.dsviewrecord_repostory.total_dataset_views()
 
+    # --- User-specific metrics ---
+    def count_user_datasets(self, user_id: int) -> int:
+        return self.repository.count_by_user(user_id)
+
+    def count_user_synchronized_datasets(self, user_id: int) -> int:
+        return self.repository.count_synchronized_by_user(user_id)
+
+    def count_user_dataset_downloads(self, user_id: int) -> int:
+        return self.dsdownloadrecord_repository.count_downloads_for_user(user_id)
+
     def create_from_form(self, form, current_user) -> DataSet:
         main_author = {
             "name": f"{current_user.profile.surname}, {current_user.profile.name}",
