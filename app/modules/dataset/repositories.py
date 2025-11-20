@@ -37,6 +37,12 @@ class DSDownloadRecordRepository(BaseRepository):
             .count()
         )
 
+    def count_downloads_performed_by_user(self, user_id: int) -> int:
+        """Count how many dataset archives the given user has downloaded."""
+        if not user_id:
+            return 0
+        return self.model.query.filter(self.model.user_id == user_id).count()
+
 
 class DSMetaDataRepository(BaseRepository):
     def __init__(self):

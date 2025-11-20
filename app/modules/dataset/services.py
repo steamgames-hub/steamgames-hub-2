@@ -98,7 +98,6 @@ class DataSetService(BaseService):
     def total_dataset_views(self) -> int:
         return self.dsviewrecord_repostory.total_dataset_views()
 
-    # --- User-specific metrics ---
     def count_user_datasets(self, user_id: int) -> int:
         return self.repository.count_by_user(user_id)
 
@@ -106,7 +105,10 @@ class DataSetService(BaseService):
         return self.repository.count_synchronized_by_user(user_id)
 
     def count_user_dataset_downloads(self, user_id: int) -> int:
-        return self.dsdownloadrecord_repository.count_downloads_for_user(user_id)
+        """Return how many downloads the given user performed (datasets + files)."""
+        dataset_archives = self.dsdownloadrecord_repository.count_downloads_performed_by_user(user_id)
+        hubfile_files = self.hubfiledownloadrecord_repository.count_downloads_performed_by_user(user_id)
+        return dataset_archives + hubfile_files
 
     def create_from_form(self, form, current_user) -> DataSet:
         main_author = {
@@ -135,7 +137,6 @@ class DataSetService(BaseService):
                     commit=False, data_set_id=dataset.id, fm_meta_data_id=fmmetadata.id
                 )
 
-                # associated files in feature model
                 file_path = os.path.join(current_user.temp_folder(), csv_filename)
                 checksum, size = calculate_checksum_and_size(file_path)
 

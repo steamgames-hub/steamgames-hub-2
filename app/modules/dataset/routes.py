@@ -22,7 +22,6 @@ from flask_login import current_user, login_required
 
 from app.modules.dataset import dataset_bp
 from app.modules.dataset.forms import DataSetForm
-from app.modules.dataset.models import DSDownloadRecord
 from app.modules.dataset.services import (
     AuthorService,
     DataSetService,
@@ -34,7 +33,6 @@ from app.modules.dataset.services import (
 from app.modules.community.services import CommunityService
 from app.modules.community.repositories import CommunityProposalRepository
 from app.modules.hubfile.services import HubfileService
-from app.modules.zenodo.services import ZenodoService
 from app.modules.fakenodo.services import FakenodoService
 from app.modules.dataset.steamcsv_service import SteamCSVService
 from core.configuration.configuration import uploads_folder_name
@@ -45,24 +43,18 @@ logger = logging.getLogger(__name__)
 dataset_service = DataSetService()
 author_service = AuthorService()
 dsmetadata_service = DSMetaDataService()
-zenodo_service = ZenodoService()
-fakenodo_service = FakenodoService()  # MOD: Fakenodo
+fakenodo_service = FakenodoService()
 doi_mapping_service = DOIMappingService()
 ds_view_record_service = DSViewRecordService()
 community_service = CommunityService()
 community_proposal_repo = CommunityProposalRepository()
 
 
-# Dataset type selection removed: Steam CSV only
-
-
 @dataset_bp.route("/dataset/upload", methods=["GET", "POST"])
 @login_required
 def create_dataset():
     form = DataSetForm()
-    # Cleanup: if user has no CSV files in their temp folder, remove the temp folder
     try:
-        # Only run cleanup on GET (when not posting the form)
         if request.method != "POST":
             try:
                 temp_dir = current_user.temp_folder()
@@ -85,17 +77,14 @@ def create_dataset():
             except Exception as diag_exc:
                 logger.warning("[upload][cleanup] Could not inspect temp folder for diagnostics: %s", diag_exc)
     except Exception:
-        # Be defensive: never let cleanup prevent rendering the page
         pass
     if request.method == "POST":
 
         dataset = None
 
         if not form.validate_on_submit():
-            # Build user-friendly error message, especially for version field in files
             messages = []
             try:
-                # Iterate FeatureModel subforms to collect version-specific errors with filenames
                 for subform in getattr(form, "feature_models", []) or []:
                     version_errors = getattr(subform, "version", None).errors if hasattr(subform, "version") else []
                     if version_errors:
@@ -104,10 +93,8 @@ def create_dataset():
                             f"Invalid version for '{filename}': must follow x.y.z (e.g., 1.2.3)"
                         )
             except Exception:
-                # be defensive; fall back to generic errors
                 pass
 
-            # Fallback: include any remaining form.errors in a readable way
             if not messages and isinstance(form.errors, dict):
                 for field, errs in form.errors.items():
                     if isinstance(errs, (list, tuple)):
@@ -120,8 +107,6 @@ def create_dataset():
             return jsonify({"message": message_text}), 400
 
         try:
-            # Validate pending files in temp folder (Steam CSV only)
-            # Diagnostics: log temp folder contents
             try:
                 temp_dir = current_user.temp_folder()
                 dir_list = []
@@ -144,10 +129,8 @@ def create_dataset():
             logger.exception(f"Exception while create dataset data in local {exc}")
             return jsonify({"Exception while create dataset data in local: ": str(exc)}), 400
 
-        # send dataset as deposition to Zenodo
         data = {}
         try:
-            # zenodo_response_json = zenodo_service.create_new_deposition(dataset) MOD: Fakenodo
             fakenodo_response_json = fakenodo_service.create_new_deposition(dataset)
             response_data = json.dumps(fakenodo_response_json)
             data = json.loads(response_data)
@@ -159,31 +142,15 @@ def create_dataset():
         if data.get("conceptrecid"):
             deposition_id = data.get("id")
 
-            # update dataset with deposition id in Zenodo
             dataset_service.update_dsmetadata(dataset.ds_meta_data_id, deposition_id=deposition_id)
 
-            print("Patata1")
-
             try:
-                # iterate for each feature model (one feature model = one request to Zenodo)
-                # for feature_model in dataset.feature_models:
-                #     zenodo_service.upload_file(dataset, deposition_id, feature_model)
-
-                # publish deposition
-                # zenodo_service.publish_deposition(deposition_id)
-
-                # update DOI
-                # deposition_doi = zenodo_service.get_doi(deposition_id)
-                print("Patata2")
                 deposition_doi = fakenodo_service.get_doi(deposition_id)
-                print("DOI:")
-                print(deposition_doi)
                 dataset_service.update_dsmetadata(dataset.ds_meta_data_id, dataset_doi=deposition_doi)
             except Exception as e:
                 msg = f"it has not been possible upload feature models in Zenodo and update the DOI: {e}"
                 return jsonify({"message": msg}), 200
 
-        # Delete temp folder
         file_path = current_user.temp_folder()
         if os.path.exists(file_path) and os.path.isdir(file_path):
             shutil.rmtree(file_path)
@@ -213,14 +180,12 @@ def upload():
     if not file or not (file.filename.endswith(".csv")):
         return jsonify({"message": "No valid file"}), 400
 
-    # create temp folder
     if not os.path.exists(temp_folder):
         os.makedirs(temp_folder)
 
     file_path = os.path.join(temp_folder, file.filename)
 
     if os.path.exists(file_path):
-        # Generate unique filename (by recursion)
         base_name, extension = os.path.splitext(file.filename)
         i = 1
         while os.path.exists(os.path.join(temp_folder, f"{base_name} ({i}){extension}")):
@@ -258,14 +223,9 @@ def delete():
 @dataset_bp.route("/dataset/file/clean_temp", methods=["POST"])
 @login_required
 def clean_temp():
-    """Delete all contents of the current user's temp folder (used when starting a new CSV upload).
-
-    Returns JSON with a message and HTTP 200 on success. Any errors are logged and returned with 500.
-    """
     try:
         temp_folder = current_user.temp_folder()
         if os.path.isdir(temp_folder):
-            # remove all files and directories inside temp_folder, but keep the folder itself
             for entry in os.listdir(temp_folder):
                 path = os.path.join(temp_folder, entry)
                 try:
@@ -285,7 +245,6 @@ def clean_temp():
 def download_dataset(dataset_id):
     dataset = dataset_service.get_or_404(dataset_id)
 
-    # Build absolute directory to dataset files in a way consistent with HubfileService
     working_dir = os.getenv("WORKING_DIR", "")
     file_path = os.path.join(
         working_dir,
@@ -309,42 +268,24 @@ def download_dataset(dataset_id):
                     arcname=os.path.join(os.path.basename(zip_path[:-4]), relative_path),
                 )
 
-    user_cookie = request.cookies.get("download_cookie")
-    if not user_cookie:
-        user_cookie = str(uuid.uuid4())  # Generate a new unique identifier if it does not exist
-        # Save the cookie to the user's browser
-        resp = make_response(
-            send_from_directory(
-                temp_dir,
-                f"dataset_{dataset_id}.zip",
-                as_attachment=True,
-                mimetype="application/zip",
-            )
-        )
-        resp.set_cookie("download_cookie", user_cookie)
-    else:
-        resp = send_from_directory(
+    user_cookie = str(uuid.uuid4())
+
+    resp = make_response(
+        send_from_directory(
             temp_dir,
             f"dataset_{dataset_id}.zip",
             as_attachment=True,
             mimetype="application/zip",
         )
+    )
+    resp.set_cookie("download_cookie", user_cookie)
 
-    # Check if the download record already exists for this cookie
-    existing_record = DSDownloadRecord.query.filter_by(
+    DSDownloadRecordService().create(
         user_id=current_user.id if current_user.is_authenticated else None,
         dataset_id=dataset_id,
+        download_date=datetime.now(timezone.utc),
         download_cookie=user_cookie,
-    ).first()
-
-    if not existing_record:
-        # Record the download in your database
-        DSDownloadRecordService().create(
-            user_id=current_user.id if current_user.is_authenticated else None,
-            dataset_id=dataset_id,
-            download_date=datetime.now(timezone.utc),
-            download_cookie=user_cookie,
-        )
+    )
 
     return resp
 
@@ -352,22 +293,17 @@ def download_dataset(dataset_id):
 @dataset_bp.route("/doi/<path:doi>/", methods=["GET"])
 def subdomain_index(doi):
 
-    # Check if the DOI is an old DOI
     new_doi = doi_mapping_service.get_new_doi(doi)
     if new_doi:
-        # Redirect to the same path with the new DOI
         return redirect(url_for("dataset.subdomain_index", doi=new_doi), code=302)
 
-    # Try to search the dataset by the provided DOI (which should already be the new one)
     ds_meta_data = dsmetadata_service.filter_by_doi(doi)
 
     if not ds_meta_data:
         abort(404)
 
-    # Get dataset
     dataset = ds_meta_data.data_set
 
-    # Save the cookie to the user's browser
     user_cookie = ds_view_record_service.create_cookie(dataset=dataset)
     FAKENODO_URL = os.getenv("FAKENODO_URL")
     accepted_proposal = community_proposal_repo.get_accepted_for_dataset(dataset.id)
@@ -392,7 +328,6 @@ def subdomain_index(doi):
 @login_required
 def get_unsynchronized_dataset(dataset_id):
 
-    # Get dataset
     dataset = dataset_service.get_unsynchronized_dataset(current_user.id, dataset_id)
 
     if not dataset:
