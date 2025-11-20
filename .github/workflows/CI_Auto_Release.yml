@@ -18,11 +18,9 @@ jobs:
 
       - name: Create tag
         id: tag
-        uses: anothrNick/github-tag-action@4ed44965e0db8dab2b466a16da04aec3cc312fd8 
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WITH_V: true
-          CONVENTIONAL_COMMITS: true                
+        uses: mathieudutour/github-tag-action@d28fa2ccfbd16e871a4bdf35e11b3ad1bd56c0c1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}              
 
       - name: Show tag
         run: |
