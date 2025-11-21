@@ -263,14 +263,6 @@ def clean_temp():
 def download_dataset(dataset_id):
     dataset = dataset_service.get_or_404(dataset_id)
 
-    working_dir = os.getenv("WORKING_DIR", "")
-    file_path = os.path.join(
-        working_dir,
-        uploads_folder_name(),
-        f"user_{dataset.user_id}",
-        f"dataset_{dataset.id}",
-    )
-
     temp_dir = tempfile.mkdtemp()
     zip_path = os.path.join(temp_dir, f"dataset_{dataset_id}.zip")
     try:
