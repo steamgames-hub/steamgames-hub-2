@@ -1,7 +1,6 @@
 import hashlib
 import logging
 import os
-import shutil
 import uuid
 from typing import Optional
 
@@ -24,6 +23,7 @@ from app.modules.hubfile.repositories import (
     HubfileViewRecordRepository,
 )
 from core.services.BaseService import BaseService
+from core.storage import storage_service
 
 logger = logging.getLogger(__name__)
 
@@ -53,20 +53,15 @@ class DataSetService(BaseService):
         current_user = AuthenticationService().get_authenticated_user()
         source_dir = current_user.temp_folder()
 
-        working_dir = os.getenv("WORKING_DIR", "")
-        from core.configuration.configuration import uploads_folder_name
-        dest_dir = os.path.join(
-            working_dir,
-            uploads_folder_name(),
-            f"user_{current_user.id}",
-            f"dataset_{dataset.id}",
-        )
-
-        os.makedirs(dest_dir, exist_ok=True)
-
         for feature_model in dataset.feature_models:
             csv_filename = feature_model.fm_meta_data.csv_filename
-            shutil.move(os.path.join(source_dir, csv_filename), dest_dir)
+            src_path = os.path.join(source_dir, csv_filename)
+            dest_relative = storage_service.dataset_file_path(
+                current_user.id,
+                dataset.id,
+                csv_filename,
+            )
+            storage_service.save_local_file(src_path, dest_relative)
 
     def get_synchronized(self, current_user_id: int) -> DataSet:
         return self.repository.get_synchronized(current_user_id)

@@ -1,4 +1,4 @@
-from flask import redirect, render_template, request, url_for, abort, flash, send_from_directory
+from flask import redirect, render_template, request, url_for, abort, flash, send_file
 from flask_login import current_user, login_required
 
 from app.modules.community import community_bp
@@ -7,9 +7,8 @@ from app.modules.community.models import ProposalStatus
 from app.modules.community.services import CommunityProposalService, CommunityService
 from app.modules.dataset.services import DataSetService
 from core.services.MailService import MailService
-from flask import current_app
 import os
-from core.configuration.configuration import uploads_folder_name
+from core.storage import storage_service
 
 
 community_service = CommunityService()
@@ -139,11 +138,14 @@ def community_icon(community_id: int):
     community = community_service.get_or_404(community_id)
     if not community.icon_path:
         abort(404)
-    base_dir = os.getenv("WORKING_DIR")
-    if not base_dir:
-        base_dir = os.path.abspath(os.path.join(current_app.root_path, os.pardir))
-    directory = os.path.join(base_dir, uploads_folder_name(), "communities", f"community_{community.id}")
-    return send_from_directory(directory, community.icon_path)
+    relative_path = storage_service.community_icon_path(
+        community.id,
+        community.icon_path,
+    )
+    local_path = storage_service.ensure_local_copy(relative_path)
+    if not os.path.exists(local_path):
+        abort(404)
+    return send_file(local_path)
 
 
 @community_bp.route("/community/mine", methods=["GET"])  
