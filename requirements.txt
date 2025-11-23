@@ -108,6 +108,7 @@ rpds-py==0.26.0
 rq==2.4.1
 selenium==4.34.2
 selenium-wire==5.1.0
+sendgrid==6.11.0
 setuptools==80.9.0
 simple-websocket==1.1.0
 six==1.17.0
