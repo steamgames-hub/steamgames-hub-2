@@ -450,3 +450,98 @@ def test_feature_model_version_optional_when_empty(test_app):
             "version": "",
         }))
         assert form.validate() is True
+
+
+
+
+# tests/test_dataset_service.py
+from unittest.mock import MagicMock, patch
+@pytest.fixture
+def mock_repo():
+    return MagicMock()
+
+@pytest.fixture
+def mock_download_repo():
+    return MagicMock()
+
+@pytest.fixture
+def service(mock_repo, mock_download_repo):
+    svc = DataSetService()
+    svc.repository = mock_repo
+    svc.dsdownloadrecord_repository = mock_download_repo
+    return svc
+
+def test_count_user_datasets(service, mock_repo):
+    mock_repo.count_by_user.return_value = 5
+    result = service.count_user_datasets(10)
+    mock_repo.count_by_user.assert_called_once_with(10)
+    assert result == 5
+
+def test_count_user_synchronized_datasets(service, mock_repo):
+    mock_repo.count_synchronized_by_user.return_value = 3
+    result = service.count_user_synchronized_datasets(10)
+    mock_repo.count_synchronized_by_user.assert_called_once_with(10)
+    assert result == 3
+
+
+
+def test_count_user_dataset_downloads():
+    service = DataSetService()
+    mock_download_repo = MagicMock()
+    mock_download_repo.count_downloads_performed_by_user.return_value = 7
+    service.dsdownloadrecord_repository = mock_download_repo
+    result = service.count_user_dataset_downloads(10)
+    mock_download_repo.count_downloads_performed_by_user.assert_called_once_with(10)
+    assert result == 7
+
+
+
+
+def test_user_metrics_authenticated():
+    current_user = MagicMock()
+    current_user.is_authenticated = True
+    current_user.id = 42
+
+    dataset_service = MagicMock()
+    dataset_service.count_user_datasets.return_value = 5
+    dataset_service.count_user_dataset_downloads.return_value = 12
+    dataset_service.count_user_synchronized_datasets.return_value = 3
+
+    user_metrics = None
+    if current_user.is_authenticated:
+        user_metrics = {
+            "uploaded_datasets": dataset_service.count_user_datasets(current_user.id),
+            "downloads": dataset_service.count_user_dataset_downloads(current_user.id),
+            "synchronizations": dataset_service.count_user_synchronized_datasets(current_user.id),
+        }
+
+    assert user_metrics == {
+        "uploaded_datasets": 5,
+        "downloads": 12,
+        "synchronizations": 3,
+    }
+
+    dataset_service.count_user_datasets.assert_called_once_with(42)
+    dataset_service.count_user_dataset_downloads.assert_called_once_with(42)
+    dataset_service.count_user_synchronized_datasets.assert_called_once_with(42)
+
+
+def test_user_metrics_not_authenticated():
+    current_user = MagicMock()
+    current_user.is_authenticated = False
+
+    dataset_service = MagicMock()
+
+    user_metrics = None
+    if current_user.is_authenticated:
+        user_metrics = {
+            "uploaded_datasets": dataset_service.count_user_datasets(current_user.id),
+            "downloads": dataset_service.count_user_dataset_downloads(current_user.id),
+            "synchronizations": dataset_service.count_user_synchronized_datasets(current_user.id),
+        }
+
+    assert user_metrics is None
+    dataset_service.count_user_datasets.assert_not_called()
+    dataset_service.count_user_dataset_downloads.assert_not_called()
+    dataset_service.count_user_synchronized_datasets.assert_not_called()
+

@@ -161,7 +161,7 @@ def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGames
         except Exception:
             pass
 
-        if time.time() - last_refresh > 3 and refresh_count < max_refreshes:
+        if time.time() - last_refresh > 5 and refresh_count < max_refreshes:
             try:
                 driver.switch_to.default_content()
                 try:
@@ -176,7 +176,7 @@ def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGames
                 pass
             last_refresh = time.time()
             refresh_count += 1
-        time.sleep(0.7)
+        time.sleep(1.2)
 
     if not email_element and last_email_element:
         email_element = last_email_element
@@ -203,7 +203,7 @@ def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGames
                 return m.group(1)
         except Exception:
             pass
-        time.sleep(0.7)
+        time.sleep(1.2)
     raise TimeoutException("[yopmail] 2FA code not found in email body")
 
 
