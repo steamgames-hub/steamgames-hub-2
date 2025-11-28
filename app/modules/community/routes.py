@@ -49,12 +49,11 @@ def create_community():
 def view_community(community_id: int):
     community = community_service.get_or_404(community_id)
 
+    accepted = [p for p in community.proposals if p.status == ProposalStatus.ACCEPTED]
     pending = []
-    accepted = []
     if current_user.is_authenticated and current_user.id == community.responsible_user_id:
         # show proposals for responsible
         pending = [p for p in community.proposals if p.status == ProposalStatus.PENDING]
-        accepted = [p for p in community.proposals if p.status == ProposalStatus.ACCEPTED]
 
     return render_template(
         "community/view.html",
@@ -148,7 +147,7 @@ def community_icon(community_id: int):
     return send_file(local_path)
 
 
-@community_bp.route("/community/mine", methods=["GET"])  
+@community_bp.route("/community/mine", methods=["GET"])
 @login_required
 def my_communities():
     communities = community_service.list_by_responsible(current_user.id)

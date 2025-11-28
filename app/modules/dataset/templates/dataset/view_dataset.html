@@ -4,15 +4,127 @@
 
 {% block head_extra %}
 <style>
-    .option-button {
-        display: block;
-        width: 100%;
-        margin-bottom: 5px;
-    }
+.related-section-container,
+.related-section-body {
+  background: #fbfdff !important;                /* blanco suave (no choque con fondo) */
+    border: 1px solid rgba(15,23,42,0.06) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 10px 25px rgba(2,6,23,0.04) !important;
+    padding: 18px !important;
+}
 
-    .option-button:last-child {
-        margin-bottom: 0;
-    }
+/* Header: quitar bordes fuertes si existieran */
+.related-section-header {
+  border-bottom: 1px solid rgba(15,23,42,0.03) !important;
+  padding-bottom: 0.5rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+/* Grid: forzarlo si bootstrap lo cambia */
+.related-section-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0,1fr)) !important;
+  gap: 1rem !important;
+}
+
+/* Tarjeta: fondo y sombra suaves, borde fino */
+.related-dataset-card {
+  background: linear-gradient(180deg,#ffffff 0%,#fbfdff 100%) !important;
+  border: 1px solid rgba(15,23,42,0.04) !important;
+  border-radius: 12px !important;
+  padding: 12px !important;
+  box-shadow: 0 10px 22px rgba(2,6,23,0.03) !important;
+  transition: transform .12s ease, box-shadow .16s ease !important;
+}
+
+/* Hover discreto */
+.related-dataset-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 16px 36px rgba(2,6,23,0.05) !important;
+}
+
+/* Flex interno: forzamos alineación como en tu HTML */
+.related-card-content {
+  display: flex !important;
+  gap: 0.9rem !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+}
+
+/* Thumb — tamaño fijo y fondo neutro */
+.related-thumb {
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 10px !important;
+  background: #eef2f6 !important;
+  color: #1f2937 !important;
+  font-weight: 700 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Si la imagen dentro tiene estilos propios, aseguramos el cover */
+.related-thumb img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+}
+
+/* Título: color y comportamiento */
+.related-card-main .related-title {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  text-decoration: none !important;
+  display: block !important;
+  margin-bottom: 0.25rem !important;
+}
+.related-card-main .related-title:hover {
+  color: #1d4ed8 !important;
+  text-decoration: underline !important;
+}
+
+/* Meta (autor + categoría) más discreto */
+.related-meta {
+  color: #6b7280 !important;
+  font-size: 0.9rem !important;
+  margin-bottom: 0.35rem !important;
+}
+
+/* Badges: evitar bg-primary o bg-light intensos de bootstrap */
+.related-badges .related-badge {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(15,23,42,0.03) !important;
+  font-size: 0.72rem !important;
+  padding: 0.18rem 0.5rem !important;
+  border-radius: 999px !important;
+  text-transform: none !important;
+}
+
+/* Estadísticas (descargas/fecha) alineadas a la derecha en desktop,
+   en mobile pasan abajo (por media query) */
+.related-stats {
+  min-width: 120px !important;
+  color: #475569 !important;
+  font-size: 0.92rem !important;
+  text-align: right !important;
+}
+@media (max-width: 768px) {
+  .related-stats { text-align: left !important; width: 100% !important; margin-top: .6rem !important; }
+}
+
+/* Iconos feather: color neutro y tamaño contenido */
+.related-stats svg.feather { width: 18px !important; height: 18px !important; vertical-align: -3px !important; color: #94a3b8 !important; }
+
+/* En caso de que Bootstrap añada .card o .shadow-sm, nulificamos comportamientos no deseados */
+.related-dataset-card.card, .related-dataset-card.shadow-sm {
+  box-shadow: 0 10px 22px rgba(2,6,23,0.03) !important;
+  background: linear-gradient(180deg,#ffffff 0%,#fbfdff 100%) !important;
+}
 </style>
 {% endblock %}
 
@@ -148,6 +260,57 @@
         </div>
 
 
+        {% if related_datasets %}
+        <div class="related-section-container">
+            <div class="related-section-header">
+                <h3 class="related-section-title">Related Datasets</h3>
+                <span class="related-section-count">{{ related_datasets|length }} suggestions</span>
+            </div>
+
+            <div class="related-section-body">
+                <div class="related-section-grid">
+                    {% for item in related_datasets %}
+                    <div class="related-dataset-card">
+                        <div class="related-card-content">
+
+                            <div class="related-card-main">
+                                <a class="related-title" href="{{ url_for('dataset.subdomain_index', doi=item.dataset.ds_meta_data.dataset_doi) }}">
+                                    {{ item.dataset.ds_meta_data.title }}
+                                </a>
+
+                                <div class="related-meta">
+                                    {% set first_author = item.dataset.ds_meta_data.authors | first %}
+                                    {% if first_author %}
+                                        {{ first_author.name }}
+                                    {% endif %}
+                                    · {{ item.dataset.ds_meta_data.data_category.name.replace('_', ' ').title() }}
+                                </div>
+
+                                <div class="related-badges">
+                                    {% if item.accepted_community %}
+                                    <span class="badge related-badge">{{ item.accepted_community.name }}</span>
+                                    {% endif %}
+
+                                    {% set related_tags = item.dataset.ds_meta_data.tags.split(',') if item.dataset.ds_meta_data.tags else [] %}
+                                    {% for tag in related_tags[:3] %}
+                                    <span class="badge related-badge">{{ tag.strip() }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <div class="related-stats">
+                                <div><i data-feather="download" class="me-1"></i>{{ item.download_count or 0 }} downloads</div>
+                                <div><i data-feather="calendar" class="me-1"></i>{{ item.dataset.created_at.strftime('%b %d, %Y') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+
     </div>
 
     <div class="col-xl-4 col-lg-12 col-md-12 col-sm-12">
@@ -243,6 +406,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         feather.replace();
+        applyRelatedSectionStyles();
     });
 
     var currentFileId;
@@ -320,6 +484,78 @@
             console.log('Text copied to clipboard');
         }).catch(err => {
             console.error('Failed to copy text: ', err);
+        });
+    }
+
+    function applyRelatedSectionStyles() {
+        const containers = document.querySelectorAll('.related-section-container, .related-section-body');
+        if (!containers.length) {
+            return;
+        }
+
+        const containerStyles = {
+            background: '#fbfdff',
+            border: '1px solid rgba(15,23,42,0.06)',
+            borderRadius: '14px',
+            boxShadow: '0 10px 25px rgba(2,6,23,0.04)',
+            padding: '18px'
+        };
+
+        const cardStyles = {
+            background: 'linear-gradient(180deg,#ffffff 0%,#fbfdff 100%)',
+            border: '1px solid rgba(15,23,42,0.04)',
+            borderRadius: '12px',
+            boxShadow: '0 10px 22px rgba(2,6,23,0.03)',
+            padding: '12px',
+            transition: 'transform .12s ease, box-shadow .16s ease'
+        };
+
+        const titleStyles = {
+            color: '#0f172a',
+            fontWeight: '700',
+            textDecoration: 'none'
+        };
+
+        const metaStyles = {
+            color: '#6b7280'
+        };
+
+        const badgeStyles = {
+            background: '#f1f5f9',
+            color: '#0f172a',
+            border: '1px solid rgba(15,23,42,0.03)',
+            borderRadius: '999px',
+            fontSize: '0.72rem',
+            padding: '0.18rem 0.5rem'
+        };
+
+        const statsStyles = {
+            color: '#475569',
+            textAlign: 'right',
+            minWidth: '120px'
+        };
+
+        containers.forEach(el => Object.assign(el.style, containerStyles));
+
+        document.querySelectorAll('.related-dataset-card').forEach(card => {
+            card.classList.remove('card', 'shadow-sm');
+            Object.assign(card.style, cardStyles);
+        });
+
+        document.querySelectorAll('.related-title').forEach(title => {
+            Object.assign(title.style, titleStyles);
+        });
+
+        document.querySelectorAll('.related-meta').forEach(meta => {
+            Object.assign(meta.style, metaStyles);
+        });
+
+        document.querySelectorAll('.related-badge').forEach(badge => {
+            Object.assign(badge.style, badgeStyles);
+        });
+
+        document.querySelectorAll('.related-stats').forEach(stats => {
+            Object.assign(stats.style, statsStyles);
         });
     }
 </script>

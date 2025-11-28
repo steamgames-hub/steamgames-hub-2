@@ -312,6 +312,7 @@ def subdomain_index(doi):
     accepted_proposal = community_proposal_repo.get_accepted_for_dataset(dataset.id)
     accepted_community = accepted_proposal.community if accepted_proposal else None
     can_propose = accepted_proposal is None
+    related_datasets = dataset_service.get_related_datasets(dataset)
     resp = make_response(
         render_template(
             "dataset/view_dataset.html",
@@ -320,6 +321,7 @@ def subdomain_index(doi):
             communities=community_service.list_all(),
             accepted_community=accepted_community,
             can_propose=can_propose,
+            related_datasets=related_datasets,
         )
     )
     resp.set_cookie("view_cookie", user_cookie)
@@ -339,6 +341,7 @@ def get_unsynchronized_dataset(dataset_id):
     accepted_proposal = community_proposal_repo.get_accepted_for_dataset(dataset.id)
     accepted_community = accepted_proposal.community if accepted_proposal else None
     can_propose = accepted_proposal is None
+    related_datasets = dataset_service.get_related_datasets(dataset)
     return render_template(
         "dataset/view_dataset.html",
         dataset=dataset,
@@ -346,6 +349,7 @@ def get_unsynchronized_dataset(dataset_id):
         communities=community_service.list_all(),
         accepted_community=accepted_community,
         can_propose=can_propose,
+        related_datasets=related_datasets,
     )
 
 
