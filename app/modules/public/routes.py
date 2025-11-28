@@ -24,6 +24,23 @@ def index():
     total_dataset_views = dataset_service.total_dataset_views()
     total_feature_model_views = feature_model_service.total_feature_model_views()
 
+    latest = dataset_service.latest_synchronized()
+
+    try:
+        trending_raw = dataset_service.trending_datasets(period_days=7, by="views", limit=5)
+    except Exception:
+        logger.exception("Error obteniendo trending datasets")
+        trending_raw = []
+    trending = []
+    for item in trending_raw:
+        if isinstance(item, (list, tuple)):
+            dataset = item[0]
+            metric = int(item[1]) if len(item) > 1 else 0
+        else:
+            dataset = item
+            metric = 0
+        trending.append((dataset, metric))
+
     # Personal dashboard metrics (only when authenticated)
     user_metrics = None
     if current_user.is_authenticated:
