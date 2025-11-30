@@ -9,8 +9,8 @@ from flask_login import current_user
 from app.modules.dataset.models import DataSet
 from app.modules.featuremodel.models import FeatureModel
 from app.modules.zenodo.repositories import ZenodoRepository
-from core.configuration.configuration import uploads_folder_name
 from core.services.BaseService import BaseService
+from core.storage import storage_service
 
 logger = logging.getLogger(__name__)
 
@@ -144,14 +144,14 @@ class ZenodoService(BaseService):
         """
 
         logger.info("Dataset sending to Zenodo...")
-        logger.info(f"Publication type...{dataset.ds_meta_data.publication_type.value}")
+        logger.info(f"Publication type...{dataset.ds_meta_data.data_category.value}")
 
         metadata = {
             "title": dataset.ds_meta_data.title,
-            "upload_type": "dataset" if dataset.ds_meta_data.publication_type.value == "none" else "publication",
-            "publication_type": (
-                dataset.ds_meta_data.publication_type.value
-                if dataset.ds_meta_data.publication_type.value != "none"
+            "upload_type": "dataset" if dataset.ds_meta_data.data_category.value == "none" else "publication",
+            "data_category": (
+                dataset.ds_meta_data.data_category.value
+                if dataset.ds_meta_data.data_category.value != "none"
                 else None
             ),
             "description": dataset.ds_meta_data.description,
@@ -195,9 +195,12 @@ class ZenodoService(BaseService):
         csv_filename = feature_model.fm_meta_data.csv_filename
         data = {"name": csv_filename}
         user_id = current_user.id if user is None else user.id
-        file_path = os.path.join(
-            uploads_folder_name(), f"user_{str(user_id)}", f"dataset_{dataset.id}/", csv_filename
+        relative_path = storage_service.dataset_file_path(
+            user_id,
+            dataset.id,
+            csv_filename,
         )
+        file_path = storage_service.ensure_local_copy(relative_path)
         files = {"file": open(file_path, "rb")}
 
         publish_url = f"{self.ZENODO_API_URL}/{deposition_id}/files"

@@ -1,16 +1,13 @@
 import logging
-import os
 
-import requests
 from dotenv import load_dotenv
-from flask import Response, jsonify
 from flask_login import current_user
 
 from app.modules.dataset.models import DataSet
 from app.modules.featuremodel.models import FeatureModel
 from app.modules.fakenodo.repositories import FakenodoRepository
-from core.configuration.configuration import uploads_folder_name
 from core.services.BaseService import BaseService
+from core.storage import storage_service
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +18,8 @@ class FakenodoService(BaseService):
     def __init__(self):
         super().__init__(FakenodoRepository())
 
-    def generate_doi(self, id: int) -> str:
-        return "10.1234" + "/" + str(id)
+    def generate_doi(self, record_id: int) -> str:
+        return f"10.1234/{record_id}"
 
     def create_new_deposition(self, dataset: DataSet) -> dict:
         """
@@ -44,11 +41,20 @@ class FakenodoService(BaseService):
             "id": fakenodo_element.dataset_id 
         }
 
-        self.repository.update(fakenodo_element.dataset_id, associated_doi=self.generate_doi(fakenodo_element.dataset_id))
+        self.repository.update(
+            fakenodo_element.dataset_id,
+            associated_doi=self.generate_doi(fakenodo_element.dataset_id),
+        )
 
         return fake_response
 
-    def upload_file(self, dataset: DataSet, deposition_id: int, feature_model: FeatureModel, user=None) -> dict:
+    def upload_file(
+        self,
+        dataset: DataSet,
+        deposition_id: int,
+        feature_model: FeatureModel,
+        user=None,
+    ) -> dict:
         """
         Upload a file to a deposition in Fakenodo.
 
@@ -61,13 +67,18 @@ class FakenodoService(BaseService):
             dict: The response in JSON format with the details of the uploaded file.
         """
         csv_filename = feature_model.fm_meta_data.csv_filename
-        data = {"name": csv_filename}
         user_id = current_user.id if user is None else user.id
-        file_path = os.path.join(
-            uploads_folder_name(), f"user_{str(user_id)}", f"dataset_{dataset.id}/", csv_filename
+        relative_path = storage_service.dataset_file_path(
+            user_id,
+            dataset.id,
+            csv_filename,
         )
-        files = {"file": open(file_path, "rb")}
-        
+        file_path = storage_service.ensure_local_copy(relative_path)
+        return {
+            "name": csv_filename,
+            "local_path": file_path,
+            "deposition_id": deposition_id,
+        }
 
     def get_deposition(self, deposition_id: int) -> dict:
         """

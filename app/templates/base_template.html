@@ -93,6 +93,25 @@
                 {% endif %}
 
 
+                <li class="sidebar-header">Communities</li>
+                <li class="sidebar-item {{ 'active' if request.endpoint == 'community.list_communities' else '' }}">
+                    <a class="sidebar-link" href="{{ url_for('community.list_communities') }}">
+                        <i class="align-middle" data-feather="grid"></i> <span class="align-middle">Explore communities</span>
+                    </a>
+                </li>
+                {% if current_user.is_authenticated %}
+                <li class="sidebar-item {{ 'active' if request.endpoint == 'community.create_community' else '' }}">
+                    <a class="sidebar-link" href="{{ url_for('community.create_community') }}">
+                        <i class="align-middle" data-feather="plus-square"></i> <span class="align-middle">Create community</span>
+                    </a>
+                </li>
+                <li class="sidebar-item {{ 'active' if request.endpoint == 'community.my_communities' else '' }}">
+                    <a class="sidebar-link" href="{{ url_for('community.my_communities') }}">
+                        <i class="align-middle" data-feather="layers"></i> <span class="align-middle">My communities</span>
+                    </a>
+                </li>
+                {% endif %}
+
                 {% if current_user.is_anonymous %}
 
                     <li class="sidebar-header">
@@ -167,7 +186,6 @@
 
         </div>
     </nav>
-
     <div class="main">
         <nav class="navbar navbar-expand navbar-light navbar-bg">
             <a class="sidebar-toggle js-sidebar-toggle">
@@ -229,10 +247,20 @@
         </nav>
 
         <main class="content">
-            
-
             <div class="container p-0">
-                
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    <div class="mt-4">
+                        {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                {% endwith %}
+
                 {% block content %}{% endblock %}
 
             </div>
@@ -250,7 +278,7 @@
                     <div class="col-6 text-end">
                         <ul class="list-inline">
                             <li class="list-inline-item">
-                                <a class="text-muted" href="https://github.com/steamgames-hub/steamgames-hub-2"
+                                <a class="text-muted" href="https://github.com/steamgames-hub/steamgames-hub"
                                    target="_blank">
                                     <i class="align-middle" data-feather="github"></i>
                                     Repository on GitHub</a>

@@ -1,6 +1,6 @@
 """008
 
-Revision ID: 008
+Revision ID: 008_a
 Revises: 007
 Create Date: 2025-11-10 04:04:11.758712
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
-revision = '008'
+revision = '008_a'
 down_revision = '007'
 branch_labels = None
 depends_on = None

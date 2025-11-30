@@ -1,0 +1,70 @@
+name: Deploy to preproduction Render
+
+on:
+  push:
+    branches: [main, Trunk, bugfix]
+  pull_request:
+    branches: [main, Trunk, bugfix]
+
+jobs:
+
+  testing:
+
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: uvlhub_root_password
+          MYSQL_DATABASE: uvlhubdb_test
+          MYSQL_USER: uvlhub_user
+          MYSQL_PASSWORD: uvlhub_password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Tests
+      env:
+        FLASK_ENV: testing
+        MARIADB_HOSTNAME: 127.0.0.1
+        MARIADB_PORT: 3306
+        MARIADB_TEST_DATABASE: uvlhubdb_test
+        MARIADB_USER: uvlhub_user
+        MARIADB_PASSWORD: uvlhub_password
+        MAIL_SERVER: smtp.sendgrid.net
+        MAIL_PORT: 587
+        MAIL_USE_TLS: True
+        MAIL_USERNAME: apikey
+        MAIL_PASSWORD: ${{ secrets.SENDGRID_API_KEY }}
+        MAIL_DEFAULT_SENDER: "noreply.steamgameshub1@gmail.com"
+      run: |
+        pytest app/modules/ --ignore-glob='*selenium*'
+
+  deploy:
+    name: Deploy to Preproduction Render
+    needs: testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Deploy to Render
+        env:
+          deploy_url: ${{ secrets.RENDER_PREPRODUCTION_DEPLOY_HOOK_URL }}
+        run: |
+          curl "$deploy_url"

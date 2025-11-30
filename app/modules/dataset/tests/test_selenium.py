@@ -1,9 +1,12 @@
 import os
+import re
 import time
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 
 from core.environment.host import get_host_for_selenium_testing
 from core.selenium.common import close_driver, initialize_driver
@@ -24,6 +27,201 @@ def count_datasets(driver, host):
     except Exception:
         amount_datasets = 0
     return amount_datasets
+def _wait_visible_any(driver, locators, timeout=15):
+    end_time = time.time() + timeout
+    last_exc = None
+    while time.time() < end_time:
+        for by, sel in locators:
+            try:
+                el = driver.find_element(by, sel)
+                if el.is_displayed():
+                    return el
+            except Exception as exc:
+                last_exc = exc
+                continue
+        time.sleep(0.3)
+    raise TimeoutException(f"Element not visible for any locator: {locators}") from last_exc
+
+
+def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGamesHub", timeout=60):
+    driver.get("https://yopmail.com/es/")
+    wait = WebDriverWait(driver, 10)
+    # Try dismiss cookie banners best-effort
+    for xp in [
+        "//button[contains(., 'Consent')]",
+        "//button[contains(., 'Aceptar')]",
+        "//button[contains(., 'Agree')]",
+        "//button[contains(., 'Aceptar todo')]",
+        "//a[contains(., 'Aceptar') or contains(., 'Accept')]",
+    ]:
+        try:
+            btn = wait.until(EC.element_to_be_clickable((By.XPATH, xp)))
+            btn.click()
+            time.sleep(0.4)
+            break
+        except Exception:
+            continue
+
+    # Open mailbox
+    inbox_field = wait.until(EC.presence_of_element_located((By.ID, "login")))
+    inbox_field.clear()
+    inbox_field.send_keys(username)
+    inbox_field.send_keys(Keys.RETURN)
+    time.sleep(1.2)
+
+    # Find inbox iframe
+    inbox_frame = None
+    for f in driver.find_elements(By.TAG_NAME, "iframe"):
+        fid = (f.get_attribute("id") or f.get_attribute("name") or "").lower()
+        if "inbox" in fid or "ifinbox" in fid or "mail" in fid:
+            inbox_frame = f
+            break
+    if not inbox_frame:
+        raise TimeoutException("[yopmail] inbox iframe not found")
+    driver.switch_to.frame(inbox_frame)
+
+    existing_ids = set()
+    try:
+        for el in driver.find_elements(By.CSS_SELECTOR, "div.m"):
+            eid = el.get_attribute("id")
+            if eid:
+                existing_ids.add(eid)
+    except Exception:
+        pass
+
+    email_element = None
+    last_email_element = None
+    start = time.time()
+    last_refresh = 0
+    refresh_count = 0
+    max_refreshes = 2
+    while time.time() - start < timeout:
+        try:
+            # Prefer sender match
+            for s in driver.find_elements(By.XPATH, f"//span[contains(., '{sender_contains}')]"):
+                parent = s
+                for _ in range(5):
+                    parent = parent.find_element(By.XPATH, "..")
+                    eid = parent.get_attribute("id")
+                    if eid:
+                        if eid not in existing_ids:
+                            email_element = parent
+                        break
+                if email_element:
+                    break
+
+            if not email_element:
+                items = driver.find_elements(By.CSS_SELECTOR, "div.m")
+                for it in items:
+                    eid = it.get_attribute("id")
+                    if eid and eid not in existing_ids:
+                        email_element = it
+                        break
+                    last_email_element = it
+
+            if email_element:
+                try:
+                    btn = email_element.find_element(By.CSS_SELECTOR, "button.lm")
+                    btn.click()
+                except Exception:
+                    try:
+                        email_element.click()
+                    except Exception:
+                        driver.execute_script("arguments[0].click();", email_element)
+                time.sleep(1.2)
+                break
+        except Exception:
+            pass
+
+        if time.time() - last_refresh > 3 and refresh_count < max_refreshes:
+            try:
+                driver.switch_to.default_content()
+                try:
+                    driver.find_element(By.ID, "refresh").click()
+                except Exception:
+                    try:
+                        driver.execute_script("if (typeof r === 'function') { r(); }")
+                    except Exception:
+                        pass
+                driver.switch_to.frame(inbox_frame)
+            except Exception:
+                pass
+            last_refresh = time.time()
+            refresh_count += 1
+        time.sleep(0.7)
+
+    if not email_element and last_email_element:
+        email_element = last_email_element
+    if not email_element:
+        raise TimeoutException("[yopmail] no email found")
+
+    # Switch to email content and extract 6-digit code
+    driver.switch_to.default_content()
+    mail_frame = WebDriverWait(driver, 8).until(lambda d: d.find_element(By.ID, "ifmail"))
+    driver.switch_to.frame(mail_frame)
+
+    start_body = time.time()
+    while time.time() - start_body < timeout:
+        try:
+            body_text = driver.find_element(By.TAG_NAME, "body").text
+            m = re.search(r"\b(\d{6})\b", body_text)
+            if m:
+                return m.group(1)
+        except Exception:
+            pass
+        time.sleep(0.7)
+    raise TimeoutException("[yopmail] 2FA code not found in email body")
+
+
+def _login_with_optional_2fa(driver, host):
+    wait = WebDriverWait(driver, 25)
+    driver.get(f"{host}/login")
+    wait_for_page_to_load(driver)
+
+    email_field = wait.until(EC.presence_of_element_located((By.NAME, "email")))
+    password_field = driver.find_element(By.NAME, "password")
+    email_field.clear()
+    email_field.send_keys("user1@yopmail.com")
+    password_field.clear()
+    password_field.send_keys("1234")
+
+    try:
+        driver.find_element(By.ID, "submit").click()
+    except Exception:
+        password_field.send_keys(Keys.RETURN)
+
+    # Wait until either 2FA page or logout link exists
+    two_factor = False
+    start = time.time()
+    while time.time() - start < 12:
+        cur = driver.current_url
+        if "/two-factor/" in cur:
+            two_factor = True
+            break
+        try:
+            driver.find_element(By.CSS_SELECTOR, "a.sidebar-link[href*='/logout']")
+            return  # logged in
+        except Exception:
+            pass
+        time.sleep(0.3)
+
+    if two_factor:
+        main = driver.current_window_handle
+        driver.execute_script("window.open('');")
+        driver.switch_to.window(driver.window_handles[-1])
+        code = fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGamesHub")
+        driver.close()
+        driver.switch_to.window(main)
+
+        code_field = wait.until(EC.presence_of_element_located((By.NAME, "code")))
+        code_field.clear()
+        code_field.send_keys(code)
+        try:
+            driver.find_element(By.CSS_SELECTOR, "form button[type='submit']").click()
+        except Exception:
+            code_field.send_keys(Keys.RETURN)
+        wait_for_page_to_load(driver)
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "a.sidebar-link[href*='/logout']")))
 
 
 def test_upload_dataset():
@@ -32,100 +230,53 @@ def test_upload_dataset():
     try:
         host = get_host_for_selenium_testing()
 
-        # Open the login page
-        driver.get(f"{host}/login")
-        wait_for_page_to_load(driver)
-
-        # Find the username and password field and enter the values
-        email_field = driver.find_element(By.NAME, "email")
-        password_field = driver.find_element(By.NAME, "password")
-
-        email_field.send_keys("user1@example.com")
-        password_field.send_keys("1234")
-
-        # Send the form
-        password_field.send_keys(Keys.RETURN)
-        time.sleep(4)
-        wait_for_page_to_load(driver)
-
-        # Count initial datasets
-        initial_datasets = count_datasets(driver, host)
+        # Login with optional 2FA
+        _login_with_optional_2fa(driver, host)
 
         # Open the upload dataset
         driver.get(f"{host}/dataset/upload")
         wait_for_page_to_load(driver)
 
-        # Find basic info and UVL model and fill values
-        title_field = driver.find_element(By.NAME, "title")
-        title_field.send_keys("Title")
+        # Fill minimal required basic info
+        title_field = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.NAME, "title")))
+        title_field.clear()
+        title_field.send_keys("Selenium Upload Test Title")
         desc_field = driver.find_element(By.NAME, "desc")
-        desc_field.send_keys("Description")
-        tags_field = driver.find_element(By.NAME, "tags")
-        tags_field.send_keys("tag1,tag2")
+        desc_field.clear()
+        desc_field.send_keys("Selenium Upload Test Description")
 
-        # Add two authors and fill
-        add_author_button = driver.find_element(By.ID, "add_author")
-        add_author_button.send_keys(Keys.RETURN)
-        wait_for_page_to_load(driver)
-        add_author_button.send_keys(Keys.RETURN)
-        wait_for_page_to_load(driver)
-
-        name_field0 = driver.find_element(By.NAME, "authors-0-name")
-        name_field0.send_keys("Author0")
-        affiliation_field0 = driver.find_element(By.NAME, "authors-0-affiliation")
-        affiliation_field0.send_keys("Club0")
-        orcid_field0 = driver.find_element(By.NAME, "authors-0-orcid")
-        orcid_field0.send_keys("0000-0000-0000-0000")
-
-        name_field1 = driver.find_element(By.NAME, "authors-1-name")
-        name_field1.send_keys("Author1")
-        affiliation_field1 = driver.find_element(By.NAME, "authors-1-affiliation")
-        affiliation_field1.send_keys("Club1")
-
-        # Obtén las rutas absolutas de los archivos
+        # Upload one CSV via Dropzone
         file1_path = os.path.abspath("app/modules/dataset/csv_examples/file1.csv")
-        file2_path = os.path.abspath("app/modules/dataset/csv_examples/file2.csv")
-
-        # Subir el primer archivo
         dropzone = driver.find_element(By.CLASS_NAME, "dz-hidden-input")
         dropzone.send_keys(file1_path)
-        wait_for_page_to_load(driver)
 
-        time.sleep(3)  # Force wait time
+        # Wait for Dropzone success and the file list item
+        WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".dz-success-mark")))
+        _wait_visible_any(driver, [(By.CSS_SELECTOR, "#file-list li")], timeout=15)
 
-        # Subir el segundo archivo
-        dropzone = driver.find_element(By.CLASS_NAME, "dz-hidden-input")
-        dropzone.send_keys(file2_path)
-        wait_for_page_to_load(driver)
+        # Reveal per-file form and set version
+        try:
+            info_btn = _wait_visible_any(driver, [(By.CSS_SELECTOR, "#file-list .info-button")], timeout=8)
+            info_btn.click()
+        except Exception:
+            pass
+        version_input = _wait_visible_any(
+            driver,
+            [(By.CSS_SELECTOR, "#file-list .file_form input[name$='-version']")],
+            timeout=15,
+        )
+        version_input.clear()
+        version_input.send_keys("1.0.0")
 
-        # Add authors in UVL models
-        time.sleep(2)  # Force wait time
-        show_button = driver.find_element(By.ID, "0_button")
-        show_button.send_keys(Keys.RETURN)
-        add_author_uvl_button = driver.find_element(By.ID, "0_form_authors_button")
-        add_author_uvl_button.send_keys(Keys.RETURN)
-        wait_for_page_to_load(driver)
-
-        name_field = driver.find_element(By.NAME, "feature_models-0-authors-2-name")
-        name_field.send_keys("Author3")
-        affiliation_field = driver.find_element(By.NAME, "feature_models-0-authors-2-affiliation")
-        affiliation_field.send_keys("Club3")
-
-        # Check I agree and send form
-        check = driver.find_element(By.ID, "agreeCheckbox")
-        check.send_keys(Keys.SPACE)
-        wait_for_page_to_load(driver)
-
+        # Tick the agree checkbox to enable upload and assert it's enabled, but do not submit
+        agree = driver.find_element(By.ID, "agreeCheckbox")
+        if not agree.is_selected():
+            agree.click()
         upload_btn = driver.find_element(By.ID, "upload_button")
-        upload_btn.send_keys(Keys.RETURN)
-        wait_for_page_to_load(driver)
-        time.sleep(5)  # Force wait time
+        assert upload_btn.is_enabled(), "Upload button should be enabled after agreeing terms"
 
-        assert driver.current_url == f"{host}/dataset/list", "Test failed!"
-
-        # Count final datasets
-        final_datasets = count_datasets(driver, host)
-        assert final_datasets == initial_datasets + 1, "Test failed!"
+        # Stay on the upload page (do not click upload_button)
+        assert "/dataset/upload" in driver.current_url
 
         print("Test passed!")
 

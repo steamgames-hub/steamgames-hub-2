@@ -1,0 +1,35 @@
+{% extends "base_template.html" %}
+
+{% block title %}Communities{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1>Communities</h1>
+  {% if current_user.is_authenticated %}
+  <a href="{{ url_for('community.create_community') }}" class="btn btn-primary">Create community</a>
+  {% endif %}
+  
+</div>
+
+{% if communities %}
+<div class="row">
+  {% for c in communities %}
+  <div class="col-md-4 col-sm-6 mb-3">
+    <div class="card h-100">
+  {% if c.icon_path %}
+  <img src="{{ url_for('community.community_icon', community_id=c.id) }}" class="card-img-top" alt="{{ c.name }} icon" style="object-fit: cover; max-height: 180px;">
+  {% endif %}
+      <div class="card-body">
+        <h5 class="card-title">{{ c.name }}</h5>
+        <p class="card-text text-muted">{{ c.description }}</p>
+        <a href="{{ url_for('community.view_community', community_id=c.id) }}" class="btn btn-outline-primary btn-sm">View</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="text-muted">No communities yet.</p>
+{% endif %}
+
+{% endblock %}

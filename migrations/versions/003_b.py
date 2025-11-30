@@ -1,7 +1,7 @@
 """empty message
 
-Revision ID: 003
-Revises: 002
+Revision ID: 003_b
+Revises: 003_a
 Create Date: 2025-11-08 18:36:09.432020
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '003'
-down_revision = '002'
+revision = '003_b'
+down_revision = '003_a'
 branch_labels = None
 depends_on = None
 

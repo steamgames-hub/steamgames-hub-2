@@ -104,8 +104,8 @@
 
                             <div class="col-lg-6 col-6">
                                 <div class="mb-3">
-                                    {{ form.publication_type.label(class="form-label") }}
-                                    {{ form.publication_type(class="form-control") }}
+                                    {{ form.data_category.label(class="form-label") }}
+                                    {{ form.data_category(class="form-control") }}
                                 </div>
 
                             </div>
@@ -255,6 +255,10 @@
                 <form action="{{ url_for('dataset.upload') }}" class="dropzone" id="myDropzone">
                     <div id="dropzone-text" class="text-muted" style="font-size: 0.9rem;"></div>
                 </form>
+
+                <div class="mt-2">
+                    <thead class="text-muted">Required headers: <code>appid, name, release_date, is_free, developers, publishers, platforms, genres, tags</code></thead>
+                </div>
 
                 <span class="text-danger" id="alerts" style="display: none">
                     </span>
@@ -435,8 +439,8 @@
                                                 </div>
                                                 <div class="col-lg-6 col-12">
                                                     <div class="mb-3">
-                                                        <label class="form-label" for="publication_type">Publication type</label>
-                                                        <select class="form-control" name="feature_models-${formUniqueId}-publication_type">
+                                                        <label class="form-label" for="data_category">Publication type</label>
+                                                        <select class="form-control" name="feature_models-${formUniqueId}-data_category">
                                                             <option value="none">None</option>
                                                             <option value="annotationcollection">Annotation Collection</option>
                                                             <option value="book">Book</option>
@@ -473,8 +477,13 @@
                                                 </div>
                                                 <div class="col-6">
                                                     <div class="mb-3">
-                                                        <label class="form-label">File version</label>
-                                                        <input type="text" class="form-control" name="feature_models-${formUniqueId}-csv_version">
+                                <label class="form-label">File version</label>
+                                <input type="text"
+                                    class="form-control"
+                                    name="feature_models-${formUniqueId}-version"
+                                    placeholder="e.g., 1.2.3"
+                                    pattern="^\\d+\\.\\d+\\.\\d+$"
+                                    title="Version must follow x.y.z format (e.g., 1.2.3)">
                                                     </div>
                                                 </div>
                                                 <div class="col-12">

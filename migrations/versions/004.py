@@ -1,7 +1,7 @@
 """002
 
 Revision ID: 004
-Revises: 003
+Revises: 003_b
 Create Date: 2025-11-07 16:27:10.820363
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
 revision = '004'
-down_revision = '003'
+down_revision = '003_b'
 branch_labels = None
 depends_on = None
 

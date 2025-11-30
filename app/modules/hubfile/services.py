@@ -9,13 +9,16 @@ from app.modules.hubfile.repositories import (
     HubfileViewRecordRepository,
 )
 from core.services.BaseService import BaseService
+from core.storage import storage_service
 
 
 class HubfileService(BaseService):
     def __init__(self):
         super().__init__(HubfileRepository())
         self.hubfile_view_record_repository = HubfileViewRecordRepository()
-        self.hubfile_download_record_repository = HubfileDownloadRecordRepository()
+        self.hubfile_download_record_repository = (
+            HubfileDownloadRecordRepository()
+        )
 
     def get_owner_user_by_hubfile(self, hubfile: Hubfile) -> User:
         return self.repository.get_owner_user_by_hubfile(hubfile)
@@ -23,17 +26,21 @@ class HubfileService(BaseService):
     def get_dataset_by_hubfile(self, hubfile: Hubfile) -> DataSet:
         return self.repository.get_dataset_by_hubfile(hubfile)
 
-    def get_path_by_hubfile(self, hubfile: Hubfile) -> str:
-
+    def _relative_path(self, hubfile: Hubfile) -> str:
         hubfile_user = self.get_owner_user_by_hubfile(hubfile)
         hubfile_dataset = self.get_dataset_by_hubfile(hubfile)
-        working_dir = os.getenv("WORKING_DIR")
-
-        path = os.path.join(
-            working_dir, "uploads", f"user_{hubfile_user.id}", f"dataset_{hubfile_dataset.id}", hubfile.name
+        return storage_service.dataset_file_path(
+            hubfile_user.id,
+            hubfile_dataset.id,
+            hubfile.name,
         )
 
-        return path
+    def get_path_by_hubfile(self, hubfile: Hubfile) -> str:
+        relative_path = self._relative_path(hubfile)
+        return storage_service.ensure_local_copy(relative_path)
+
+    def get_relative_path_by_hubfile(self, hubfile: Hubfile) -> str:
+        return self._relative_path(hubfile)
 
     def total_hubfile_views(self) -> int:
         return self.hubfile_view_record_repository.total_hubfile_views()

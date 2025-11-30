@@ -1,14 +1,14 @@
 """
 CSV-only refactor: drop dataset_type and rename UVL columns to CSV.
 
-Revision ID: 005
+Revision ID: 005_a
 Revises: 004
 Create Date: 2025-11-04
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = '005'
+revision = '005_a'
 down_revision = '004'
 branch_labels = None
 depends_on = None
