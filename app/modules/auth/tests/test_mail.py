@@ -34,12 +34,12 @@ def test_client(test_client):
 def test_send_verification_email_authenticated(test_client):
     with test_client.application.app_context():
         db.session.reset()
-        u = User(email="verify@example.com", password="verify1234", verified=False)
+        u = User(email="verify@yopmail.com", password="verify1234", verified=False)
         db.session.add(u)
         db.session.commit()
 
     test_client.post(
-        "/login", data=dict(email="verify@example.com", password="verify1234"), follow_redirects=True
+        "/login", data=dict(email="verify@yopmail.com", password="verify1234"), follow_redirects=True
     )
 
     response = test_client.get("/verify", follow_redirects=True)

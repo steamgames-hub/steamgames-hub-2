@@ -9,7 +9,7 @@ from app.modules.profile.repositories import UserProfileRepository
 
 from app.modules.auth.models import User, UserRole, PasswordResetToken
 from app.modules.profile.models import UserProfile
-from app.modules.dataset.models import DSMetaData, DataSet, PublicationType
+from app.modules.dataset.models import DSMetaData, DataSet, DataCategory
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
@@ -181,7 +181,7 @@ def test_curator_can_create_issue(test_client):
     assert resp.status_code == 200
 
     # create a DSMetaData and DataSet to reference
-    md = DSMetaData(title="t", description="d", publication_type=PublicationType.NONE)
+    md = DSMetaData(title="t", description="d", data_category=DataCategory.NONE)
     db.session.add(md)
     db.session.commit()
     ds = DataSet(user_id=user.id, ds_meta_data_id=md.id)
@@ -242,7 +242,7 @@ def test_curator_can_create_issue(test_client):
     assert resp.status_code == 200
 
     # create a DSMetaData and DataSet to reference
-    md = DSMetaData(title="t", description="d", publication_type=PublicationType.NONE)
+    md = DSMetaData(title="t", description="d", data_category=DataCategory.NONE)
     db.session.add(md)
     db.session.commit()
     ds = DataSet(user_id=user.id, ds_meta_data_id=md.id)

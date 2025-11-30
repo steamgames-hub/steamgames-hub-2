@@ -49,6 +49,7 @@ class TestingConfig(Config):
         f"{os.getenv('MARIADB_TEST_DATABASE', 'default_db')}"
     )
     WTF_CSRF_ENABLED = False
+    TWO_FACTOR_ENABLED = False
 
 
 class ProductionConfig(Config):
