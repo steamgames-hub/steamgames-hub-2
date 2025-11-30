@@ -27,7 +27,8 @@ def create_app(config_name="development"):
     app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD")
     app.config['MAIL_USE_TLS'] = os.getenv("MAIL_USE_TLS", "True") == "True"
     app.config['MAIL_DEFAULT_SENDER'] = os.getenv("MAIL_DEFAULT_SENDER")
-
+    app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
+    app.config['SECURITY_PASSWORD_SALT'] = os.getenv("SECURITY_PASSWORD_SALT")
 
     mail.init_app(app)
 

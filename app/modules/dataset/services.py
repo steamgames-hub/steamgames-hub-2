@@ -1,14 +1,21 @@
 import hashlib
 import logging
 import os
-import shutil
 import uuid
-from typing import Optional
+from datetime import datetime
+from typing import List, Optional, Set
 
 from flask import request
+from datetime import datetime, timedelta
+from app.modules.dataset.models import DSDownloadRecord
+
+from app.modules.community.models import CommunityDatasetProposal
+from sqlalchemy import func, or_, desc
+
+from app import db
 
 from app.modules.auth.services import AuthenticationService
-from app.modules.dataset.models import DataSet, DSMetaData, DSViewRecord
+from app.modules.dataset.models import Author, DataSet, DSMetaData, DSDownloadRecord, DSViewRecord
 from app.modules.dataset.repositories import (
     AuthorRepository,
     DataSetRepository,
@@ -23,7 +30,9 @@ from app.modules.hubfile.repositories import (
     HubfileRepository,
     HubfileViewRecordRepository,
 )
+from app.modules.community.models import CommunityDatasetProposal, ProposalStatus
 from core.services.BaseService import BaseService
+from core.storage import storage_service
 
 logger = logging.getLogger(__name__)
 
