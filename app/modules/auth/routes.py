@@ -29,7 +29,11 @@ def login():
     if form.validate_on_submit():
         user = authentication_service.login(form.email.data, form.password.data)
         if user:
-            return redirect(url_for("auth.two_factor", user_id=user.id))
+            from flask import current_app
+            if current_app.config.get("TWO_FACTOR_ENABLED", True):
+                return redirect(url_for("auth.two_factor", user_id=user.id))
+            else:
+                return redirect(url_for("public.index"))
         return render_template("auth/login_form.html", form=form, error="Credenciales inválidas")
 
     return render_template("auth/login_form.html", form=form)
@@ -102,7 +106,7 @@ def send_verification_email(email=None):
     
     return render_template("auth/verification_lockscreen.html", show_modal=True, modal_message="A verification email has been sent to your address. Make sure to check your spam folder before resending the email.")
     
-@auth_bp.route("/verify/<token>", methods=['GET', 'POST'])
+@auth_bp.route("/verify/<path:token>", methods=['GET', 'POST'])
 @login_required
 def verify(token):
     if current_user.verified:

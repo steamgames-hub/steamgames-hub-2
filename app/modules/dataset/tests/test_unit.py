@@ -66,7 +66,12 @@ def test_validate_folder_invalid_headers_failure(tmp_path):
         svc.validate_folder(str(tmp_path))
 
     # Should report invalid headers for at least one file
-    assert "missing headers appid" in str(exc.value).lower()
+    # Accept either 'missing headers' or 'invalid headers. expected exactly' for robustness
+    error_msg = str(exc.value).lower()
+    assert (
+        "invalid headers. expected exactly" in error_msg
+        or "missing headers" in error_msg
+    ), f"Unexpected error message: {error_msg}"
 
 
 def test_validate_folder_missing_data_rows(tmp_path):

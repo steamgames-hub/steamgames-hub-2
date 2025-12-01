@@ -22,17 +22,13 @@ def test_client(test_client):
         db.session.add(profile)
         db.session.commit()
 
-        user_id = user_test.id
-        
-    yield test_client, user_id
+    yield test_client
 
 
 def test_edit_profile_page_get(test_client):
     """
     Testea el flujo completo de login + 2FA + acceso a /profile/edit.
     """
-    client, user_test_id = test_client
-
     # 1️⃣ Login inicial
     resp = test_client.post(
         "/login",
@@ -40,33 +36,30 @@ def test_edit_profile_page_get(test_client):
         follow_redirects=False
     )
     assert resp.status_code == 302
-    assert "/two-factor/" in resp.location  # confirmamos que se redirige a 2FA
+    # Permite login directo o con 2FA según config
+    assert resp.location == "/" or "/two-factor/" in resp.location
 
     # 2️⃣ Obtener el usuario y su código de 2FA
     user = User.query.filter_by(email="user@example.com").first()
     assert user is not None
-    assert user.two_factor_code is not None
-
-    # 3️⃣ Enviar el código al endpoint correcto
-    two_factor_url = f"/two-factor/{user.id}"
-    resp = test_client.post(
-        two_factor_url,
-        data={"code": user.two_factor_code},
-        follow_redirects=True
-    )
-
-    # Si el login fue correcto, debería redirigir a alguna vista interna (no 404 ni login)
-    assert resp.status_code == 200
-    assert b"Welcome" in resp.data or b"Profile" in resp.data or b"Steam" in resp.data
-
+    if test_client.application.config.get("TWO_FACTOR_ENABLED", True):
+        assert user.two_factor_code is not None
+        # 3️⃣ Enviar el código al endpoint correcto
+        two_factor_url = f"/two-factor/{user.id}"
+        resp = test_client.post(
+            two_factor_url,
+            data={"code": user.two_factor_code},
+            follow_redirects=True
+        )
+        # Si el login fue correcto, debería redirigir a alguna vista interna (no 404 ni login)
+        assert resp.status_code == 200
+        assert b"Welcome" in resp.data or b"Profile" in resp.data or b"Steam" in resp.data
     # 4️⃣ Acceder a la página de edición de perfil (requiere sesión)
-    response = client.get(f"/profile/edit/{user_test_id}")
-
+    response = test_client.get(f"/profile/edit/{user.id}")
     # Verificaciones claras
     assert response.status_code == 200, "El acceso a /profile/edit no devolvió 200 OK"
     assert b"Edit" in response.data or b"Profile" in response.data, \
         "La página de edición de perfil no contiene texto esperado"
-
     # 5️⃣ Logout al final del test
     logout(test_client)
 
@@ -75,8 +68,6 @@ def test_change_preference_save_drafts(test_client):
     """
     Tests to modify the profile attribute "save_drafts" via a PUT request.
     """
-    client, _ = test_client
-
     # 1️⃣ Login inicial
     resp = test_client.post(
         "/login",
@@ -84,27 +75,25 @@ def test_change_preference_save_drafts(test_client):
         follow_redirects=False
     )
     assert resp.status_code == 302
-    assert "/two-factor/" in resp.location  # confirmamos que se redirige a 2FA
+    # Permite login directo o con 2FA según config
+    assert resp.location == "/" or "/two-factor/" in resp.location
 
     # 2️⃣ Obtener el usuario y su código de 2FA
     user = User.query.filter_by(email="user@example.com").first()
     assert user is not None
-    assert user.two_factor_code is not None
-
-    # 3️⃣ Enviar el código al endpoint correcto
-    two_factor_url = f"/two-factor/{user.id}"
-    resp = test_client.post(
-        two_factor_url,
-        data={"code": user.two_factor_code},
-        follow_redirects=True
-    )
-
-    # Si el login fue correcto, debería redirigir a alguna vista interna (no 404 ni login)
-    assert resp.status_code == 200
-    assert b"Welcome" in resp.data or b"Profile" in resp.data or b"Steam" in resp.data
-
-    response = client.put("/profile/save_drafts")
+    if test_client.application.config.get("TWO_FACTOR_ENABLED", True):
+        assert user.two_factor_code is not None
+        # 3️⃣ Enviar el código al endpoint correcto
+        two_factor_url = f"/two-factor/{user.id}"
+        resp = test_client.post(
+            two_factor_url,
+            data={"code": user.two_factor_code},
+            follow_redirects=True
+        )
+        # Si el login fue correcto, debería redirigir a alguna vista interna (no 404 ni login)
+        assert resp.status_code == 200
+        assert b"Welcome" in resp.data or b"Profile" in resp.data or b"Steam" in resp.data
+    response = test_client.put("/profile/save_drafts")
     assert response.status_code == 200, "The preference was changed succesfully"
-
-    logout(client)
+    logout(test_client)
     

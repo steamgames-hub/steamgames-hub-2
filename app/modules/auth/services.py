@@ -39,8 +39,14 @@ class AuthenticationService(BaseService):
         email = kwargs.pop("email", None)
         password = kwargs.pop("password", None)
 
-        if not all([email, password, name, surname]):
-            raise ValueError("Email, password, name y surname son requeridos.")
+        if not email:
+            raise ValueError("Email is required.")
+        if not password:
+            raise ValueError("Password is required.")
+        if not name:
+            raise ValueError("Name is required.")
+        if not surname:
+            raise ValueError("Surname is required.")
 
         user = User(email=email, password=password)
         db.session.add(user)
