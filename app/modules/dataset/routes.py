@@ -36,7 +36,6 @@ from app.modules.dataset.services import (
 from app.modules.community.services import CommunityService
 from app.modules.community.repositories import CommunityProposalRepository
 from app.modules.hubfile.services import HubfileService
-from app.modules.zenodo.services import ZenodoService
 from app.modules.fakenodo.services import FakenodoService
 from app.modules.dataset.steamcsv_service import SteamCSVService
 from app.modules.auth.models import UserRole
@@ -48,7 +47,6 @@ logger = logging.getLogger(__name__)
 dataset_service = DataSetService()
 author_service = AuthorService()
 dsmetadata_service = DSMetaDataService()
-zenodo_service = ZenodoService()
 fakenodo_service = FakenodoService()  # MOD: Fakenodo
 doi_mapping_service = DOIMappingService()
 ds_view_record_service = DSViewRecordService()
