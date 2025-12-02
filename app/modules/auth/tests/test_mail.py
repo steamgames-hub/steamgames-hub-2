@@ -1,8 +1,22 @@
 import pytest
+import click
 
 from app import db
 from app.modules.auth.mail_util.token import generate_token
+from app.modules.auth.services import AuthenticationService
 from app.modules.auth.models import User
+
+
+@pytest.fixture(autouse=True)
+def disable_send_email(monkeypatch):
+    """Prevent real emails from being sent during tests by replacing
+    AuthenticationService.send_email with a no-op.
+    """
+    def _noop(self, email, subject, html):
+        return None
+
+    monkeypatch.setattr(AuthenticationService, "send_email", _noop)
+    yield
 
 
 @pytest.fixture(scope="module")
@@ -39,9 +53,11 @@ def test_verify_token_success(test_client, clean_database):
         db.session.add(u)
         db.session.commit()
 
-    test_client.post("/login", data=dict(email="verify@example.com", password="verify1234"), follow_redirects=True)
-
-    token = generate_token("verify@example.com")
+    test_client.post(
+        "/login", data=dict(email="verify@example.com", password="verify1234"), follow_redirects=True
+    )
+    
+    token = AuthenticationService().generate_token("verify@example.com")
     response = test_client.get(f"/verify/{str(token)}", follow_redirects=True)
 
     assert b"Your account has been verified successfully!" in response.data, "Verification unsuccessful"

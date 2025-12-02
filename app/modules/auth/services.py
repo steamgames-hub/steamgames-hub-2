@@ -1,4 +1,6 @@
 import os
+from flask import current_app, render_template, url_for
+from itsdangerous import URLSafeTimedSerializer
 
 from flask_login import current_user, login_user
 
@@ -9,6 +11,8 @@ from app.modules.profile.models import UserProfile
 from app.modules.profile.repositories import UserProfileRepository
 from core.configuration.configuration import uploads_folder_name
 from core.services.BaseService import BaseService
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 
 class AuthenticationService(BaseService):
@@ -105,3 +109,51 @@ class AuthenticationService(BaseService):
             self.repository.session.delete(profile)
         self.repository.session.delete(user)
         self.repository.session.commit()
+
+    # Token auxiliary functions
+    def generate_token(self, email):
+        serializer = URLSafeTimedSerializer(os.getenv("SECRET_KEY"))
+        return serializer.dumps(email, salt=os.getenv("SECURITY_PASSWORD_SALT"))
+
+
+    def confirm_token(self, token, expiration=3600):
+        serializer = URLSafeTimedSerializer(os.getenv("SECRET_KEY"))
+        try:
+            email = serializer.loads(
+                token, salt=os.getenv("SECURITY_PASSWORD_SALT"), max_age=expiration
+            )
+            return email
+        except Exception:
+            return False
+        
+    # Verification email sending
+    def send_verification_email(self, email):
+        token = self.generate_token(email)
+        confirm_url = url_for("auth.verify", token=token, _external=True)
+        html = render_template("auth/verification_email.html", confirm_url=confirm_url)
+        subject = "Please confirm your email"
+
+        self.send_email(email, subject, html)
+    
+    def send_email(self, email, subject, html):
+        app = current_app._get_current_object()
+        sg_api_key = os.environ.get("SENDGRID_API_KEY")
+        from_email = os.environ.get("MAIL_USER")
+
+        if not sg_api_key or not from_email:
+            raise RuntimeError("SENDGRID_API_KEY o MAIL_USER no configuradas")
+
+        message = Mail(
+            from_email=from_email,
+            to_emails=email,
+            subject=subject,
+            html_content=html
+        )
+
+        try:
+            sg = SendGridAPIClient(sg_api_key)
+            response = sg.send(message)
+            app.logger.info(f"Correo enviado a {email} | Status: {response.status_code}")
+        except Exception as e:
+            app.logger.exception(f"Error enviando correo vía SendGrid: {e}")
+            raise

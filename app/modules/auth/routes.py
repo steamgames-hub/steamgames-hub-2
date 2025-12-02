@@ -11,6 +11,10 @@ from app.modules.auth.mail_util.token import confirm_token, generate_token
 from app.modules.auth.models import User, UserRole
 from app.modules.auth.services import AuthenticationService
 from app.modules.profile.services import UserProfileService
+from app.modules.auth.models import User, UserRole
+from app import db
+
+import logging
 
 authentication_service = AuthenticationService()
 user_profile_service = UserProfileService()
@@ -36,11 +40,7 @@ def show_signup_form():
 
         login_user(user, remember=True)
         send_verification_email()
-        return render_template(
-            "auth/verification_lockscreen.html",
-            show_modal=True,
-            modal_message="A verification email has been sent to your address.",
-        )
+        return render_template("auth/verification_lockscreen.html", show_modal=True, modal_message="A verification email has been sent to your address. Make sure to check your spam folder before resending the email.")
 
     return render_template("auth/signup_form.html", form=form)
 
@@ -58,6 +58,13 @@ def login():
 
     return render_template("auth/login_form.html", form=form)
 
+# Auxiliary function to minimize code duplication and complexity
+def redirect_checks_verified(url, verified):
+    if verified:
+        return redirect(url)
+    else:
+        return render_template("auth/verification_lockscreen.html")
+
 
 @auth_bp.route("/logout")
 def logout():
@@ -71,25 +78,20 @@ def send_verification_email(email=None):
     if email is None:
         email = current_user.email
 
-    token = generate_token(email)
-    confirm_url = url_for("auth.verify", token=token, _external=True)
-    html = render_template("auth/verification_email.html", confirm_url=confirm_url)
-    subject = "Please confirm your email"
-
-    send_email(email, subject, html)
-    return render_template(
-        "auth/verification_lockscreen.html",
-        show_modal=True,
-        modal_message="A verification email has been sent to your address.",
-    )
-
-
-@auth_bp.route("/verify/<token>", methods=["GET", "POST"])
+    try:
+        authentication_service.send_verification_email(email)
+    except Exception as exc:
+        logger.exception(f"Exception while sending verification email: {exc}")
+        return render_template("auth/verification_lockscreen.html", show_modal=True, modal_message=f"Error sending verification email, please, try again later.")
+    
+    return render_template("auth/verification_lockscreen.html", show_modal=True, modal_message="A verification email has been sent to your address. Make sure to check your spam folder before resending the email.")
+    
+@auth_bp.route("/verify/<token>", methods=['GET', 'POST'])
 @login_required
 def verify(token):
     if current_user.verified:
         return redirect(url_for("public.index"))
-    email = confirm_token(token)
+    email = authentication_service.confirm_token(token)
     if not email:
         return render_template(
             "auth/verification_lockscreen.html",
@@ -117,14 +119,7 @@ def verify(token):
     )
 
 
-def redirect_checks_verified(url, verified):
-    if verified:
-        return redirect(url)
-    else:
-        return render_template("auth/verification_lockscreen.html")
-
-
-@auth_bp.route("/user/upgrade/<int:user_id>", methods=["POST"])
+@auth_bp.route("/user/upgrade/<int:user_id>", methods=['POST'])
 @login_required
 def upgrade_user_role(user_id):
     user = User.query.get_or_404(user_id)
