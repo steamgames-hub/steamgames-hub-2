@@ -1,4 +1,3 @@
-import os
 from threading import Thread
 
 from flask import current_app
@@ -13,8 +12,8 @@ from sendgrid.helpers.mail import Mail as SGMail
 class MailService:
     def _send_via_sendgrid(self, to: str, subject: str, body: str):
         app = current_app._get_current_object()
-        sg_api_key = os.environ.get("SENDGRID_API_KEY")
-        from_email = os.environ.get("FROM_EMAIL")
+        sg_api_key = app.config.get("SENDGRID_API_KEY")
+        from_email = app.config.get("FROM_EMAIL") or app.config.get("MAIL_DEFAULT_SENDER")
 
         if not sg_api_key or not from_email:
             raise RuntimeError("SENDGRID_API_KEY o FROM_EMAIL no configuradas")
@@ -47,7 +46,7 @@ class MailService:
         def _send():
             with app.app_context():
                 try:
-                    if os.environ.get("SENDGRID_API_KEY"):
+                    if app.config.get("SENDGRID_API_KEY"):
                         self._send_via_sendgrid(to, subject, body)
                     else:
                         msg = Message(subject, recipients=[to], body=body)

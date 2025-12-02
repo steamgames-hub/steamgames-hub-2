@@ -23,7 +23,6 @@ from werkzeug.security import generate_password_hash
 from app import db, mail
 
 
-
 class AuthenticationService(BaseService):
     def __init__(self):
         self.repository = UserRepository()
@@ -126,8 +125,8 @@ class AuthenticationService(BaseService):
     # --- Envío de correo con SendGrid ---
     def _send_via_sendgrid(self, to: str, subject: str, body: str):
         app = current_app._get_current_object()
-        sg_api_key = os.environ.get("SENDGRID_API_KEY")
-        from_email = os.environ.get("FROM_EMAIL")
+        sg_api_key = app.config.get("SENDGRID_API_KEY")
+        from_email = app.config.get("FROM_EMAIL") or app.config.get("MAIL_DEFAULT_SENDER")
 
         if not sg_api_key or not from_email:
             raise RuntimeError("SENDGRID_API_KEY o FROM_EMAIL no configuradas")
@@ -157,7 +156,7 @@ class AuthenticationService(BaseService):
         def _send():
             with app.app_context():
                 try:
-                    if os.environ.get("SENDGRID_API_KEY"):
+                    if app.config.get("SENDGRID_API_KEY"):
                         self._send_via_sendgrid(to, subject, body)
                     else:
                         msg = Message(subject, recipients=[to], body=body)
@@ -212,15 +211,26 @@ class AuthenticationService(BaseService):
 
     # Token auxiliary functions
     def generate_token(self, email):
-        serializer = URLSafeTimedSerializer(os.getenv("SECRET_KEY"))
-        return serializer.dumps(email, salt=os.getenv("SECURITY_PASSWORD_SALT"))
+        secret_key = current_app.config.get("SECRET_KEY")
+        salt = current_app.config.get("SECURITY_PASSWORD_SALT")
 
+        if not secret_key or not salt:
+            raise RuntimeError("SECRET_KEY o SECURITY_PASSWORD_SALT no configuradas")
+
+        serializer = URLSafeTimedSerializer(secret_key)
+        return serializer.dumps(email, salt=salt)
 
     def confirm_token(self, token, expiration=3600):
-        serializer = URLSafeTimedSerializer(os.getenv("SECRET_KEY"))
+        secret_key = current_app.config.get("SECRET_KEY")
+        salt = current_app.config.get("SECURITY_PASSWORD_SALT")
+
+        if not secret_key or not salt:
+            raise RuntimeError("SECRET_KEY o SECURITY_PASSWORD_SALT no configuradas")
+
+        serializer = URLSafeTimedSerializer(secret_key)
         try:
             email = serializer.loads(
-                token, salt=os.getenv("SECURITY_PASSWORD_SALT"), max_age=expiration
+                token, salt=salt, max_age=expiration
             )
             return email
         except Exception:

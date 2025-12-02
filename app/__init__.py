@@ -18,6 +18,7 @@ db = SQLAlchemy()
 migrate = Migrate()
 mail = Mail()
 
+
 def create_app(config_name="development"):
     app = Flask(__name__)
 
@@ -29,6 +30,8 @@ def create_app(config_name="development"):
     app.config['MAIL_DEFAULT_SENDER'] = os.getenv("MAIL_DEFAULT_SENDER")
     app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
     app.config['SECURITY_PASSWORD_SALT'] = os.getenv("SECURITY_PASSWORD_SALT")
+    app.config['SENDGRID_API_KEY'] = os.getenv("SENDGRID_API_KEY")
+    app.config['FROM_EMAIL'] = os.getenv("FROM_EMAIL")
 
     mail.init_app(app)
 
@@ -40,15 +43,6 @@ def create_app(config_name="development"):
     db.init_app(app)
     migrate.init_app(app, db)
 
-    # Configuración del servicio de correo
-    app.config['MAIL_SERVER'] = os.getenv("MAIL_SERVER")
-    app.config['MAIL_PORT'] = int(os.getenv("MAIL_PORT", 587))
-    app.config['MAIL_USERNAME'] = os.getenv("MAIL_USERNAME")
-    app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD")
-    app.config['MAIL_USE_TLS'] = os.getenv("MAIL_USE_TLS", "True") == "True"
-    app.config['MAIL_DEFAULT_SENDER'] = os.getenv("MAIL_DEFAULT_SENDER")
-    
-    mail.init_app(app)
     # Register modules
     module_manager = ModuleManager(app)
     module_manager.register_modules()
