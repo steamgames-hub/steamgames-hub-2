@@ -26,10 +26,10 @@ class SteamCSVService:
 
         errors: List[str] = []
         found_csv = False
+
         for entry in os.listdir(folder_path):
             if not entry.lower().endswith(".csv"):
-                # Ignore non-CSV files for this type
-                continue
+                continue  # Ignore non-CSV files
             found_csv = True
             msg = self._validate_csv_file(folder_path, entry)
             if msg:
@@ -48,27 +48,24 @@ class SteamCSVService:
             with open(fpath, "r", encoding="utf-8", newline="") as f:
                 reader = csv.reader(f)
                 headers = next(reader, [])
-                has_data_row = False
-                for row in reader:
-                    if any(str(cell).strip() for cell in row):
-                        has_data_row = True
-                        break
+                rows = list(reader)
         except Exception as exc:
             return f"{entry}: cannot read CSV ({exc})"
 
-        # Compare headers case-insensitively and ignoring extra spaces
-        present = {str(h).strip().lower() for h in headers}
-        missing = []
-        for h in self.REQUIRED_HEADERS:
-            if h.strip().lower() not in present:
-                missing.append(h)
-        if missing:
-            return f"{entry}: missing headers {', '.join(missing)}"
-        if not has_data_row:
+        if headers != self.REQUIRED_HEADERS:
+            return (
+                f"{entry}: invalid headers. Expected exactly: "
+                f"{', '.join(self.REQUIRED_HEADERS)} in this order"
+            )
+
+        if not rows or all(not any(cell.strip() for cell in row) for row in rows):
             return f"{entry}: must contain at least one data row"
+
+        for i, row in enumerate(rows, start=2):
+            if len(row) != len(self.REQUIRED_HEADERS):
+                return f"{entry}: row {i} does not match header column count"
 
         return None
 
     def files_block_partial(self) -> str:
-        # New flattened template path (no 'types' folder)
         return "dataset/_files_block.html"

@@ -1,14 +1,21 @@
 import hashlib
 import logging
 import os
-import shutil
 import uuid
-from typing import Optional
+from datetime import datetime
+from typing import List, Optional, Set
 
 from flask import request
+from datetime import datetime, timedelta
+from app.modules.dataset.models import DSDownloadRecord
+
+from app.modules.community.models import CommunityDatasetProposal
+from sqlalchemy import func, or_, desc
+
+from app import db
 
 from app.modules.auth.services import AuthenticationService
-from app.modules.dataset.models import DataSet, DSMetaData, DSViewRecord
+from app.modules.dataset.models import Author, DataSet, DSMetaData, DSDownloadRecord, DSViewRecord
 from app.modules.dataset.repositories import (
     AuthorRepository,
     DataSetRepository,
@@ -23,7 +30,9 @@ from app.modules.hubfile.repositories import (
     HubfileRepository,
     HubfileViewRecordRepository,
 )
+from app.modules.community.models import CommunityDatasetProposal, ProposalStatus
 from core.services.BaseService import BaseService
+from core.storage import storage_service
 
 logger = logging.getLogger(__name__)
 
@@ -53,14 +62,15 @@ class DataSetService(BaseService):
         current_user = AuthenticationService().get_authenticated_user()
         source_dir = current_user.temp_folder()
 
-        working_dir = os.getenv("WORKING_DIR", "")
-        dest_dir = os.path.join(working_dir, "uploads", f"user_{current_user.id}", f"dataset_{dataset.id}")
-
-        os.makedirs(dest_dir, exist_ok=True)
-
         for feature_model in dataset.feature_models:
             csv_filename = feature_model.fm_meta_data.csv_filename
-            shutil.move(os.path.join(source_dir, csv_filename), dest_dir)
+            src_path = os.path.join(source_dir, csv_filename)
+            dest_relative = storage_service.dataset_file_path(
+                current_user.id,
+                dataset.id,
+                csv_filename,
+            )
+            storage_service.save_local_file(src_path, dest_relative)
 
     def get_synchronized(self, current_user_id: int) -> DataSet:
         return self.repository.get_synchronized(current_user_id)
@@ -171,6 +181,89 @@ class DataSetService(BaseService):
         dataset = self.get_by_id(dataset_id)
         if dataset.draft_mode is True:
             return self.update(self, dataset_id)
+    def trending_datasets(self, period_days: int = 7, by: str = "views", limit: int = 5):
+        try:
+            since = datetime.now() - timedelta(days=period_days)
+            session = self.repository.session
+
+            if by == "views":
+                ts_col = getattr(DSViewRecord, "view_date", None)
+                if ts_col is None:
+                    raise AttributeError("DSViewRecord no tiene 'view_date'")
+
+                subq = (
+                    session.query(
+                        DSViewRecord.dataset_id.label("dataset_id"),
+                        func.count(DSViewRecord.id).label("metric"),
+                    )
+                    .filter(ts_col >= since)
+                    .group_by(DSViewRecord.dataset_id)
+                    .subquery()
+                )
+
+                q = (
+                    session.query(DataSet, func.coalesce(subq.c.metric, 0).label("metric"))
+                    .outerjoin(subq, subq.c.dataset_id == DataSet.id)
+                    .order_by(desc("metric"))
+                    .limit(limit)
+                )
+                results = q.all()
+
+            elif by == "downloads":
+                ts_col = getattr(DSDownloadRecord, "download_date", None)
+                if ts_col is None:
+                    raise AttributeError("DSDownloadRecord no tiene 'download_date'")
+
+                subq = (
+                    session.query(
+                        DSDownloadRecord.dataset_id.label("dataset_id"),
+                        func.count(DSDownloadRecord.id).label("metric"),
+                    )
+                    .filter(ts_col >= since)
+                    .group_by(DSDownloadRecord.dataset_id)
+                    .subquery()
+                )
+
+                q = (
+                    session.query(DataSet, func.coalesce(subq.c.metric, 0).label("metric"))
+                    .outerjoin(subq, subq.c.dataset_id == DataSet.id)
+                    .order_by(desc("metric"))
+                    .limit(limit)
+                )
+                results = q.all()
+            else:
+                results = []
+
+            # Agregar comunidad aceptada a cada dataset
+            trending_with_community = []
+            for dataset, metric in results:
+                accepted_proposal = (
+                    session.query(CommunityDatasetProposal)
+                    .filter_by(dataset_id=dataset.id, status="accepted")
+                    .first()
+                )
+                dataset.accepted_community = accepted_proposal.community if accepted_proposal else None
+                trending_with_community.append((dataset, int(metric or 0)))
+
+            return trending_with_community
+
+        except Exception:
+            logger.exception("Error al calcular trending_datasets; usando fallback.")
+
+        try:
+            recent = (
+                self.repository.latest_synchronized()
+                if hasattr(self.repository, "latest_synchronized")
+                else self.latest_synchronized()
+            )
+
+            recent = list(recent)[:limit]
+            for d in recent:
+                d.accepted_community = None
+            return [(d, 0) for d in recent]
+        except Exception:
+            logger.exception("Fallback de trending_datasets también ha fallado. Devolviendo lista vacía.")
+            return []
 
 
 class AuthorService(BaseService):

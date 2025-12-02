@@ -29,6 +29,7 @@ deployments.log
 htmlcov/
 .pytest_cache/
 coverage.xml
+app.log.[0-9]*
 
 # ==========================
 # Config & environment

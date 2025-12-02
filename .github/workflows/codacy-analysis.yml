@@ -1,0 +1,29 @@
+name: Codacy Analysis
+
+on:
+  push:
+    branches: [main, Trunk, bugfix]
+  pull_request:
+    branches: [main, Trunk, bugfix]
+
+jobs:
+  codacy-analysis:
+    name: Codacy Analysis (linters + Analysis CLI)
+    runs-on: ubuntu-latest
+
+    env:
+      FLASK_ENV: testing
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Codacy Analysis CLI (official action)
+        uses: codacy/codacy-analysis-cli-action@562ee3e92b8e92df8b67e0a5ff8aa8e261919c08
+        with:
+          # Choose a specific client-side tool, like "ruff" or "bandit".
+          # Omit the "tool" to run all tools enabled on Codacy for this repo.
+          # tool: ruff
+          upload: true
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          max-allowed-issues: 2147483647

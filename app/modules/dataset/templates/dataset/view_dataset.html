@@ -38,7 +38,7 @@
                 <div class="d-flex align-items-center justify-content-between">
                     <h1><b>{{ dataset.ds_meta_data.title }}</b></h1>
                     <div>
-                        <span class="badge bg-secondary">{{ dataset.get_cleaned_publication_type() }}</span>
+                        <span class="badge bg-secondary">{{ dataset.get_cleaned_data_category() }}</span>
                     </div>
                 </div>
                 <p class="text-secondary">{{ dataset.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
@@ -145,13 +145,7 @@
 
             </div>
 
-            {% if dataset.ds_meta_data.dataset_doi %}
-            <!-- Removed UVLHub-specific DOI badge. Zenodo record link is shown above. -->
-            {% endif %}
-
         </div>
-
-        <!-- Removed legacy UVLHub publication and copy helpers. -->
 
 
     </div>
@@ -165,6 +159,47 @@
         
     
         <a href="/dataset/download/{{ dataset.id }}" class="btn btn-primary mt-3" style="border-radius: 5px;">
+
+        {% if accepted_community %}
+        <div class="card mt-3">
+            <div class="card-body d-flex align-items-center">
+                {% if accepted_community.icon_path %}
+                <img src="{{ url_for('community.community_icon', community_id=accepted_community.id) }}" alt="icon" style="width:32px;height:32px;object-fit:cover;border-radius:4px;margin-right:8px;" />
+                {% endif %}
+                <div>
+                    <div class="text-muted" style="font-size: 0.9rem;">Community</div>
+                    <a class="fw-bold" href="{{ url_for('community.view_community', community_id=accepted_community.id) }}">{{ accepted_community.name }}</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if current_user.is_authenticated and current_user.id == dataset.user_id and can_propose %}
+        <div class="card mt-3">
+            <div class="card-body">
+                <h6 class="card-title">Propose to a community</h6>
+                {% if communities and communities|length > 0 %}
+                <form method="post" action="{{ url_for('community.propose_dataset_to_community') }}">
+                    <input type="hidden" name="dataset_id" value="{{ dataset.id }}" />
+                    <div class="input-group">
+                        <select name="community_id" class="form-select" required>
+                            {% for c in communities %}
+                            <option value="{{ c.id }}">{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button class="btn btn-outline-primary" type="submit">Propose</button>
+                    </div>
+                </form>
+                {% else %}
+                <p class="text-muted">No communities available yet.</p>
+                <a class="btn btn-sm btn-primary" href="{{ url_for('community.create_community') }}">Create one</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+
+        <a href="{{ url_for('dataset.download_dataset', dataset_id=dataset.id) }}" class="btn btn-primary mt-3" style="border-radius: 5px;">
             <i data-feather="download" class="center-button-icon"></i>
             Download all ({{ dataset.get_file_total_size_for_human() }})
         </a>
@@ -206,22 +241,27 @@
     </div>
 </div>
 
+<!-- Hidden element to carry Flask's SCRIPT_ROOT for subpath deployments -->
+<span id="script-root" data-root="{{ request.script_root|default('') }}" style="display:none"></span>
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         feather.replace();
     });
 
     var currentFileId;
+    // Injected via data attribute to avoid breaking static JS parsing
+    const ROOT = (document.getElementById('script-root')?.dataset.root) || '';
 
     function viewFile(fileId) {
-        fetch(`/file/view/${fileId}`)
+        fetch(`${ROOT}/file/view/${fileId}`)
             .then(response => response.json())
             .then(data => {
                 document.getElementById('fileContent').textContent = data.content;
                 document.getElementById('fileContent').style.display = 'block';
                 document.getElementById('csvPreview').style.display = 'none';
                 currentFileId = fileId;
-                document.getElementById('downloadButton').href = `/file/download/${fileId}`;
+                document.getElementById('downloadButton').href = `${ROOT}/file/download/${fileId}`;
                 var modal = new bootstrap.Modal(document.getElementById('fileViewerModal'));
                 modal.show();
             })
@@ -229,7 +269,7 @@
     }
 
     function previewCSV(fileId) {
-        fetch(`/dataset/file/preview/${fileId}`)
+        fetch(`${ROOT}/dataset/file/preview/${fileId}`)
             .then(response => response.json())
             .then(data => {
                 const preview = document.getElementById('csvPreview');
@@ -264,7 +304,7 @@
                 pre.style.display = 'none';
                 preview.style.display = 'block';
                 currentFileId = fileId;
-                document.getElementById('downloadButton').href = `/file/download/${fileId}`;
+                document.getElementById('downloadButton').href = `${ROOT}/file/download/${fileId}`;
                 var modal = new bootstrap.Modal(document.getElementById('fileViewerModal'));
                 modal.show();
             })
@@ -278,58 +318,6 @@
     function hideLoading() {
         document.getElementById("loading").style.display = "none";
     }
- 
-    /*
-    async function valid() {
-        showLoading()
-        let pyodide = await loadPyodide();
-        await pyodide.loadPackage("micropip");
-        const micropip = pyodide.pyimport("micropip");
-        //await micropip.install("/assets/web_assembly/antlr4_python3_runtime-4.7.2-py3-none-any.whl");
-        await micropip.install("antlr4-python3-runtime==4.13.1");
-        await micropip.install("uvlparser==2.0.1");
-        //await micropip.install("afmparser==1.0.0");
-
-        await pyodide.runPythonAsync(
-        `
-            import micropip
-            #await micropip.install("flamapy-fm-dist", deps=False)#this is to avoid problems with deps later on
-            await micropip.install("flamapy==2.0.1.dev1", deps=False);
-            await micropip.install("flamapy-fm==2.0.1.dev1", deps=False);
-            await micropip.install("flamapy-sat");
-        `
-        )
-        hideLoading()
-
-        try {
-            let output = pyodide.runPython(
-            `
-            import js
-
-            file_content = js.document.getElementById('fileContent').textContent 
-            div = js.document.createElement("result")
-
-            with open("uvlfile.uvl", "w") as text_file:
-                print(file_content, file=text_file)
-
-            from flamapy.interfaces.python.FLAMAFeatureModel import FLAMAFeatureModel
-
-            fm = FLAMAFeatureModel("uvlfile.uvl")
-            result=fm.valid()
-
-            div.innerHTML = "<div id='deleteme'>"+str(result)+"</div>"
-            exists=js.document.getElementById('deleteme')
-            if(exists):
-                exists.remove()
-
-            js.document.getElementById('result').append(div)
-            `
-        );
-        } catch (err) {
-            console.log(err);
-        }
-    }
-    */
     function copyToClipboard() {
         const text = document.getElementById('fileContent').textContent;
         navigator.clipboard.writeText(text).then(() => {

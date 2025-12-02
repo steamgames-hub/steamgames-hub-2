@@ -26,6 +26,10 @@ class User(db.Model, UserMixin):
     data_sets = db.relationship("DataSet", backref="user", lazy=True)
     profile = db.relationship("UserProfile", backref="user", uselist=False)
 
+    two_factor_code = db.Column(db.String(6), nullable=True)
+    two_factor_expires_at = db.Column(db.DateTime, nullable=True)
+    two_factor_verified = db.Column(db.Boolean, default=False)
+
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
         if "password" in kwargs:
@@ -64,3 +68,26 @@ class User(db.Model, UserMixin):
         elif self.role == UserRole.CURATOR:
             return UserRole.USER
         return self.role
+
+class PasswordResetToken(db.Model):
+    __tablename__ = "password_reset_tokens"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    token_hash = db.Column(db.String(256), unique=True, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref="password_reset_tokens")
+
+    @property
+    def is_expired(self):
+         return datetime.utcnow() > self.expires_at
+
+    @property
+    def is_used(self):
+        return self.used_at is not None
+
+    def mark_used(self):
+        self.used_at = datetime.now(timezone.utc)

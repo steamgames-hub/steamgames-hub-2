@@ -33,14 +33,6 @@ class Config:
     TIMEZONE = "Europe/Madrid"
     TEMPLATES_AUTO_RELOAD = True
     UPLOAD_FOLDER = "uploads"
-    # Mail configuration
-    MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
-    MAIL_PORT = int(os.getenv("MAIL_PORT", 587))
-    MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "True").lower() in ("1", "true", "yes")
-    MAIL_USE_SSL = os.getenv("MAIL_USE_SSL", "False").lower() in ("1", "true", "yes")
-    MAIL_USERNAME = os.getenv("MAIL_USERNAME", os.getenv("MAIL_USER"))
-    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
-    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "no-reply@steamgameshub.io")
 
 
 class DevelopmentConfig(Config):
@@ -57,6 +49,9 @@ class TestingConfig(Config):
         f"{os.getenv('MARIADB_TEST_DATABASE', 'default_db')}"
     )
     WTF_CSRF_ENABLED = False
+    TWO_FACTOR_ENABLED = False
+    SECRET_KEY = 'test-secret-key-1234'
+    SECURITY_PASSWORD_SALT = 'test-password-salt-5678'
 
 
 class ProductionConfig(Config):
