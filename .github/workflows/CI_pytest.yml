@@ -7,11 +7,7 @@
 
 name: Pytest
 
-on:
-  push:
-    branches: [main, Trunk, bugfix]
-  pull_request:
-    branches: [main, Trunk, bugfix]
+on: [push, pull_request]
 
 jobs:
   pytest:
