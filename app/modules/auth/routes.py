@@ -1,10 +1,6 @@
-from flask import redirect, render_template, abort, request, url_for, jsonify, flash
+from flask import redirect, render_template, abort, request, url_for, jsonify, flash, session, current_app
 from flask_login import current_user, login_user, logout_user, login_required
 
-from flask import abort, jsonify, redirect, render_template, request, url_for
-from flask_login import current_user, login_required, login_user, logout_user
-
-from app import db
 from app.modules.auth import auth_bp
 from app.modules.auth.forms import LoginForm, SignupForm, TwoFactorForm
 from app.modules.profile.services import UserProfileService
@@ -33,15 +29,20 @@ def login():
     if form.validate_on_submit():
         user = authentication_service.login(form.email.data, form.password.data)
         if user:
-            from flask import current_app
-            if current_app.config.get("TWO_FACTOR_ENABLED", True):
-                return redirect(url_for("auth.two_factor", user_id=user.id))
+            if not user.verified:
+                session['email'] = form.email.data
+                session['password'] = form.password.data
+                send_verification_email(email=form.email.data)
+                return render_template("auth/verification_lockscreen.html", show_modal=True, modal_message="A verification email has been sent to your address. Make sure to check your spam folder before resending the email.")
             else:
-                return redirect(url_for("public.index"))
-        return render_template("auth/login_form.html", form=form, error="Credenciales inválidas")
+                if current_app.config.get("TWO_FACTOR_ENABLED", True):
+                    return redirect(url_for("auth.two_factor", user_id=user.id))
+                else:
+                    return redirect(url_for("public.index"))
+        else:
+            return render_template("auth/login_form.html", form=form, error="Credenciales inválidas")
 
     return render_template("auth/login_form.html", form=form)
-
 
 # -------------------------------------
 # SIGNUP
@@ -54,6 +55,7 @@ def show_signup_form():
     form = SignupForm()
     if form.validate_on_submit():
         email = form.email.data
+        session['email'] = email
         if not authentication_service.is_email_available(email):
             return render_template("auth/signup_form.html", form=form, error=f"Email {email} en uso")
 
@@ -62,8 +64,7 @@ def show_signup_form():
         except Exception as exc:
             return render_template("auth/signup_form.html", form=form, error=f"Error creando usuario: {exc}")
 
-        login_user(user, remember=True)
-        send_verification_email()
+        send_verification_email(email=email)
         return render_template("auth/verification_lockscreen.html", show_modal=True, modal_message="Se ha enviado un correo electrónico de verificación a tu dirección. Asegúrate de revisar tu carpeta de correo no deseado antes de reenviarlo.")
 
     return render_template("auth/signup_form.html", form=form)
@@ -96,12 +97,13 @@ def logout():
     logout_user()
     return redirect(url_for("public.index"))
 
-
-@auth_bp.route("/verify", methods=["GET", "POST"])
-@login_required
+# -------------------------------------
+# EMAIL VERIFICATION
+# -------------------------------------
+@auth_bp.route("/verify", methods=['GET', 'POST'])
 def send_verification_email(email=None):
     if email is None:
-        email = current_user.email
+        email = session.get('email')
 
     try:
         authentication_service.send_verification_email(email)
@@ -110,47 +112,42 @@ def send_verification_email(email=None):
         return render_template("auth/verification_lockscreen.html", show_modal=True, modal_message=f"Error sending verification email, please, try again later.")
     
     return render_template("auth/verification_lockscreen.html", show_modal=True, modal_message="A verification email has been sent to your address. Make sure to check your spam folder before resending the email.")
-    
+
 @auth_bp.route("/verify/<path:token>", methods=['GET', 'POST'])
-@login_required
 def verify(token):
-    if current_user.verified:
-        return redirect(url_for("public.index"))
     email = authentication_service.confirm_token(token)
     if not email:
-        return render_template(
-            "auth/verification_lockscreen.html",
-            show_modal=True,
-            modal_message="The confirmation link is invalid or has expired.",
-        )
+        return render_template("auth/verification_lockscreen.html", show_modal=True, modal_message="The confirmation link is invalid or has expired.")
 
-    user = User.query.filter_by(email=current_user.email).first_or_404()
+    user = User.query.filter_by(email=session.get('email')).first_or_404()
     if user.email == email:
         user.verify_user()
         try:
             db.session.add(user)
             db.session.commit()
+            session.clear()
         except Exception as exc:
             db.session.rollback()
-            return render_template(
-                "auth/verification_lockscreen.html", show_modal=True, modal_message=f"Error verifying account: {exc}"
-            )
-        return render_template("auth/verification_success.html")
+            return render_template("auth/verification_lockscreen.html", show_modal=True, modal_message=f"Error verifying account: {exc}")
+        
+        next_url = url_for('public.index')
+        if current_app.config.get("TWO_FACTOR_ENABLED", True):
+            authentication_service.generate_2fa(user=user) # Generamos el doble factor para mejorar la experiencia de usuario
+            next_url = url_for("auth.two_factor", user_id=user.id)
+        return render_template("auth/verification_success.html", url=next_url)
 
-    return render_template(
-        "auth/verification_lockscreen.html",
-        show_modal=True,
-        modal_message="The confirmation link is invalid or has expired.",
-    )
+    return render_template("auth/verification_lockscreen.html", show_modal=True, modal_message="The confirmation link is invalid or has expired.")
 
-
+# -------------------------------------
+# USER MANAGEMENT
+# -------------------------------------
 @auth_bp.route("/user/upgrade/<int:user_id>", methods=['POST'])
 @login_required
 def upgrade_user_role(user_id):
     user = User.query.get_or_404(user_id)
 
     if not current_user.role == UserRole.ADMIN:
-        abort(403, description="Unauthorized")
+        abort(403, description="Unauthorized")  
     try:
         authentication_service.upgrade_user_role(user)
         msg = f"User {user.email} upgraded to role {user.role.value}"
@@ -160,13 +157,13 @@ def upgrade_user_role(user_id):
         return jsonify({"Exception while upgrading user role: ": str(exc)}), 400
 
 
-@auth_bp.route("/user/downgrade/<int:user_id>", methods=["POST"])
+@auth_bp.route("/user/downgrade/<int:user_id>", methods=['POST'])
 @login_required
 def downgrade_user_role(user_id):
     user = User.query.get_or_404(user_id)
 
     if not current_user.role == UserRole.ADMIN:
-        abort(403, description="Unauthorized")
+        abort(403, description="Unauthorized")  
     try:
         authentication_service.downgrade_user_role(user)
         msg = f"User {user.email} downgraded to role {user.role.value}"

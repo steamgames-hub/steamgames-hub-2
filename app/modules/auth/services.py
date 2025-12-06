@@ -10,9 +10,9 @@ from flask_mail import Message
 
 from app.modules.auth.models import User, PasswordResetToken
 from app.modules.auth.repositories import UserRepository
-from app.modules.dataset.models import DataSet
 from app.modules.profile.models import UserProfile
 from app.modules.profile.repositories import UserProfileRepository
+from app.modules.dataset.models import DataSet
 from core.configuration.configuration import uploads_folder_name
 from core.services.BaseService import BaseService
 from sendgrid import SendGridAPIClient
@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 from threading import Thread
 from werkzeug.security import generate_password_hash
 from app import db, mail
+
 
 class AuthenticationService(BaseService):
     def __init__(self):
@@ -82,7 +83,6 @@ class AuthenticationService(BaseService):
         return False
 
     # --- Editar perdil ---
-
     def update_profile(self, user_profile_id, form):
         if form.validate():
             updated_instance = self.update(user_profile_id, **form.data)
@@ -120,6 +120,57 @@ class AuthenticationService(BaseService):
         reset_link = url_for("auth.reset_password_form", token=raw_token, _external=True)
         body = f"Usa este enlace para restablecer tu contraseña: {reset_link}"
         self.send_email(user.email, "Restablecer contraseña", body)
+
+    def validate_reset_token(self, raw_token: str):
+        hashed = self._hash_token(raw_token)
+        token = PasswordResetToken.query.filter_by(token_hash=hashed).first()
+        if not token or token.is_expired or token.is_used:
+            return None
+        return token
+
+    def consume_reset_token(self, raw_token: str, new_password: str):
+        token = self.validate_reset_token(raw_token)
+        if not token:
+            return False
+        token.user.password = generate_password_hash(new_password)
+        token.mark_used()
+        db.session.commit()
+        return True
+
+    # --- Verificación de email ---
+    def generate_token(self, email):
+        secret_key = current_app.config.get("SECRET_KEY")
+        salt = current_app.config.get("SECURITY_PASSWORD_SALT")
+
+        if not secret_key or not salt:
+            raise RuntimeError("SECRET_KEY o SECURITY_PASSWORD_SALT no configuradas")
+
+        serializer = URLSafeTimedSerializer(secret_key)
+        return serializer.dumps(email, salt=salt)
+
+    def confirm_token(self, token, expiration=3600):
+        secret_key = current_app.config.get("SECRET_KEY")
+        salt = current_app.config.get("SECURITY_PASSWORD_SALT")
+
+        if not secret_key or not salt:
+            raise RuntimeError("SECRET_KEY o SECURITY_PASSWORD_SALT no configuradas")
+
+        serializer = URLSafeTimedSerializer(secret_key)
+        try:
+            email = serializer.loads(
+                token, salt=salt, max_age=expiration
+            )
+            return email
+        except Exception:
+            return False
+        
+    def send_verification_email(self, email):
+        token = self.generate_token(email)
+        confirm_url = url_for("auth.verify", token=token, _external=True)
+        html = render_template("auth/verification_email.html", confirm_url=confirm_url)
+        subject = "SteamGames Hub: Please confirm your email"
+
+        self.send_email(to=email, subject=subject, body=html)
 
     # --- Envío de correo con SendGrid ---
     def _send_via_sendgrid(self, to: str, subject: str, body: str):
@@ -165,28 +216,13 @@ class AuthenticationService(BaseService):
 
         Thread(target=_send, daemon=True).start()
 
-    def validate_reset_token(self, raw_token: str):
-        hashed = self._hash_token(raw_token)
-        token = PasswordResetToken.query.filter_by(token_hash=hashed).first()
-        if not token or token.is_expired or token.is_used:
-            return None
-        return token
-
-    def consume_reset_token(self, raw_token: str, new_password: str):
-        token = self.validate_reset_token(raw_token)
-        if not token:
-            return False
-        token.user.password = generate_password_hash(new_password)
-        token.mark_used()
-        db.session.commit()
-        return True
-    
+    # --- Gestión de roles ---
     def get_profile_by_user_id(self, user_id: int) -> UserProfile | None:
         user = self.repository.get_by_id(user_id)
         if user:
             return user.profile
         return None
-
+    
     def upgrade_user_role(self, user: User):
         user.role = user.get_next_role()
         self.repository.session.add(user)
@@ -196,7 +232,7 @@ class AuthenticationService(BaseService):
         user.role = user.get_previous_role()
         self.repository.session.add(user)
         self.repository.session.commit()
-
+        
     def delete_user(self, user: User):
         # Borrar datasets y perfil del usuario antes de borrar el usuario
         datasets = self.repository.session.query(DataSet).filter_by(user_id=user.id).all()
@@ -207,42 +243,6 @@ class AuthenticationService(BaseService):
             self.repository.session.delete(profile)
         self.repository.session.delete(user)
         self.repository.session.commit()
-
-    # Token auxiliary functions
-    def generate_token(self, email):
-        secret_key = current_app.config.get("SECRET_KEY")
-        salt = current_app.config.get("SECURITY_PASSWORD_SALT")
-
-        if not secret_key or not salt:
-            raise RuntimeError("SECRET_KEY o SECURITY_PASSWORD_SALT no configuradas")
-
-        serializer = URLSafeTimedSerializer(secret_key)
-        return serializer.dumps(email, salt=salt)
-
-    def confirm_token(self, token, expiration=3600):
-        secret_key = current_app.config.get("SECRET_KEY")
-        salt = current_app.config.get("SECURITY_PASSWORD_SALT")
-
-        if not secret_key or not salt:
-            raise RuntimeError("SECRET_KEY o SECURITY_PASSWORD_SALT no configuradas")
-
-        serializer = URLSafeTimedSerializer(secret_key)
-        try:
-            email = serializer.loads(
-                token, salt=salt, max_age=expiration
-            )
-            return email
-        except Exception:
-            return False
-        
-    # Verification email sending
-    def send_verification_email(self, email):
-        token = self.generate_token(email)
-        confirm_url = url_for("auth.verify", token=token, _external=True)
-        html = render_template("auth/verification_email.html", confirm_url=confirm_url)
-        subject = "Please confirm your email"
-
-        self.send_email(email, subject, html)
 
 
 authentication_service = AuthenticationService()
