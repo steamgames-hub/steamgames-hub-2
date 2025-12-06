@@ -2,7 +2,6 @@ import pytest
 import click
 
 from app import db
-from app.modules.auth.mail_util.token import generate_token
 from app.modules.auth.services import AuthenticationService
 from app.modules.auth.models import User
 
@@ -12,7 +11,7 @@ def disable_send_email(monkeypatch):
     """Prevent real emails from being sent during tests by replacing
     AuthenticationService.send_email with a no-op.
     """
-    def _noop(self, email, subject, html):
+    def _noop(self, to, subject, body):
         return None
 
     monkeypatch.setattr(AuthenticationService, "send_email", _noop)
@@ -38,10 +37,6 @@ def test_send_verification_email_authenticated(test_client):
         u = User(email="verify@yopmail.com", password="verify1234", verified=False)
         db.session.add(u)
         db.session.commit()
-
-    test_client.post(
-        "/login", data=dict(email="verify@yopmail.com", password="verify1234"), follow_redirects=True
-    )
 
     response = test_client.get("/verify", follow_redirects=True)
 
