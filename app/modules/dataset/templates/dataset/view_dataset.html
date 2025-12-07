@@ -42,6 +42,7 @@
                         <span class="badge bg-secondary">v{{ dataset.ds_meta_data.version }}</span>
                     </div>
                 </div>
+                
                 <p class="text-secondary">{{ dataset.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
 
                 <div class="row mb-4">
@@ -142,7 +143,11 @@
 
                 </div>
 
-                
+                {% if not dataset.ds_meta_data.is_latest %}
+                    <div class="alert-error">
+                        <p>Atención: Versión desactualizada</p>
+                    </div>
+                {% endif %}
 
             </div>
 
