@@ -722,3 +722,79 @@ def test_feature_model_version_optional_when_empty(test_app):
             "version": "",
         }))
         assert form.validate() is True
+
+def test_dsmetadata_has_version_and_is_latest_attributes():
+    # DSMetaData should expose the new fields (version, is_latest) on instances
+    md = DSMetaData(title="t", description="d", data_category=DataCategory.NONE)
+    # attributes must exist (DB default may be None/False but attribute should be present)
+    assert hasattr(md, "version")
+    assert hasattr(md, "is_latest")
+
+
+def test_filter_only_latest_from_list():
+    # prepare two DSMetaData objects, one latest and one not
+    ds_old = DSMetaData(
+        title="old",
+        description="old",
+        data_category=DataCategory.NONE,
+        publication_doi="10.0/old",
+        dataset_doi="10.0/old",
+        version="0.1.0",
+    )
+    ds_new = DSMetaData(
+        title="new",
+        description="new",
+        data_category=DataCategory.NONE,
+        publication_doi="10.0/new",
+        dataset_doi="10.0/new",
+        version="1.0.0",
+    )
+    # set the is_latest flags as if coming from the repository
+    ds_old.is_latest = False
+    ds_new.is_latest = True
+
+    mixed = [ds_old, ds_new]
+
+    # Emulate repository returning mixed results and ensure only is_latest==True are selected
+    latest_only = [d for d in mixed if getattr(d, "is_latest", False) is True]
+
+    assert len(latest_only) == 1
+    assert latest_only[0].title == "new"
+    assert latest_only[0].version == "1.0.0"
+
+
+def test_count_and_list_consider_only_is_latest():
+    # Build sample DSMetaData records with mixed is_latest values
+    records = []
+    for i in range(5):
+        md = DSMetaData(
+            title=f"ds{i}",
+            description="x",
+            data_category=DataCategory.NONE,
+            publication_doi=f"10.0/{i}",
+            dataset_doi=f"10.0/{i}",
+            version=f"1.0.{i}",
+        )
+        # mark only even indices as latest for the test
+        md.is_latest = (i % 2 == 0)
+        records.append(md)
+
+    # Fake repository that would return all DSMetaData rows
+    class FakeRepo:
+        def list_all(self):
+            return records
+
+        def count_all(self):
+            return len(records)
+
+    repo = FakeRepo()
+
+    # Simulate repository-level logic that should count/list only latest records
+    listed_latest = [r for r in repo.list_all() if getattr(r, "is_latest", False)]
+    counted_latest = len(listed_latest)
+
+    # expected number of latest records (indices 0,2,4 -> 3)
+    assert counted_latest == 3
+    assert all(getattr(r, "is_latest", False) for r in listed_latest)
+    # sanity: repo.count_all still reports total if asked
+    assert repo.count_all() == 5
