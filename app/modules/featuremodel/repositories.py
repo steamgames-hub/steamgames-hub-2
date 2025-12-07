@@ -9,8 +9,8 @@ class FeatureModelRepository(BaseRepository):
         super().__init__(FeatureModel)
 
     def count_feature_models(self) -> int:
-        max_id = self.model.query.with_entities(func.max(self.model.id)).scalar()
-        return max_id if max_id is not None else 0
+        return self.model.query.count()
+        
 
 
 class FMMetaDataRepository(BaseRepository):
