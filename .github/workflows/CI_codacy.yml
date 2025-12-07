@@ -2,9 +2,9 @@ name: Codacy CI
 
 on:
   push:
-    branches: [main, Trunk, bugfix]
+    branches: [main, Trunk, trunk, bugfix]
   pull_request:
-    branches: [main, Trunk, bugfix]
+    branches: [main, Trunk, trunk, bugfix]
 
 jobs:
   build:

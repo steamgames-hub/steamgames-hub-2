@@ -2,9 +2,9 @@ name: Deploy to preproduction Render
 
 on:
   push:
-    branches: [main, Trunk, bugfix]
+    branches: [Trunk, trunk]
   pull_request:
-    branches: [main, Trunk, bugfix]
+    branches: [Trunk, trunk]
 
 jobs:
 
