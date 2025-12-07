@@ -1,0 +1,32 @@
+name: Weekly merge trunk to main
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo with bot token
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.BOT_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure bot identity
+        run: |
+          git config user.name "steamgames-hub Bot"
+          git config user.email "steamgameshub@outlook.es"
+
+      - name: Merge trunk into main
+        run: |
+          git fetch origin
+          git switch main
+          git merge origin/trunk
+          git push origin main
