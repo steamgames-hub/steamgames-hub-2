@@ -30,7 +30,6 @@ def test_client(test_client):
 
     yield test_client
 
-
 def create_test_user():
 
     user = User.query.filter_by(email="user1@yopmail.com").first()
@@ -48,6 +47,16 @@ def create_test_user():
 def auth_service():
     return AuthenticationService()
 
+@pytest.fixture(autouse=True)
+def disable_send_email(monkeypatch):
+    """Prevent real emails from being sent during tests by replacing
+    AuthenticationService.send_email with a no-op.
+    """
+    def _noop(self, to, subject, body):
+        return None
+
+    monkeypatch.setattr(AuthenticationService, "send_email", _noop)
+    yield
 
 
 def test_login_success(test_client):
@@ -87,6 +96,14 @@ def test_signup_user_no_name(test_client):
     assert response.request.path == url_for("auth.show_signup_form"), "Signup was unsuccessful"
     assert b"This field is required" in response.data, response.data
 
+def test_signup_user_successful(test_client):
+    response = test_client.post(
+        "/signup",
+        data=dict(name="Foo", surname="Example", email="foo@example.com", password="foo1234"),
+        follow_redirects=True,
+    )
+    assert b"Please, verify your account" in response.data, "Signup was unsuccessful"
+
 
 def test_signup_user_unsuccessful(test_client):
     email = "test@example.com"
@@ -118,14 +135,56 @@ def test_service_create_with_profile_fail_no_password(clean_database):
     assert UserProfileRepository().count() == 0
 
 
+def test_send_verification_email_authenticated(test_client):
+    with test_client.application.app_context():
+        db.session.reset()
+        u = User(email="verify@example.com", password="verify1234", verified=False)
+        db.session.add(u)
+        db.session.commit()
 
-def test_signup_user_successful(test_client):
-    response = test_client.post(
-        "/signup",
-        data=dict(name="Foo", surname="Example", email="foo@example.com", password="foo1234"),
-        follow_redirects=True,
+    response = test_client.get("/verify", follow_redirects=True)
+
+    assert b"A verification email has been sent to your address." in response.data, "Verification email not sent"
+
+
+def test_verify_token_success(test_client, clean_database):
+    with test_client.application.app_context():
+        db.session.reset()
+        u = User(email="verify@example.com", password="verify1234", verified=False)
+        db.session.add(u)
+        db.session.commit()
+
+    test_client.post(
+        "/login", data=dict(email="verify@example.com", password="verify1234"), follow_redirects=True
     )
-    assert b"Please, verify your account" in response.data, "Signup was unsuccessful"
+    
+    token = AuthenticationService().generate_token("verify@example.com")
+    response = test_client.get(f"/verify/{str(token)}", follow_redirects=True)
+
+    assert b"Your account has been verified successfully!" in response.data, "Verification unsuccessful"
+
+    with test_client.application.app_context():
+        u = User.query.filter_by(email="verify@example.com").first()
+        assert u is not None and u.verified is True, "User not verified as expected"
+
+
+def test_verify_token_invalid(test_client, clean_database):
+    with test_client.application.app_context():
+        db.session.reset()
+        u = User(email="verify@example.com", password="verify1234", verified=False)
+        db.session.add(u)
+        db.session.commit()
+
+    test_client.post("/login", data=dict(email="verify@example.com", password="verify1234"), follow_redirects=True)
+
+    invalid_token = "invalid-token"
+    response = test_client.get(f"/verify/{invalid_token}", follow_redirects=True)
+
+    assert b"The confirmation link is invalid or has expired." in response.data, "Verification unsuccessful"
+
+    with test_client.application.app_context():
+        u = User.query.filter_by(email="verify@example.com").first()
+        assert u is not None and u.verified is False, "User not verified as expected"
 
 
 def test_service_create_with_profie_success(clean_database):
