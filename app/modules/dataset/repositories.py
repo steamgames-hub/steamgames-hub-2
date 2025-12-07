@@ -94,6 +94,7 @@ class DataSetRepository(BaseRepository):
         return (
             self.model.query.join(DSMetaData)
             .filter(DSMetaData.dataset_doi.isnot(None))
+            .filter(DSMetaData.is_latest.is_(True))
             .order_by(desc(self.model.id))
             .limit(5)
             .all()

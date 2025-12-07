@@ -27,7 +27,7 @@ class DataSetSeeder(BaseSeeder):
         ds_metrics = DSMetrics(number_of_models="5", number_of_features="50")
         seeded_ds_metrics = self.seed([ds_metrics])[0]
 
-        # Create DSMetaData instances
+        # Create DSMetaData instances (the 4th metadata has 2 versions)
         ds_meta_data_list = [
             DSMetaData(
                 deposition_id=1 + i,
@@ -38,9 +38,25 @@ class DataSetSeeder(BaseSeeder):
                 dataset_doi=f"10.1234/dataset{i+1}",
                 tags="tag1, tag2",
                 ds_metrics_id=seeded_ds_metrics.id,
+                is_latest = i != 3
             )
             for i in range(4)
         ]
+
+        ds_meta_data_list.append(
+            DSMetaData(
+                deposition_id = 4,
+                title=f"New version of sample dataset 4",
+                description=f"Description for dataset 4 v1.1",
+                data_category=DataCategory.GENERAL,
+                publication_doi=f"10.1234/dataset4/1.1",
+                dataset_doi=f"10.1234/dataset4/1.1",
+                tags="tag1, tag3, tag5",
+                ds_metrics_id=seeded_ds_metrics.id,
+                version=1.1,
+                is_latest=True
+            )
+        )
         seeded_ds_meta_data = self.seed(ds_meta_data_list)
 
         # Create Author instances and associate with DSMetaData
@@ -49,21 +65,21 @@ class DataSetSeeder(BaseSeeder):
                 name=f"Author {i+1}",
                 affiliation=f"Affiliation {i+1}",
                 orcid=f"0000-0000-0000-000{i}",
-                ds_meta_data_id=seeded_ds_meta_data[i % 4].id,
+                ds_meta_data_id=seeded_ds_meta_data[i % 5].id,
             )
-            for i in range(4)
+            for i in range(5)
         ]
         self.seed(authors)
 
         # Create DataSet instances
         datasets = [
             DataSet(
-                user_id=user1.id if i % 2 == 0 else user2.id,
+                user_id=user1.id if (i % 2 == 0 and i < 3) else user2.id,
                 ds_meta_data_id=seeded_ds_meta_data[i].id,
                 created_at=datetime.now(timezone.utc),
                 draft_mode=False,
             )
-            for i in range(4)
+            for i in range(5)
         ]
         seeded_datasets = self.seed(datasets)
 
@@ -85,9 +101,9 @@ class DataSetSeeder(BaseSeeder):
         # Create Author instances and associate with FMMetaData
         fm_authors = [
             Author(
-                name=f"Author {i+5}",
-                affiliation=f"Affiliation {i+5}",
-                orcid=f"0000-0000-0000-000{i+5}",
+                name=f"Author {i+6}",
+                affiliation=f"Affiliation {i+6}",
+                orcid=f"0000-0000-0000-000{i+6}",
                 fm_meta_data_id=seeded_fm_meta_data[i].id,
             )
             for i in range(12)
@@ -96,8 +112,13 @@ class DataSetSeeder(BaseSeeder):
 
         feature_models = [
             FeatureModel(data_set_id=seeded_datasets[i // 3].id, fm_meta_data_id=seeded_fm_meta_data[i].id)
-            for i in range(12)
+            for i in range(11)
         ]
+
+        feature_models += [
+            FeatureModel(data_set_id=seeded_datasets[4].id, fm_meta_data_id=seeded_fm_meta_data[11].id)
+        ]
+
         seeded_feature_models = self.seed(feature_models)
 
         # Create files, associate them with FeatureModels and copy files
