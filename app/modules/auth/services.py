@@ -73,7 +73,7 @@ class AuthenticationService(BaseService):
         user.two_factor_expires_at = datetime.utcnow() + timedelta(minutes=5)
         db.session.commit()
 
-        body = f"Tu código de verificación es: {code}\nVálido por 5 minutos."
+        body = render_template("auth/two_factor_email.html", code=code)
         self.send_email(user.email, "Código 2FA", body)
 
     def verify_2fa(self, user, code):
@@ -185,7 +185,7 @@ class AuthenticationService(BaseService):
             from_email=from_email,
             to_emails=to,
             subject=subject,
-            html_content=body.replace("\n", "<br>")
+            html_content=body
         )
 
         try:
