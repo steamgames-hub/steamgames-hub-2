@@ -39,6 +39,7 @@
                     <h1><b>{{ dataset.ds_meta_data.title }}</b></h1>
                     <div>
                         <span class="badge bg-secondary">{{ dataset.get_cleaned_data_category() }}</span>
+                        <span class="badge bg-secondary">v{{ dataset.ds_meta_data.version }}</span>
                     </div>
                 </div>
                 <p class="text-secondary">{{ dataset.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>

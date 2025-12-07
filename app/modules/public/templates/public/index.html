@@ -22,10 +22,11 @@
                                 <a href="{{ dataset.get_uvlhub_doi() }}">
                                     {{ dataset.ds_meta_data.title }}
                                 </a>
-
+                                
                             </h2>
                             <div>
                                 <span class="badge bg-secondary">{{ dataset.get_cleaned_data_category() }}</span>
+                                <span class="badge bg-secondary">v{{ dataset.ds_meta_data.version }}</span>
                             </div>
                         </div>
                         <p class="text-secondary">{{ dataset.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
@@ -222,6 +223,7 @@
                                                         <a href="{{ dataset.get_uvlhub_doi() }}">
                                                             <strong>{{ dataset.ds_meta_data.title }}</strong>
                                                         </a>
+                                                        
                                                         <div class="small text-secondary">
                                                             {% if dataset.ds_meta_data.authors and dataset.ds_meta_data.authors|length > 0 %}
                                                                 {{ dataset.ds_meta_data.authors[0].name }}
