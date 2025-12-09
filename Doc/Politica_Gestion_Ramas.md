@@ -12,15 +12,16 @@ Existen dos ramas principales con roles y restricciones específicas:
 -   **Propósito**: Refleja el **código de producción**. Cada commit en `main` corresponde a una versión estable y desplegada de la aplicación.
 -   **Flujo de trabajo**:
     -   **No se admiten Pull Requests directos a `main`**.
-    -   Para lanzar una nueva versión, un miembro autorizado del equipo debe fusionar la rama `Trunk` en su copia local de `main` y luego empujar los cambios al repositorio remoto.
-    -   Junto con el push a `main`, se debe crear y empujar una **etiqueta (tag)** de versionado semántico (ej. `v1.2.3`).
--   **CI/CD**: El push de una nueva etiqueta en `main` dispara automáticamente los pipelines de CI/CD para ejecutar pruebas finales y realizar el **despliegue en el entorno de producción**.
+    -   Para lanzar una nueva versión, un miembro autorizado del equipo debe fusionar la rama **`Trunk`** en su copia local de **`main`** y luego empujar los cambios al repositorio remoto.
+    -   Cada push a **`main`** activa el workflow automático de versionado semántico y crea una **etiqueta (tag)** y una release asociada a la versión correspondiente (ej. v1.2.3).
+-   **CI/CD**: El push de una nueva etiqueta en **`main`** dispara los pipelines de CI/CD para ejecutar pruebas finales y realizar el **despliegue en el entorno de producción**.
 
 ### Rama `Trunk`
 -   **Propósito**: Es la rama principal de **integración y desarrollo**. Contiene los cambios más recientes que han sido probados y están listos para ser incluidos en la próxima versión.
 -   **Flujo de trabajo**:
     -   Integra los cambios provenientes de las ramas de desarrollo (`feature/Task.xyz`).
-    -   La integración se realiza exclusivamente mediante **Pull Requests**.
+    -   La integración de ramas internas del equipo se realiza exclusivamente mediante **merges locales**, **no mediante Pull Requests**
+    -   Los **Pull Requests** solo se utilizan para contribuciones externas provenientes de otros forks de **uvlhub**.
 -   **CI/CD**: Cada vez que se fusiona un cambio en `Trunk`, se ejecutan automáticamente los pipelines de CI/CD que incluyen:
     -   Ejecución de pruebas unitarias y de integración.
     -   **Despliegue en el entorno de pre-producción** para validación.
