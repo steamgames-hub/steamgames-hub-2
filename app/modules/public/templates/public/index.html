@@ -213,7 +213,7 @@
                                 </div>
                             </div>
 
-                            <div id="trending-list">
+                            <div id="trending-list" data-testid="trending-list-primary" data-by="views" data-period="week">
                                 {% if trending_datasets %}
                                     <ul class="list-unstyled mb-0">
                                         {% for item in trending_datasets %}
@@ -273,21 +273,21 @@
                             <!-- selectores debajo del título -->
                             <div class="d-flex align-items-center mb-3">
                                 <div class="me-2">
-                                    <select id="trending-by" class="form-select form-select-sm" style="width: 130px;">
+                                    <select id="trending-by-secondary" class="form-select form-select-sm" style="width: 130px;">
                                         <option value="views" selected>Views</option>
                                         <option value="downloads">Downloads</option>
                                     </select>
                                 </div>
 
                                 <div>
-                                    <select id="trending-period" class="form-select form-select-sm" style="width: 110px;">
+                                    <select id="trending-period-secondary" class="form-select form-select-sm" style="width: 110px;">
                                         <option value="week" selected>Last week</option>
                                         <option value="month">Last month</option>
                                     </select>
                                 </div>
                             </div>
 
-                            <div id="trending-list">
+                            <div id="trending-list-secondary" data-by="views" data-period="week">
                                 {% if trending_datasets %}
                                     <ul class="list-unstyled mb-0">
                                         {% for item in trending_datasets %}
