@@ -2,8 +2,8 @@
 
 mensaje_commit=$(cat "$1")
 
-if ! [[ "$mensaje_commit" =~ ^(feat|fix|chore): ]]; then
-  echo "ERROR: El mensaje del commit debe comenzar con uno de los siguientes prefijos: feat:, fix:, chore:"
+if ! [[ "$mensaje_commit" =~ ^(feat|fix|chore|docs): ]]; then
+  echo "ERROR: El mensaje del commit debe comenzar con uno de los siguientes prefijos: feat:, fix:, chore, docs:"
   exit 1
 fi
 

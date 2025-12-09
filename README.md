@@ -61,3 +61,9 @@ Add context of the change here.
 Closes: #321
 Refs: #220
 ```
+
+## Quick fix for common Vagrant errors
+
+- In case you have an error corresponding to AMD-V and you cannot access the bios settings for that, please use this command `sudo rmmod kvm_amd`
+
+- In case you have an error about Virtual Box instances, please go to your Virtual Box Manager and delete the current vagrant image or use `vagrant destroy` instead
