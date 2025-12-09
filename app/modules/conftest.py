@@ -4,6 +4,7 @@ import pytest
 
 from app import create_app, db
 from app.modules.auth.models import User
+from app.modules.profile.models import UserProfile
 
 
 @pytest.fixture(scope="session")
@@ -39,7 +40,6 @@ def test_client(test_app):
 
             # create a UserProfile for test user so routes accessing
             # current_user.profile.save_drafts don't fail
-            from app.modules.profile.models import UserProfile
 
             profile = UserProfile(user_id=user_test.id, name="Test", surname="User", save_drafts=False)
             db.session.add(profile)

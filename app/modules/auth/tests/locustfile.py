@@ -1,10 +1,11 @@
-from locust import HttpUser, TaskSet, task
-from core.environment.host import get_host_for_locust_testing
-from core.locust.common import fake, get_csrf_token
 import os
-from flask import Flask
+
+from locust import HttpUser, TaskSet, task
+
 from app import create_app, db
 from app.modules.auth.models import User
+from core.environment.host import get_host_for_locust_testing
+from core.locust.common import fake, get_csrf_token
 
 app = create_app(os.getenv("FLASK_ENV", "testing"))
 app.app_context().push()

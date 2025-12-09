@@ -31,13 +31,11 @@ def test_edit_profile_page_get(test_client):
     """
     # 1️⃣ Login inicial
     resp = test_client.post(
-        "/login",
-        data={"email": "user@example.com", "password": "test1234"},
-        follow_redirects=False
+        "/login", data={"email": "user@example.com", "password": "test1234"}, follow_redirects=False
     )
     assert resp.status_code == 302 or 200
     # Permite login directo o con 2FA según config
-    assert resp.location == "/" or "/two-factor/" #in resp.location
+    assert resp.location == "/" or "/two-factor/"  # in resp.location
 
     # 2️⃣ Obtener el usuario y su código de 2FA
     user = User.query.filter_by(email="user@example.com").first()
@@ -46,11 +44,7 @@ def test_edit_profile_page_get(test_client):
         assert user.two_factor_code is not None
         # 3️⃣ Enviar el código al endpoint correcto
         two_factor_url = f"/two-factor/{user.id}"
-        resp = test_client.post(
-            two_factor_url,
-            data={"code": user.two_factor_code},
-            follow_redirects=True
-        )
+        resp = test_client.post(two_factor_url, data={"code": user.two_factor_code}, follow_redirects=True)
         # Si el login fue correcto, debería redirigir a alguna vista interna (no 404 ni login)
         assert resp.status_code == 200
         assert b"Welcome" in resp.data or b"Profile" in resp.data or b"Steam" in resp.data
@@ -58,11 +52,11 @@ def test_edit_profile_page_get(test_client):
     response = test_client.get(f"/profile/edit/{user.id}")
     # Verificaciones claras
     assert response.status_code == 200, "El acceso a /profile/edit no devolvió 200 OK"
-    assert b"Edit" in response.data or b"Profile" in response.data, \
-        "La página de edición de perfil no contiene texto esperado"
+    assert (
+        b"Edit" in response.data or b"Profile" in response.data
+    ), "La página de edición de perfil no contiene texto esperado"
     # 5️⃣ Logout al final del test
     logout(test_client)
-
 
 
 def test_change_preference_save_drafts(test_client):
@@ -71,13 +65,11 @@ def test_change_preference_save_drafts(test_client):
     """
     # 1️⃣ Login inicial
     resp = test_client.post(
-        "/login",
-        data={"email": "user@example.com", "password": "test1234"},
-        follow_redirects=False
+        "/login", data={"email": "user@example.com", "password": "test1234"}, follow_redirects=False
     )
     assert resp.status_code == 302 or 200
     # Permite login directo o con 2FA según config
-    assert resp.location == "/" or "/two-factor/" #in resp.location
+    assert resp.location == "/" or "/two-factor/"  # in resp.location
 
     # 2️⃣ Obtener el usuario y su código de 2FA
     user = User.query.filter_by(email="user@example.com").first()
@@ -86,15 +78,10 @@ def test_change_preference_save_drafts(test_client):
         assert user.two_factor_code is not None
         # 3️⃣ Enviar el código al endpoint correcto
         two_factor_url = f"/two-factor/{user.id}"
-        resp = test_client.post(
-            two_factor_url,
-            data={"code": user.two_factor_code},
-            follow_redirects=True
-        )
+        resp = test_client.post(two_factor_url, data={"code": user.two_factor_code}, follow_redirects=True)
         # Si el login fue correcto, debería redirigir a alguna vista interna (no 404 ni login)
         assert resp.status_code == 200
         assert b"Welcome" in resp.data or b"Profile" in resp.data or b"Steam" in resp.data
     response = test_client.put("/profile/save_drafts")
     assert response.status_code == 200, "The preference was changed succesfully"
     logout(test_client)
-    

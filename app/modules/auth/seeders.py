@@ -1,5 +1,6 @@
-from app.modules.auth.models import User, UserRole
 from datetime import datetime, timedelta
+
+from app.modules.auth.models import User, UserRole
 from app.modules.profile.models import UserProfile
 from core.seeders.BaseSeeder import BaseSeeder
 
@@ -14,7 +15,7 @@ class AuthSeeder(BaseSeeder):
         users = [
             User(email="user1@yopmail.com", password="1234", role=UserRole.ADMIN, verified=True),
             User(email="user2@yopmail.com", password="1234", role=UserRole.CURATOR, verified=True),
-            User(email="user3@yopmail.com", password="1234", verified=True)
+            User(email="user3@yopmail.com", password="1234", verified=True),
         ]
 
         # Inserted users with their assigned IDs are returned by `self.seed`.
@@ -43,4 +44,3 @@ class AuthSeeder(BaseSeeder):
 
         # 3️⃣ Seeding user profiles
         self.seed(user_profiles)
-

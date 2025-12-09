@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta
 import sys
+from datetime import datetime, timedelta
 from types import ModuleType, SimpleNamespace
 from typing import Optional
 
@@ -10,10 +10,11 @@ from app.modules.dataset.models import (
     Author,
     DataCategory,
     DataSet,
-    DSMetaData,
     DSDownloadRecord,
+    DSMetaData,
     DSViewRecord,
 )
+from app.modules.dataset.services import DataSetService
 
 
 class _FakeSendGridAPIClient:
@@ -34,7 +35,11 @@ if "sendgrid" not in sys.modules:  # pragma: no cover - module availability guar
     sendgrid_module.SendGridAPIClient = _FakeSendGridAPIClient
     sys.modules["sendgrid"] = sendgrid_module
 else:  # pragma: no cover
-    setattr(sys.modules["sendgrid"], "SendGridAPIClient", getattr(sys.modules["sendgrid"], "SendGridAPIClient", _FakeSendGridAPIClient))
+    setattr(
+        sys.modules["sendgrid"],
+        "SendGridAPIClient",
+        getattr(sys.modules["sendgrid"], "SendGridAPIClient", _FakeSendGridAPIClient),
+    )
 
 helpers_module = ModuleType("sendgrid.helpers")
 mail_module = ModuleType("sendgrid.helpers.mail")
@@ -42,8 +47,6 @@ mail_module.Mail = _FakeMail
 helpers_module.mail = mail_module
 sys.modules["sendgrid.helpers"] = helpers_module
 sys.modules["sendgrid.helpers.mail"] = mail_module
-
-from app.modules.dataset.services import DataSetService
 
 
 def _create_user(email: str) -> User:

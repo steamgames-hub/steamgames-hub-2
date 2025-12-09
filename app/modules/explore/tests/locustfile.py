@@ -28,7 +28,7 @@ class ExploreBehavior(TaskSet):
             "tags": ",".join(fake.words(nb=2)),
             "min_downloads": fake.random_int(0, 10),
             "min_views": fake.random_int(0, 100),
-            "csrf_token": csrf
+            "csrf_token": csrf,
         }
         r = self.client.post("/explore", json=payload)
         if r.status_code != 200:

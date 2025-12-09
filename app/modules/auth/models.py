@@ -69,6 +69,7 @@ class User(db.Model, UserMixin):
             return UserRole.USER
         return self.role
 
+
 class PasswordResetToken(db.Model):
     __tablename__ = "password_reset_tokens"
 
@@ -83,7 +84,7 @@ class PasswordResetToken(db.Model):
 
     @property
     def is_expired(self):
-         return datetime.utcnow() > self.expires_at
+        return datetime.utcnow() > self.expires_at
 
     @property
     def is_used(self):

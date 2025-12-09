@@ -1,15 +1,16 @@
 import re
 import time
+
 import pytest
-import os
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 from core.environment.host import get_host_for_selenium_testing
 from core.selenium.common import close_driver, initialize_driver
-from selenium.common.exceptions import TimeoutException
+
 
 @pytest.fixture
 def driver():
@@ -17,6 +18,7 @@ def driver():
     yield drv
 
     close_driver(drv)
+
 
 def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGamesHub", timeout=60, debug=True):
     """
@@ -36,12 +38,13 @@ def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGames
         "//button[contains(., 'Aceptar')]",
         "//button[contains(., 'Agree')]",
         "//button[contains(., 'Aceptar todo')]",
-        "//a[contains(., 'Aceptar') or contains(., 'Accept')]"
+        "//a[contains(., 'Aceptar') or contains(., 'Accept')]",
     ]
     for xp in consent_xpaths:
         try:
             btn = wait.until(EC.element_to_be_clickable((By.XPATH, xp)))
-            if debug: print(f"[yopmail] clicando en botón de cookies: {xp}")
+            if debug:
+                print(f"[yopmail] clicando en botón de cookies: {xp}")
             btn.click()
             time.sleep(0.5)
             break
@@ -67,7 +70,8 @@ def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGames
         raise TimeoutException("[yopmail] No se encontró iframe de la bandeja de entrada")
 
     driver.switch_to.frame(inbox_frame)
-    if debug: print(f"[yopmail] switch a iframe: {inbox_frame.get_attribute('id') or inbox_frame.get_attribute('name')}")
+    if debug:
+        print(f"[yopmail] switch a iframe: {inbox_frame.get_attribute('id') or inbox_frame.get_attribute('name')}")
 
     # snapshot de ids actuales (para evitar coger un mail viejo)
     existing_ids = set()
@@ -79,7 +83,8 @@ def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGames
                 existing_ids.add(eid)
     except Exception:
         pass
-    if debug: print(f"[yopmail] existing email ids: {existing_ids}")
+    if debug:
+        print(f"[yopmail] existing email ids: {existing_ids}")
 
     # 🔹 Variables para refrescos
     refresh_count = 0
@@ -160,11 +165,13 @@ def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGames
                 try:
                     refresh_btn = driver.find_element(By.ID, "refresh")
                     driver.execute_script("arguments[0].click();", refresh_btn)
-                    if debug: print("[yopmail] clicked #refresh button")
+                    if debug:
+                        print("[yopmail] clicked #refresh button")
                 except Exception:
                     try:
                         driver.execute_script("if (typeof r === 'function') { r(); }")
-                        if debug: print("[yopmail] executed r() to refresh")
+                        if debug:
+                            print("[yopmail] executed r() to refresh")
                     except Exception:
                         pass
                 driver.switch_to.frame(inbox_frame)
@@ -178,7 +185,8 @@ def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGames
     # 🔹 Si no hay nuevo email, usar el último disponible
     if not email_element and last_email_element:
         email_element = last_email_element
-        if debug: print(f"[yopmail] usando último email disponible id={email_element.get_attribute('id')}")
+        if debug:
+            print(f"[yopmail] usando último email disponible id={email_element.get_attribute('id')}")
 
     if not email_element:
         raise TimeoutException(f"[yopmail] No se encontró ningún correo (username={username})")
@@ -203,14 +211,14 @@ def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGames
             m = re.search(r"\b(\d{6})\b", body_text)
             if m:
                 code = m.group(1)
-                if debug: print(f"[yopmail] código 2FA encontrado: {code}")
+                if debug:
+                    print(f"[yopmail] código 2FA encontrado: {code}")
                 return code
         except Exception:
             pass
         time.sleep(0.8)
 
     raise TimeoutException("[yopmail] No se encontró código 2FA en el correo (tras abrirlo)")
-
 
 
 def test_login_and_2fa():
@@ -251,23 +259,17 @@ def test_login_and_2fa():
         # --- Click en botón Verificar ---
         submit_btn = driver.find_element(By.ID, "submit")
         submit_btn.click()
-        
+
         # --- Esperar a que aparezca el div con el nombre del usuario ---
-        user_div = wait.until(
-            EC.visibility_of_element_located((By.XPATH, "//span[contains(text(), 'Doe, John')]"))
-        )
+        user_div = wait.until(EC.visibility_of_element_located((By.XPATH, "//span[contains(text(), 'Doe, John')]")))
 
         if user_div:
             print("[test] Login + 2FA completado correctamente")
         else:
             print("[test] ERROR: No se encontró el div del usuario, login fallido")
 
-
     finally:
         driver.quit()
-
-
-
 
 
 def test_forgot_password_ui(driver):
@@ -284,8 +286,6 @@ def test_forgot_password_ui(driver):
 
     # Espera que la página muestre algo relacionado con "reset" o "email"
     try:
-        wait.until(
-            lambda d: "reset" in d.page_source.lower() or "email" in d.page_source.lower()
-        )
-    except:
+        wait.until(lambda d: "reset" in d.page_source.lower() or "email" in d.page_source.lower())
+    except Exception:
         pytest.fail("No se encontró mensaje de restablecimiento de contraseña")

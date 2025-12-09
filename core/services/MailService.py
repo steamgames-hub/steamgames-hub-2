@@ -2,11 +2,10 @@ from threading import Thread
 
 from flask import current_app
 from flask_mail import Message
-
-from app import mail
-
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail as SGMail
+
+from app import mail
 
 
 class MailService:
@@ -21,12 +20,7 @@ class MailService:
         if SGMail is None or SendGridAPIClient is None:
             raise RuntimeError("SendGrid SDK no disponible")
 
-        message = SGMail(
-            from_email=from_email,
-            to_emails=to,
-            subject=subject,
-            html_content=body.replace("\n", "<br>")
-        )
+        message = SGMail(from_email=from_email, to_emails=to, subject=subject, html_content=body.replace("\n", "<br>"))
 
         try:
             sg = SendGridAPIClient(sg_api_key)

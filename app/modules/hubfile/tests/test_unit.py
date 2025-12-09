@@ -1,7 +1,7 @@
 import pytest
 
 from app import db
-from app.modules.dataset.models import DSMetaData, DataSet, DataCategory
+from app.modules.dataset.models import DataCategory, DataSet, DSMetaData
 from app.modules.featuremodel.models import FeatureModel, FMMetaData
 from app.modules.hubfile.models import Hubfile
 from app.modules.hubfile.services import HubfileDownloadRecordService
@@ -98,4 +98,3 @@ def test_download_count_increments(test_client):
             db.session.query(DataSet).delete()
             db.session.query(DSMetaData).delete()
             db.session.commit()
-    

@@ -2,8 +2,8 @@ import os
 from datetime import datetime
 from typing import List
 
-from werkzeug.utils import secure_filename
 from PIL import Image
+from werkzeug.utils import secure_filename
 
 from app.modules.community.models import Community, ProposalStatus
 from app.modules.community.repositories import CommunityProposalRepository, CommunityRepository

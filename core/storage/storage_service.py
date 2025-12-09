@@ -36,9 +36,7 @@ class StorageService:
         self._aws_secret = os.getenv("AWS_SECRET_ACCESS_KEY")
         self._remote_prefix = self._resolve_remote_prefix()
 
-        has_remote_config = all(
-            [self._bucket, self._region, self._aws_key, self._aws_secret]
-        )
+        has_remote_config = all([self._bucket, self._region, self._aws_key, self._aws_secret])
         self._use_s3 = bool(has_remote_config and boto3 is not None)
 
         if self._use_s3:
@@ -56,9 +54,7 @@ class StorageService:
         else:
             self._s3_client = None
             if has_remote_config and boto3 is None:
-                logger.warning(
-                    "boto3 is not installed; falling back to local storage"
-                )
+                logger.warning("boto3 is not installed; falling back to local storage")
 
     def _resolve_local_root(self) -> str:
         uploads_dir = self._uploads_setting
@@ -77,10 +73,7 @@ class StorageService:
     def _refresh_local_context_if_needed(self) -> None:
         working_dir = os.getenv("WORKING_DIR", "")
         uploads_setting = uploads_folder_name()
-        if (
-            working_dir != self._working_dir
-            or uploads_setting != self._uploads_setting
-        ):
+        if working_dir != self._working_dir or uploads_setting != self._uploads_setting:
             self._working_dir = working_dir
             self._uploads_setting = uploads_setting
             self._local_root = self._resolve_local_root()
@@ -111,19 +104,13 @@ class StorageService:
 
     @staticmethod
     def dataset_file_path(user_id: int, dataset_id: int, filename: str) -> str:
-        return os.path.join(
-            StorageService.dataset_subdir(user_id, dataset_id), filename
-        )
+        return os.path.join(StorageService.dataset_subdir(user_id, dataset_id), filename)
 
     @staticmethod
     def community_icon_path(community_id: int, filename: str) -> str:
-        return os.path.join(
-            "communities", f"community_{community_id}", filename
-        )
+        return os.path.join("communities", f"community_{community_id}", filename)
 
-    def save_local_file(
-        self, src_path: str, relative_dest: str, remove_source: bool = True
-    ) -> str:
+    def save_local_file(self, src_path: str, relative_dest: str, remove_source: bool = True) -> str:
         """Store a file from disk into the configured backend."""
         if self._use_s3:
             key = self._s3_key(relative_dest)
@@ -172,9 +159,7 @@ class StorageService:
     def exists(self, relative_path: str) -> bool:
         if self._use_s3:
             try:
-                self._s3_client.head_object(
-                    Bucket=self._bucket, Key=self._s3_key(relative_path)
-                )
+                self._s3_client.head_object(Bucket=self._bucket, Key=self._s3_key(relative_path))
                 return True
             except ClientError:
                 return False
@@ -187,9 +172,7 @@ class StorageService:
         errors: str = "replace",
     ) -> str:
         if self._use_s3:
-            obj = self._s3_client.get_object(
-                Bucket=self._bucket, Key=self._s3_key(relative_path)
-            )
+            obj = self._s3_client.get_object(Bucket=self._bucket, Key=self._s3_key(relative_path))
             return obj["Body"].read().decode(encoding, errors)
         with open(
             self._local_path(relative_path),
@@ -201,9 +184,7 @@ class StorageService:
 
     def open_binary(self, relative_path: str):
         if self._use_s3:
-            obj = self._s3_client.get_object(
-                Bucket=self._bucket, Key=self._s3_key(relative_path)
-            )
+            obj = self._s3_client.get_object(Bucket=self._bucket, Key=self._s3_key(relative_path))
             return obj["Body"]
         return open(self._local_path(relative_path), "rb")
 
@@ -211,9 +192,7 @@ class StorageService:
         if self._use_s3:
             temp_file = tempfile.NamedTemporaryFile(delete=False)
             with temp_file as tmp:
-                self._s3_client.download_fileobj(
-                    self._bucket, self._s3_key(relative_path), tmp
-                )
+                self._s3_client.download_fileobj(self._bucket, self._s3_key(relative_path), tmp)
             return temp_file.name
         return self._local_path(relative_path)
 
@@ -227,11 +206,7 @@ class StorageService:
             for page in paginator.paginate(Bucket=self._bucket, Prefix=prefix):
                 for content in page.get("Contents", []):
                     key = content["Key"]
-                    rel = (
-                        key[len(self._remote_prefix) + 1:]
-                        if self._remote_prefix
-                        else key
-                    )
+                    rel = key[len(self._remote_prefix) + 1 :] if self._remote_prefix else key
                     results.append(rel)
         else:
             base = self._local_path(normalized_dir)
@@ -258,9 +233,7 @@ class StorageService:
         else:
             yield self._local_path(relative_path)
 
-    def generate_presigned_url(
-        self, relative_path: str, expires_in: int = 600
-    ) -> Optional[str]:
+    def generate_presigned_url(self, relative_path: str, expires_in: int = 600) -> Optional[str]:
         if not self._use_s3:
             return None
         return self._s3_client.generate_presigned_url(

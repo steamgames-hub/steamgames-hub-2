@@ -1,21 +1,21 @@
-from locust import HttpUser, TaskSet, task
-from core.environment.host import get_host_for_locust_testing
-from core.locust.common import get_csrf_token
+import base64
 import os
 import random
 import re
-import base64
+
+from locust import HttpUser, TaskSet, task
+
+from core.environment.host import get_host_for_locust_testing
+from core.locust.common import get_csrf_token
 
 # Adjust to a valid path in your environment
 locust_file_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(locust_file_dir, '..'))
+project_root = os.path.abspath(os.path.join(locust_file_dir, ".."))
 ICON_DIR = os.path.join(project_root, "img_examples")
 ICON_FILE_PATH = os.path.join(ICON_DIR, "icon.png")
 
 # 1x1 PNG (transparent), base64-encoded to avoid extra deps
-PNG_1x1_BASE64 = (
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAuMBg7zY6y8AAAAASUVORK5CYII="
-)
+PNG_1x1_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAuMBg7zY6y8AAAAASUVORK5CYII="
 
 COMMUNITY_LINK_RE = re.compile(r"/community/(\d+)")
 
@@ -185,4 +185,3 @@ class CommunityBehavior(TaskSet):
 class CommunityUser(HttpUser):
     tasks = [CommunityBehavior]
     host = get_host_for_locust_testing()
-

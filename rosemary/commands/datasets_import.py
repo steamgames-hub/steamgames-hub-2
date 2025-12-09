@@ -10,11 +10,10 @@ from flask.cli import with_appcontext
 from app import create_app, db
 from app.modules.auth.models import User
 from app.modules.dataset.models import (
+    DataCategory,
     DataSet,
     DSMetaData,
     DSMetrics,
-    DataSet,
-    DataCategory,
 )
 from app.modules.featuremodel.models import FeatureModel, FMMetaData
 from app.modules.hubfile.models import Hubfile

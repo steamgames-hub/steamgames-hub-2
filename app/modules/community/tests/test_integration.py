@@ -8,7 +8,7 @@ import pytest
 from app import db
 from app.modules.auth.models import User
 from app.modules.community.models import Community, CommunityDatasetProposal, ProposalStatus
-from app.modules.dataset.models import DataSet, DSMetaData, DataCategory
+from app.modules.dataset.models import DataCategory, DataSet, DSMetaData
 
 
 @pytest.fixture()
@@ -59,6 +59,7 @@ def test_create_community_flow(test_client, users, monkeypatch):
     # POST create with icon
     # valid PNG via Pillow to satisfy integrity check
     from PIL import Image
+
     png = io.BytesIO()
     Image.new("RGB", (2, 2), (10, 20, 30)).save(png, format="PNG")
     png.seek(0)
@@ -102,6 +103,7 @@ def test_propose_and_accept_reject(test_client, users):
     if r.status_code not in (302, 303):
         # Fallback for environments where the route guard mismatches session auth
         from app.modules.community.services import CommunityProposalService
+
         CommunityProposalService().propose(ds.id, c1.id, owner.id)
     p = CommunityDatasetProposal.query.filter_by(dataset_id=ds.id, community_id=c1.id).first()
     assert p and p.status == ProposalStatus.PENDING
@@ -118,6 +120,7 @@ def test_propose_and_accept_reject(test_client, users):
     if r2.status_code != 200:
         # Fallback: accept via service if route-level guard misfires in this environment
         from app.modules.community.services import CommunityProposalService
+
         ok, _, _ = CommunityProposalService().decide(p.id, accept=True)
         assert ok
     db.session.refresh(p)
@@ -127,7 +130,6 @@ def test_propose_and_accept_reject(test_client, users):
     with force_login(test_client, owner):
         r3 = test_client.post("/community/propose", data={"dataset_id": ds.id, "community_id": c2.id})
     if r3.status_code not in (302, 303):
-        from app.modules.community.services import CommunityProposalService
         ok_block, _msg = CommunityProposalService().propose(ds.id, c2.id, owner.id)
         assert not ok_block
     p2 = CommunityDatasetProposal.query.filter_by(dataset_id=ds.id, community_id=c2.id).first()
@@ -146,4 +148,3 @@ def test_my_communities_listing(test_client, users):
         r = test_client.get("/community/mine")
     assert r.status_code == 200
     assert b"Communities" in r.data or b"Create community" in r.data
-

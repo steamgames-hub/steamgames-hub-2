@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from dotenv import load_dotenv
 
 from app.modules.auth.models import User
-from app.modules.dataset.models import Author, DataSet, DSMetaData, DSMetrics, DataCategory
+from app.modules.dataset.models import Author, DataCategory, DataSet, DSMetaData, DSMetrics
 from app.modules.featuremodel.models import FeatureModel, FMMetaData
 from app.modules.hubfile.models import Hubfile
 from core.seeders.BaseSeeder import BaseSeeder
@@ -38,23 +38,23 @@ class DataSetSeeder(BaseSeeder):
                 dataset_doi=f"10.1234/dataset{i+1}",
                 tags="tag1, tag2",
                 ds_metrics_id=seeded_ds_metrics.id,
-                is_latest = i != 3
+                is_latest=i != 3,
             )
             for i in range(4)
         ]
 
         ds_meta_data_list.append(
             DSMetaData(
-                deposition_id = 4,
-                title=f"New version of sample dataset 4",
-                description=f"Description for dataset 4 v1.1",
+                deposition_id=4,
+                title="New version of sample dataset 4",
+                description="Description for dataset 4 v1.1",
                 data_category=DataCategory.GENERAL,
-                publication_doi=f"10.1234/dataset4/1.1",
-                dataset_doi=f"10.1234/dataset4/1.1",
+                publication_doi="10.1234/dataset4/1.1",
+                dataset_doi="10.1234/dataset4/1.1",
                 tags="tag1, tag3, tag5",
                 ds_metrics_id=seeded_ds_metrics.id,
                 version=1.1,
-                is_latest=True
+                is_latest=True,
             )
         )
         seeded_ds_meta_data = self.seed(ds_meta_data_list)
@@ -115,9 +115,7 @@ class DataSetSeeder(BaseSeeder):
             for i in range(11)
         ]
 
-        feature_models += [
-            FeatureModel(data_set_id=seeded_datasets[4].id, fm_meta_data_id=seeded_fm_meta_data[11].id)
-        ]
+        feature_models += [FeatureModel(data_set_id=seeded_datasets[4].id, fm_meta_data_id=seeded_fm_meta_data[11].id)]
 
         seeded_feature_models = self.seed(feature_models)
 

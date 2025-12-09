@@ -1,5 +1,3 @@
-from sqlalchemy import func
-
 from app.modules.featuremodel.models import FeatureModel, FMMetaData
 from core.repositories.BaseRepository import BaseRepository
 
@@ -10,7 +8,6 @@ class FeatureModelRepository(BaseRepository):
 
     def count_feature_models(self) -> int:
         return self.model.query.count()
-        
 
 
 class FMMetaDataRepository(BaseRepository):

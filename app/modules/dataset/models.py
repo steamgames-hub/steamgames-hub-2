@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from enum import Enum
-import os
+
 from flask import request
 from sqlalchemy import Enum as SQLAlchemyEnum
 
@@ -49,11 +49,10 @@ class DSMetaData(db.Model):
     dataset_doi = db.Column(db.String(120))
     tags = db.Column(db.String(120))
     ds_metrics_id = db.Column(db.Integer, db.ForeignKey("ds_metrics.id"))
-    version = db.Column(db.Float, nullable=False, default=1.)
+    version = db.Column(db.Float, nullable=False, default=1.0)
     is_latest = db.Column(db.Boolean, nullable=False, default=True)
     ds_metrics = db.relationship("DSMetrics", uselist=False, backref="ds_meta_data", cascade="all, delete")
     authors = db.relationship("Author", backref="ds_meta_data", lazy=True, cascade="all, delete")
-    
 
 
 class DataSet(db.Model):

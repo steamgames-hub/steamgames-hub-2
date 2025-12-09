@@ -38,9 +38,7 @@ class CommunityDatasetProposal(db.Model):
     dataset = db.relationship("DataSet", backref="community_proposals")
     proposed_by = db.relationship("User", backref="community_proposals_made")
 
-    __table_args__ = (
-        db.UniqueConstraint("dataset_id", "community_id", name="uq_dataset_community"),
-    )
+    __table_args__ = (db.UniqueConstraint("dataset_id", "community_id", name="uq_dataset_community"),)
 
     def __repr__(self):
         return f"Proposal<ds={self.dataset_id}, community={self.community_id}, status={self.status}>"

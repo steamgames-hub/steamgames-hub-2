@@ -35,10 +35,7 @@ class FeatureModelForm(FlaskForm):
     tags = StringField("Tags (separated by commas)")
     version = StringField(
         "CSV Version",
-        validators=[
-            Optional(),
-            Regexp(r"^\d+\.\d+\.\d+$", message="Version must follow x.y.z format (e.g., 1.2.3)")
-        ],
+        validators=[Optional(), Regexp(r"^\d+\.\d+\.\d+$", message="Version must follow x.y.z format (e.g., 1.2.3)")],
     )
     authors = FieldList(FormField(AuthorForm))
 

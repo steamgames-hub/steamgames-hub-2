@@ -1,26 +1,23 @@
-import os
-import re
-import time
-import tempfile
-import random
 import csv
-from PIL import Image
+import os
+import random
+import re
+import tempfile
+import time
 
+from PIL import Image
+from selenium.common.exceptions import ElementClickInterceptedException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException
+from selenium.webdriver.support.ui import WebDriverWait
+
 from core.environment.host import get_host_for_selenium_testing
 from core.selenium.common import close_driver, initialize_driver
 
 
-
-
 def wait_for_page_to_load(driver, timeout=6):
-    WebDriverWait(driver, timeout).until(
-        lambda d: d.execute_script("return document.readyState") == "complete"
-    )
+    WebDriverWait(driver, timeout).until(lambda d: d.execute_script("return document.readyState") == "complete")
 
 
 def _wait_visible_any(driver, locators, timeout=15):
@@ -311,6 +308,7 @@ def _login_with_optional_2fa(driver, host):
 
 # ---------- Tests ----------
 
+
 def test_community_create_and_mine():
     driver = initialize_driver()
     icon_path = None
@@ -327,9 +325,7 @@ def test_community_create_and_mine():
             wait_for_page_to_load(driver)
 
         # Wait for form readiness (CSRF token present), then fill the form
-        WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.NAME, "csrf_token"))
-        )
+        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.NAME, "csrf_token")))
         name_value = f"Selenium Community {random.randint(1, 1_000_000)}"
         name_field = _wait_visible_any(
             driver,
@@ -416,14 +412,11 @@ def test_community_create_and_mine():
 
         try:
             WebDriverWait(driver, 20).until(
-                lambda d: _is_detail_page(d)
-                or len(d.find_elements(By.CSS_SELECTOR, ".card-title")) > 0
+                lambda d: _is_detail_page(d) or len(d.find_elements(By.CSS_SELECTOR, ".card-title")) > 0
             )
 
             # Assert the title matches
-            title_el = _wait_visible_any(
-                driver, [(By.CSS_SELECTOR, ".card-title")], timeout=15
-            )
+            title_el = _wait_visible_any(driver, [(By.CSS_SELECTOR, ".card-title")], timeout=15)
             title_text = (title_el.text or title_el.get_attribute("textContent") or "").strip()
             assert name_value in title_text
         except TimeoutException:
@@ -452,9 +445,7 @@ def test_community_create_and_mine():
                         for a in card.find_elements(By.TAG_NAME, "a"):
                             href = a.get_attribute("href") or ""
                             if "/community/" in href and href.rstrip("/").split("/")[-1].isdigit():
-                                driver.execute_script(
-                                    "arguments[0].scrollIntoView({block:'center'});", a
-                                )
+                                driver.execute_script("arguments[0].scrollIntoView({block:'center'});", a)
                                 a.click()
                                 opened = True
                                 break
@@ -473,12 +464,8 @@ def test_community_create_and_mine():
             if opened:
                 wait_for_page_to_load(driver)
                 WebDriverWait(driver, 10).until(EC.url_contains("/community/"))
-                title_el = _wait_visible_any(
-                    driver, [(By.CSS_SELECTOR, ".card-title")], timeout=10
-                )
-                title_text = (
-                    title_el.text or title_el.get_attribute("textContent") or ""
-                ).strip()
+                title_el = _wait_visible_any(driver, [(By.CSS_SELECTOR, ".card-title")], timeout=10)
+                title_text = (title_el.text or title_el.get_attribute("textContent") or "").strip()
                 assert name_value in title_text
 
         # Go to My communities and verify it's listed
@@ -519,9 +506,7 @@ def test_community_list_and_view():
             wait_for_page_to_load(driver)
             WebDriverWait(driver, 10).until(EC.url_contains("/community/"))
             # Assert we see a card-title (community name)
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, ".card-title"))
-            )
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".card-title")))
     finally:
         close_driver(driver)
 
@@ -550,8 +535,8 @@ def test_community_icon_endpoint_best_effort():
         assert f"/community/icon/{cid}" in driver.current_url
     finally:
         close_driver(driver)
-    
-    
+
+
 def _make_csv_file(filename="steam_test.csv") -> str:
     """Create a temporary valid Steam CSV file and return its path."""
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../"))
@@ -560,8 +545,22 @@ def _make_csv_file(filename="steam_test.csv") -> str:
     path = os.path.join(target_dir, filename)
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["appid", "name", "release_date", "is_free", "developers", "publishers", "platforms", "genres", "tags"])
-        writer.writerow([570, "Dota 2", "2013-07-09", "true", "Valve", "Valve", "Windows;Mac;Linux", "Action;Strategy", "MOBA;Multiplayer"])
+        writer.writerow(
+            ["appid", "name", "release_date", "is_free", "developers", "publishers", "platforms", "genres", "tags"]
+        )
+        writer.writerow(
+            [
+                570,
+                "Dota 2",
+                "2013-07-09",
+                "true",
+                "Valve",
+                "Valve",
+                "Windows;Mac;Linux",
+                "Action;Strategy",
+                "MOBA;Multiplayer",
+            ]
+        )
     return path
 
 
@@ -715,9 +714,10 @@ def _handle_proposal(driver, host, community_id, dataset_title, action):
     def _not_in_pending(drv):
         try:
             pending = drv.find_element(By.XPATH, pending_body_xpath)
-            return len(pending.find_elements(By.XPATH, f".//div[contains(., '{dataset_title}')]") ) == 0
+            return len(pending.find_elements(By.XPATH, f".//div[contains(., '{dataset_title}')]")) == 0
         except Exception:
             return True
+
     WebDriverWait(driver, 15).until(lambda d: _not_in_pending(d))
 
     # If accepted, ensure it appears under "Datasets in this community"
@@ -761,12 +761,8 @@ def test_propose_reject_accept_flow():
         # 7. Final verification: check dataset view page shows community
         driver.get(dataset_view_url)
         wait_for_page_to_load(driver)
-        xpath_comm_link = (
-            f"//a[contains(@href, '/community/{community_id}') and contains(., '{community_name}')]"
-        )
-        community_link = _wait_visible_any(
-            driver, [(By.XPATH, xpath_comm_link)], timeout=15
-        )
+        xpath_comm_link = f"//a[contains(@href, '/community/{community_id}') and contains(., '{community_name}')]"
+        community_link = _wait_visible_any(driver, [(By.XPATH, xpath_comm_link)], timeout=15)
         assert community_link.is_displayed()
 
     finally:

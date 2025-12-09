@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 from flask_login import current_user
 
 from app.modules.dataset.models import DataSet
-from app.modules.featuremodel.models import FeatureModel
 from app.modules.fakenodo.repositories import FakenodoRepository
+from app.modules.featuremodel.models import FeatureModel
 from core.services.BaseService import BaseService
 from core.storage import storage_service
 

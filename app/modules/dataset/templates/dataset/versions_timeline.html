@@ -1,0 +1,136 @@
+{% extends "base_template.html" %}
+
+{% block title %}Version History - {{ dataset.ds_meta_data.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <a href="{{ dataset.get_uvlhub_doi() }}" class="btn btn-outline-primary mb-3">
+                <i data-feather="arrow-left" class="center-button-icon"></i>
+                Back to Dataset
+            </a>
+            <h1>Timeline of versions</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            {% if versions %}
+                <div class="timeline-container">
+                    <div class="timeline">
+                        {% for version in versions %}
+                            <div class="timeline-item">
+                                <div class="timeline-marker"></div>
+                                <div class="timeline-content">
+                                    <a href="{{ url_for('dataset.subdomain_index', doi=version.metadata.dataset_doi) }}" class="timeline-version-link">
+                                        <h3 class="timeline-version">
+                                            {{ "%.1f" | format(version.version) }} 
+                                        </h3>
+                                    </a>
+                                    {% if version.is_latest %}
+                                        <span class="badge bg-primary">Latest version</span>
+                                    {% endif %}
+                                    <p class="timeline-date">
+                                        {{ version.created_at.strftime('%B %d, %Y') }}
+                                    </p>
+
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    No versions found for this dataset.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .timeline-container {
+        padding: 20px 0;
+    }
+
+    .timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 31px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, #0662A6, #0662A6);
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-left: 100px;
+        padding-bottom: 40px;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: 0;
+        top: 5px;
+        width: 64px;
+        height: 64px;
+        background-color: #0662A6;
+        border-radius: 50%;
+        border: 4px solid white;
+        box-shadow: 0 0 0 2px #0662A6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .timeline-content {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 4px solid #0662A6;
+        transition: all 0.3s ease;
+    }
+
+    .timeline-content:hover {
+        background-color: #e9ecef;
+        transform: translateX(10px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .timeline-version {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #0662A6;
+    }
+
+    .timeline-date {
+        margin: 0.5rem 0 0 0;
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+
+    .timeline-version-link {
+        text-decoration: none;
+        color: inherit;
+        display: inline-block;
+    }
+
+    .timeline-version-link:hover .timeline-version {
+        text-decoration: underline;
+    }
+
+    .badge {
+        margin-left: 10px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}

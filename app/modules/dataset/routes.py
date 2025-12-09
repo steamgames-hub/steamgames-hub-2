@@ -22,9 +22,11 @@ from flask_login import current_user, login_required
 
 from app.modules.auth.models import UserRole
 from app.modules.auth.services import AuthenticationService
+from app.modules.community.repositories import CommunityProposalRepository
+from app.modules.community.services import CommunityService
 from app.modules.dataset import dataset_bp
 from app.modules.dataset.forms import DataSetForm
-from app.modules.dataset.models import DSDownloadRecord
+from app.modules.dataset.models import DataSet, DSDownloadRecord
 from app.modules.dataset.services import (
     AuthorService,
     DataSetService,
@@ -34,13 +36,9 @@ from app.modules.dataset.services import (
     DSViewRecordService,
     IssueService,
 )
-
-from app.modules.community.services import CommunityService
-from app.modules.community.repositories import CommunityProposalRepository
-from app.modules.hubfile.services import HubfileService
-from app.modules.fakenodo.services import FakenodoService
 from app.modules.dataset.steamcsv_service import SteamCSVService
-from app.modules.auth.models import UserRole
+from app.modules.fakenodo.services import FakenodoService
+from app.modules.hubfile.services import HubfileService
 from core.storage import storage_service
 
 logger = logging.getLogger(__name__)
@@ -66,7 +64,7 @@ def _write_dataset_zip(dataset, zip_path: str):
         for stored_key in stored_files:
             normalized_key = stored_key.replace("\\", "/")
             if normalized_key.startswith(dataset_prefix):
-                inner = normalized_key[len(dataset_prefix):].lstrip("/")
+                inner = normalized_key[len(dataset_prefix) :].lstrip("/")
             else:
                 inner = normalized_key
             arcname = os.path.join(f"dataset_{dataset.id}", inner)
@@ -85,7 +83,7 @@ def create_dataset():
             try:
                 temp_dir = current_user.temp_folder()
                 if os.path.isdir(temp_dir):
-                    csv_files = [f for f in os.listdir(temp_dir) if f.lower().endswith('.csv')]
+                    csv_files = [f for f in os.listdir(temp_dir) if f.lower().endswith(".csv")]
                     if not csv_files:
                         try:
                             shutil.rmtree(temp_dir)
@@ -118,9 +116,7 @@ def create_dataset():
                     version_errors = getattr(subform, "version", None).errors if hasattr(subform, "version") else []
                     if version_errors:
                         filename = getattr(getattr(subform, "csv_filename", None), "data", None) or "file"
-                        messages.append(
-                            f"Invalid version for '{filename}': must follow x.y.z (e.g., 1.2.3)"
-                        )
+                        messages.append(f"Invalid version for '{filename}': must follow x.y.z (e.g., 1.2.3)")
             except Exception:
                 # be defensive; fall back to generic errors
                 pass
@@ -165,9 +161,10 @@ def create_dataset():
         # send dataset as deposition to Zenodo
         data = {}
         try:
-            # zenodo_response_json = zenodo_service.create_new_deposition(dataset) MOD: Fakenodo
-            
-            # HEY, SI ERES LA PERSONA QUE TIENE QUE HACER EL BOTONCITO DE CREAR UNA NUEVA VERSIÓN, AQUÍ TIENES QUE TOCAR LO DEL DEPOSITION_ID
+            # zenodo_response_json = zenodo_service.create_new_deposition(dataset)
+            # MOD: Fakenodo
+
+            # NOTE: To implement version creation feature, modify DEPOSITION_ID handling here
             fakenodo_response_json = fakenodo_service.create_new_deposition(dataset)
             response_data = json.dumps(fakenodo_response_json)
             data = json.loads(response_data)
@@ -598,6 +595,39 @@ def report_dataset(dataset_id: int):
 
     dataset = dataset_service.get_or_404(dataset_id)
     return render_template("dataset/notify_issue.html", dataset=dataset)
+
+
+@dataset_bp.route("/dataset/versions/<int:dataset_id>", methods=["GET"])
+def dataset_versions(dataset_id):
+    """Display version history timeline for a dataset."""
+    dataset = dataset_service.get_by_id(dataset_id)
+    if not dataset or dataset.draft_mode:
+        abort(404)
+
+    # Get the deposition_id and fetch all versions
+    deposition_id = dataset.ds_meta_data.deposition_id
+    if not deposition_id:
+        abort(404)
+
+    # Get all versions ordered by version ascending (oldest first)
+    versions_meta = dsmetadata_service.get_all_versions_by_deposition_id(deposition_id)
+
+    # For each version, find the corresponding dataset
+    versions = []
+    for meta in versions_meta:
+        ds = DataSet.query.filter_by(ds_meta_data_id=meta.id).first()
+        if ds:
+            versions.append(
+                {
+                    "version": meta.version,
+                    "is_latest": meta.is_latest,
+                    "dataset_id": ds.id,
+                    "metadata": meta,
+                    "created_at": ds.created_at,
+                }
+            )
+
+    return render_template("dataset/versions_timeline.html", dataset=dataset, versions=versions)
 
 
 @dataset_bp.route("/dataset/issues/open/<int:issue_id>/", methods=["PUT"])

@@ -1,11 +1,11 @@
-import pytest
 from datetime import datetime
+
+import pytest
+
 from app import db
-from app.modules.explore.repositories import ExploreRepository
 from app.modules.auth.models import User
-from app.modules.dataset.models import (
-    DataSet, DSMetaData, Author, DSDownloadRecord, DSViewRecord, DataCategory
-)
+from app.modules.dataset.models import Author, DataCategory, DataSet, DSDownloadRecord, DSMetaData, DSViewRecord
+from app.modules.explore.repositories import ExploreRepository
 from app.modules.featuremodel.models import FeatureModel, FMMetaData
 
 
@@ -27,10 +27,7 @@ def populated_db(test_client, clean_database):
 
         # Dataset 1: author Alice, tags "action,indie", filename games.csv, created 2020-01-15
         md1 = DSMetaData(
-            title="Dataset One",
-            description="First dataset",
-            tags="action,indie",
-            data_category=DataCategory.NONE
+            title="Dataset One", description="First dataset", tags="action,indie", data_category=DataCategory.NONE
         )
         db.session.add(md1)
         db.session.flush()
@@ -48,7 +45,7 @@ def populated_db(test_client, clean_database):
             title="FM1",
             description="FM1 desc",
             tags="indie,action",
-            data_category=DataCategory.NONE
+            data_category=DataCategory.NONE,
         )
         db.session.add(fm1_meta)
         db.session.flush()
@@ -62,12 +59,7 @@ def populated_db(test_client, clean_database):
             db.session.add(DSDownloadRecord(user_id=None, dataset_id=ds1.id, download_cookie=f"dc{i}"))
 
         # Dataset 2: author Bob, tags "rpg", filename monsters.csv, created 2021-06-10
-        md2 = DSMetaData(
-            title="Dataset Two",
-            description="Second dataset",
-            tags="rpg",
-            data_category=DataCategory.NONE
-        )
+        md2 = DSMetaData(title="Dataset Two", description="Second dataset", tags="rpg", data_category=DataCategory.NONE)
         db.session.add(md2)
         db.session.flush()
 
@@ -84,7 +76,7 @@ def populated_db(test_client, clean_database):
             title="FM2",
             description="FM2 desc",
             tags="rpg",
-            data_category=DataCategory.NONE
+            data_category=DataCategory.NONE,
         )
         db.session.add(fm2_meta)
         db.session.flush()
@@ -93,12 +85,7 @@ def populated_db(test_client, clean_database):
         db.session.add(fm2)
 
         # Dataset 3: no tags, recent date
-        md3 = DSMetaData(
-            title="Dataset Three",
-            description="Third dataset",
-            tags="",
-            data_category=DataCategory.NONE
-        )
+        md3 = DSMetaData(title="Dataset Three", description="Third dataset", tags="", data_category=DataCategory.NONE)
         db.session.add(md3)
         db.session.flush()
 

@@ -1,5 +1,3 @@
-import os
-
 from app.modules.auth.models import User
 from app.modules.dataset.models import DataSet
 from app.modules.hubfile.models import Hubfile
@@ -16,9 +14,7 @@ class HubfileService(BaseService):
     def __init__(self):
         super().__init__(HubfileRepository())
         self.hubfile_view_record_repository = HubfileViewRecordRepository()
-        self.hubfile_download_record_repository = (
-            HubfileDownloadRecordRepository()
-        )
+        self.hubfile_download_record_repository = HubfileDownloadRecordRepository()
 
     def get_owner_user_by_hubfile(self, hubfile: Hubfile) -> User:
         return self.repository.get_owner_user_by_hubfile(hubfile)

@@ -3,20 +3,20 @@ import io
 import json
 import os
 import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from flask import Flask
+from werkzeug.datastructures import MultiDict
 
+import app.modules.dataset.routes as routes_mod
 from app import db
 from app.modules.auth.models import User, UserRole
-from app.modules.profile.models import UserProfile
-from app.modules.dataset.models import DSMetaData, DataCategory, DataSet
-from app.modules.dataset.steamcsv_service import SteamCSVService
-
-from werkzeug.datastructures import MultiDict
 from app.modules.dataset.forms import FeatureModelForm
+from app.modules.dataset.models import DataCategory, DataSet, DSMetaData
+from app.modules.dataset.repositories import DSMetaDataRepository
 from app.modules.dataset.services import (
     AuthorService,
     DataSetService,
@@ -70,8 +70,7 @@ def test_validate_folder_invalid_headers_failure(tmp_path):
     # Accept either 'missing headers' or 'invalid headers. expected exactly' for robustness
     error_msg = str(exc.value).lower()
     assert (
-        "invalid headers. expected exactly" in error_msg
-        or "missing headers" in error_msg
+        "invalid headers. expected exactly" in error_msg or "missing headers" in error_msg
     ), f"Unexpected error message: {error_msg}"
 
 
@@ -376,6 +375,7 @@ def test_thin_wrapper_services_smoke():
     assert hasattr(a, "repository")
     assert hasattr(d, "repository")
 
+
 def login_client(client, email="test@example.com", password="test1234"):
     return client.post("/login", data={"email": email, "password": password}, follow_redirects=True)
 
@@ -402,7 +402,11 @@ def test_upload_and_delete_csv_flow(test_client, tmp_path, monkeypatch):
         assert b"CSV files" in resp.data
 
         # upload a CSV
-        csv_content = b"appid,name,release_date,is_free,developers,publishers,platforms,genres,tags\n1,Game,2020-01-01,true,Dev,Pub,win,Action,tag1\n"
+        csv_content = (
+            b"appid,name,release_date,is_free,developers,publishers,"
+            b"platforms,genres,tags\n1,Game,2020-01-01,true,Dev,Pub,"
+            b"win,Action,tag1\n"
+        )
         data = {
             "file": (io.BytesIO(csv_content), "test.csv"),
         }
@@ -419,7 +423,9 @@ def test_upload_and_delete_csv_flow(test_client, tmp_path, monkeypatch):
             assert os.path.exists(file_path)
 
             # call delete endpoint
-            resp = test_client.post("/dataset/file/delete", data=json.dumps({"file": filename}), content_type="application/json")
+            resp = test_client.post(
+                "/dataset/file/delete", data=json.dumps({"file": filename}), content_type="application/json"
+            )
             assert resp.status_code in (200, 302)
             if resp.status_code == 200:
                 body = json.loads(resp.data)
@@ -428,7 +434,6 @@ def test_upload_and_delete_csv_flow(test_client, tmp_path, monkeypatch):
 
     # cleanup uploads dir
     if os.path.exists(str(tmp_path)):
-        import shutil
         shutil.rmtree(str(tmp_path))
 
 
@@ -457,11 +462,9 @@ def test_clean_temp_endpoint(test_client, tmp_path, monkeypatch):
         assert os.listdir(temp_folder) == []
 
 
-
 def test_preview_csv_route(test_client, tmp_path, monkeypatch):
     resp = login_client(test_client)
     assert resp.status_code in (200, 302)
-
 
     # create a temp csv
     f = tmp_path / "p.csv"
@@ -484,13 +487,10 @@ def test_download_dataset_route(test_client, tmp_path, monkeypatch):
     resp = login_client(test_client)
     assert resp.status_code in (200, 302)
 
-
     # prepare uploads folder with a file
     uploads = tmp_path / "uploads" / "user_1" / "dataset_9"
     uploads.mkdir(parents=True)
     (uploads / "a.txt").write_text("x")
-
-    import app.modules.dataset.routes as routes_mod
 
     # monkeypatch dataset_service.get_or_404
     monkeypatch.setattr(
@@ -521,7 +521,6 @@ def test_dataset_stats_route(monkeypatch, test_client):
     fake_dataset = SimpleNamespace(id=123, feature_models=[fake_feature_model])
 
     fake_service = SimpleNamespace(get_or_404=lambda _id: fake_dataset)
-    import app.modules.dataset.routes as routes_mod
 
     monkeypatch.setattr(routes_mod, "dataset_service", fake_service)
 
@@ -536,11 +535,6 @@ def test_dataset_stats_route(monkeypatch, test_client):
 
 
 def test_dataset_stats_route_empty(monkeypatch, test_client):
-
-    import json
-    from types import SimpleNamespace
-
-    import app.modules.dataset.routes as routes_mod
 
     fake_dataset = SimpleNamespace(id=99, feature_models=[])
 
@@ -580,7 +574,6 @@ def test_list_all_issues_requires_admin(test_client):
 
 
 def test_list_all_issues_success(test_client, monkeypatch):
-    from datetime import datetime, timezone
 
     # Create and login as admin user
     user = User.query.filter_by(email="test@example.com").first()
@@ -616,7 +609,6 @@ def test_list_all_issues_success(test_client, monkeypatch):
 
     # Patch the IssueService used by the routes module so the view
     # will receive our fake issues list.
-    import app.modules.dataset.routes as routes_mod
 
     monkeypatch.setattr(routes_mod, "IssueService", lambda: FakeIssueService())
 
@@ -645,7 +637,6 @@ def test_open_issue_requires_admin(test_client):
 
 
 def test_open_issue_success(test_client, monkeypatch):
-    from datetime import datetime, timezone
 
     # Login as admin
     user = User.query.filter_by(email="test@example.com").first()
@@ -684,21 +675,24 @@ def test_open_issue_success(test_client, monkeypatch):
         def list_all(self):
             return fake_issues
 
-    import app.modules.dataset.routes as routes_mod
-
     monkeypatch.setattr(routes_mod, "IssueService", lambda: FakeIssueService2())
 
     r = test_client.put("/dataset/issues/open/1/")
     assert r.status_code == 200
     assert b"Toggled issue" in r.data
-    
+
+
 def test_feature_model_version_accepts_valid_semver(test_app):
     # Use POST request context to let FlaskForm read formdata
     with test_app.test_request_context("/", method="POST"):
-        form = FeatureModelForm(formdata=MultiDict({
-            "csv_filename": "file.csv",
-            "version": "1.2.3",
-        }))
+        form = FeatureModelForm(
+            formdata=MultiDict(
+                {
+                    "csv_filename": "file.csv",
+                    "version": "1.2.3",
+                }
+            )
+        )
         assert form.validate() is True
 
 
@@ -707,21 +701,30 @@ essa = "1.2"  # to keep flake8 from complaining about magic values reuse
 
 def test_feature_model_version_rejects_invalid_format(test_app):
     with test_app.test_request_context("/", method="POST"):
-        form = FeatureModelForm(formdata=MultiDict({
-            "csv_filename": "file.csv",
-            "version": essa,  # not x.y.z
-        }))
+        form = FeatureModelForm(
+            formdata=MultiDict(
+                {
+                    "csv_filename": "file.csv",
+                    "version": essa,  # not x.y.z
+                }
+            )
+        )
         assert form.validate() is False
         assert "x.y.z" in ";".join(form.version.errors)
 
 
 def test_feature_model_version_optional_when_empty(test_app):
     with test_app.test_request_context("/", method="POST"):
-        form = FeatureModelForm(formdata=MultiDict({
-            "csv_filename": "file.csv",
-            "version": "",
-        }))
+        form = FeatureModelForm(
+            formdata=MultiDict(
+                {
+                    "csv_filename": "file.csv",
+                    "version": "",
+                }
+            )
+        )
         assert form.validate() is True
+
 
 def test_dsmetadata_has_version_and_is_latest_attributes():
     # DSMetaData should expose the new fields (version, is_latest) on instances
@@ -776,7 +779,7 @@ def test_count_and_list_consider_only_is_latest():
             version=f"1.0.{i}",
         )
         # mark only even indices as latest for the test
-        md.is_latest = (i % 2 == 0)
+        md.is_latest = i % 2 == 0
         records.append(md)
 
     # Fake repository that would return all DSMetaData rows
@@ -798,3 +801,221 @@ def test_count_and_list_consider_only_is_latest():
     assert all(getattr(r, "is_latest", False) for r in listed_latest)
     # sanity: repo.count_all still reports total if asked
     assert repo.count_all() == 5
+
+
+def test_dsmetadata_repository_get_all_versions_by_deposition_id():
+    """Test that repository returns all versions with same deposition_id."""
+
+    repo = DSMetaDataRepository()
+
+    # Create multiple DSMetaData with same deposition_id but different versions
+    deposition_id = 12345
+    md1 = DSMetaData(
+        title="v1",
+        description="desc",
+        data_category=DataCategory.NONE,
+        deposition_id=deposition_id,
+        dataset_doi="10.5281/zenodo.1",
+        version=1.0,
+        is_latest=False,
+    )
+    md2 = DSMetaData(
+        title="v2",
+        description="desc",
+        data_category=DataCategory.NONE,
+        deposition_id=deposition_id,
+        dataset_doi="10.5281/zenodo.2",
+        version=2.0,
+        is_latest=True,
+    )
+    md3 = DSMetaData(
+        title="v3",
+        description="desc",
+        data_category=DataCategory.NONE,
+        deposition_id=deposition_id,
+        dataset_doi="10.5281/zenodo.3",
+        version=1.5,
+        is_latest=False,
+    )
+
+    db.session.add_all([md1, md2, md3])
+    db.session.commit()
+
+    # Retrieve all versions by deposition_id
+    versions = repo.get_all_versions_by_deposition_id(deposition_id)
+
+    # Should return all 3 versions
+    assert len(versions) == 3
+
+    # Should be ordered by version ascending (oldest first)
+    versions_list = list(versions)
+    assert versions_list[0].version == 1.0
+    assert versions_list[1].version == 1.5
+    assert versions_list[2].version == 2.0
+
+    # Cleanup
+    db.session.delete(md1)
+    db.session.delete(md2)
+    db.session.delete(md3)
+    db.session.commit()
+
+
+def test_dsmetadata_service_get_all_versions_by_deposition_id():
+    """Test that service delegates to repository correctly."""
+    svc = DSMetaDataService()
+    svc.repository = SimpleNamespace(
+        get_all_versions_by_deposition_id=lambda dep_id: [
+            SimpleNamespace(version=1.0, is_latest=False),
+            SimpleNamespace(version=2.0, is_latest=True),
+        ]
+    )
+
+    versions = svc.get_all_versions_by_deposition_id(12345)
+
+    assert len(versions) == 2
+    assert versions[0].version == 1.0
+    assert versions[1].version == 2.0
+    assert versions[1].is_latest is True
+
+
+def test_dataset_versions_route_returns_all_versions(test_client):
+    """Test that /dataset/versions/<id> returns timeline with all versions."""
+    # Create user and login
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(email="test@example.com", password="test1234", verified=True)
+        db.session.add(user)
+        db.session.commit()
+
+    if not user.profile:
+        profile = UserProfile(user_id=user.id, name="Test", surname="User")
+        db.session.add(profile)
+        db.session.commit()
+
+    # Create multiple dataset versions with same deposition_id
+    deposition_id = 99999
+    md1 = DSMetaData(
+        title="Dataset v1",
+        description="First version",
+        data_category=DataCategory.GENERAL,
+        deposition_id=deposition_id,
+        dataset_doi="10.5281/zenodo.100",
+        version=1.0,
+        is_latest=False,
+    )
+    md2 = DSMetaData(
+        title="Dataset v2",
+        description="Second version",
+        data_category=DataCategory.GENERAL,
+        deposition_id=deposition_id,
+        dataset_doi="10.5281/zenodo.101",
+        version=2.0,
+        is_latest=True,
+    )
+
+    db.session.add_all([md1, md2])
+    db.session.commit()
+
+    # Create datasets linked to metadata
+    ds1 = DataSet(user_id=user.id, ds_meta_data_id=md1.id, draft_mode=False)
+    ds2 = DataSet(user_id=user.id, ds_meta_data_id=md2.id, draft_mode=False)
+
+    db.session.add_all([ds1, ds2])
+    db.session.commit()
+
+    # Access versions timeline
+    response = test_client.get(f"/dataset/versions/{ds2.id}")
+
+    # Should succeed
+    assert response.status_code == 200
+
+    # Should contain version information
+    assert b"Timeline of versions" in response.data
+    assert b"1.0" in response.data or b"1" in response.data
+    assert b"2.0" in response.data or b"2" in response.data
+    assert b"Latest version" in response.data
+
+    # Cleanup: Delete datasets first (foreign key constraint)
+    db.session.query(DataSet).filter_by(id=ds1.id).delete()
+    db.session.query(DataSet).filter_by(id=ds2.id).delete()
+    # Then delete metadata
+    db.session.query(DSMetaData).filter_by(id=md1.id).delete()
+    db.session.query(DSMetaData).filter_by(id=md2.id).delete()
+    db.session.commit()
+
+
+def test_dataset_versions_route_returns_404_for_draft(test_client):
+    """Test that /dataset/versions/<id> returns 404 for draft datasets."""
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(email="test@example.com", password="test1234", verified=True)
+        db.session.add(user)
+        db.session.commit()
+
+    if not user.profile:
+        profile = UserProfile(user_id=user.id, name="Test", surname="User")
+        db.session.add(profile)
+        db.session.commit()
+
+    md = DSMetaData(
+        title="Draft Dataset",
+        description="Draft",
+        data_category=DataCategory.GENERAL,
+        deposition_id=None,
+    )
+    db.session.add(md)
+    db.session.commit()
+
+    ds = DataSet(user_id=user.id, ds_meta_data_id=md.id, draft_mode=True)
+    db.session.add(ds)
+    db.session.commit()
+
+    response = test_client.get(f"/dataset/versions/{ds.id}")
+
+    # Should return 404 for draft dataset
+    assert response.status_code == 404
+
+    # Cleanup
+    db.session.delete(ds)
+    db.session.delete(md)
+    db.session.commit()
+
+
+def test_dataset_versions_route_returns_404_for_no_deposition_id(
+    test_client,
+):
+    """Test that /dataset/versions/<id> returns 404 if no deposition_id."""
+    user = User.query.filter_by(email="test@example.com").first()
+    if not user:
+        user = User(email="test@example.com", password="test1234", verified=True)
+        db.session.add(user)
+        db.session.commit()
+
+    if not user.profile:
+        profile = UserProfile(user_id=user.id, name="Test", surname="User")
+        db.session.add(profile)
+        db.session.commit()
+
+    md = DSMetaData(
+        title="No Deposition Dataset",
+        description="No deposition",
+        data_category=DataCategory.GENERAL,
+        deposition_id=None,
+        dataset_doi="10.5281/zenodo.999",
+    )
+    db.session.add(md)
+    db.session.commit()
+
+    ds = DataSet(user_id=user.id, ds_meta_data_id=md.id, draft_mode=False)
+    db.session.add(ds)
+    db.session.commit()
+
+    response = test_client.get(f"/dataset/versions/{ds.id}")
+
+    # Should return 404 if no deposition_id
+    assert response.status_code == 404
+
+    # Cleanup
+    db.session.delete(ds)
+    db.session.delete(md)
+    db.session.commit()

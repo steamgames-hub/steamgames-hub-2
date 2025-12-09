@@ -2,20 +2,15 @@ import hashlib
 import logging
 import os
 import uuid
-from datetime import datetime
-from typing import List, Optional, Set
+from datetime import datetime, timedelta
+from typing import Optional
 
 from flask import request
-from datetime import datetime, timedelta
-from app.modules.dataset.models import DSDownloadRecord
-
-from app.modules.community.models import CommunityDatasetProposal
-from sqlalchemy import func, or_, desc
-
-from app import db
+from sqlalchemy import desc, func
 
 from app.modules.auth.services import AuthenticationService
-from app.modules.dataset.models import Author, DataSet, DSMetaData, DSDownloadRecord, DSViewRecord
+from app.modules.community.models import CommunityDatasetProposal
+from app.modules.dataset.models import DataSet, DSDownloadRecord, DSMetaData, DSViewRecord
 from app.modules.dataset.repositories import (
     AuthorRepository,
     DataSetRepository,
@@ -23,6 +18,7 @@ from app.modules.dataset.repositories import (
     DSDownloadRecordRepository,
     DSMetaDataRepository,
     DSViewRecordRepository,
+    IssueRepository,
 )
 from app.modules.featuremodel.repositories import FeatureModelRepository, FMMetaDataRepository
 from app.modules.hubfile.repositories import (
@@ -30,7 +26,6 @@ from app.modules.hubfile.repositories import (
     HubfileRepository,
     HubfileViewRecordRepository,
 )
-from app.modules.community.models import CommunityDatasetProposal, ProposalStatus
 from core.services.BaseService import BaseService
 from core.storage import storage_service
 
@@ -181,6 +176,7 @@ class DataSetService(BaseService):
         dataset = self.get_by_id(dataset_id)
         if dataset.draft_mode is True:
             return self.update(self, dataset_id)
+
     def trending_datasets(self, period_days: int = 7, by: str = "views", limit: int = 5):
         try:
             since = datetime.now() - timedelta(days=period_days)
@@ -238,9 +234,7 @@ class DataSetService(BaseService):
             trending_with_community = []
             for dataset, metric in results:
                 accepted_proposal = (
-                    session.query(CommunityDatasetProposal)
-                    .filter_by(dataset_id=dataset.id, status="accepted")
-                    .first()
+                    session.query(CommunityDatasetProposal).filter_by(dataset_id=dataset.id, status="accepted").first()
                 )
                 dataset.accepted_community = accepted_proposal.community if accepted_proposal else None
                 trending_with_community.append((dataset, int(metric or 0)))
@@ -285,6 +279,12 @@ class DSMetaDataService(BaseService):
 
     def filter_by_doi(self, doi: str) -> Optional[DSMetaData]:
         return self.repository.filter_by_doi(doi)
+
+    def get_all_versions_by_doi(self, doi: str):
+        return self.repository.get_all_versions_by_doi(doi)
+
+    def get_all_versions_by_deposition_id(self, deposition_id: int):
+        return self.repository.get_all_versions_by_deposition_id(deposition_id)
 
 
 class DSViewRecordService(BaseService):
@@ -341,8 +341,6 @@ class SizeService:
 
 class IssueService(BaseService):
     def __init__(self):
-        from app.modules.dataset.repositories import IssueRepository
-
         super().__init__(IssueRepository())
 
     def list_for_dataset(self, dataset_id: int):

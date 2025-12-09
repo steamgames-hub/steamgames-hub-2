@@ -50,8 +50,8 @@ class TestingConfig(Config):
     )
     WTF_CSRF_ENABLED = False
     TWO_FACTOR_ENABLED = False
-    SECRET_KEY = 'test-secret-key-1234'
-    SECURITY_PASSWORD_SALT = 'test-password-salt-5678'
+    SECRET_KEY = "test-secret-key-1234"
+    SECURITY_PASSWORD_SALT = "test-password-salt-5678"
 
 
 class ProductionConfig(Config):

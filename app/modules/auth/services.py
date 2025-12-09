@@ -1,26 +1,26 @@
+import hashlib
 import os
 import random
 import secrets
-import hashlib
-from flask import current_app, render_template, url_for
-from itsdangerous import URLSafeTimedSerializer
-
-from flask_login import current_user, login_user
-from flask_mail import Message
-
-from app.modules.auth.models import User, PasswordResetToken
-from app.modules.auth.repositories import UserRepository
-from app.modules.profile.models import UserProfile
-from app.modules.profile.repositories import UserProfileRepository
-from app.modules.dataset.models import DataSet
-from core.configuration.configuration import uploads_folder_name
-from core.services.BaseService import BaseService
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
 from datetime import datetime, timedelta
 from threading import Thread
+
+from flask import current_app, render_template, url_for
+from flask_login import current_user, login_user
+from flask_mail import Message
+from itsdangerous import URLSafeTimedSerializer
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 from werkzeug.security import generate_password_hash
+
 from app import db, mail
+from app.modules.auth.models import PasswordResetToken, User
+from app.modules.auth.repositories import UserRepository
+from app.modules.dataset.models import DataSet
+from app.modules.profile.models import UserProfile
+from app.modules.profile.repositories import UserProfileRepository
+from core.configuration.configuration import uploads_folder_name
+from core.services.BaseService import BaseService
 
 
 class AuthenticationService(BaseService):
@@ -111,9 +111,7 @@ class AuthenticationService(BaseService):
         raw_token = secrets.token_urlsafe(48)
         hashed = self._hash_token(raw_token)
         token = PasswordResetToken(
-            user_id=user.id,
-            token_hash=hashed,
-            expires_at=datetime.utcnow() + timedelta(minutes=ttl_minutes)
+            user_id=user.id, token_hash=hashed, expires_at=datetime.utcnow() + timedelta(minutes=ttl_minutes)
         )
         db.session.add(token)
         db.session.commit()
@@ -157,13 +155,11 @@ class AuthenticationService(BaseService):
 
         serializer = URLSafeTimedSerializer(secret_key)
         try:
-            email = serializer.loads(
-                token, salt=salt, max_age=expiration
-            )
+            email = serializer.loads(token, salt=salt, max_age=expiration)
             return email
         except Exception:
             return False
-        
+
     def send_verification_email(self, email):
         token = self.generate_token(email)
         confirm_url = url_for("auth.verify", token=token, _external=True)
@@ -181,12 +177,7 @@ class AuthenticationService(BaseService):
         if not sg_api_key or not from_email:
             raise RuntimeError("SENDGRID_API_KEY o FROM_EMAIL no configuradas")
 
-        message = Mail(
-            from_email=from_email,
-            to_emails=to,
-            subject=subject,
-            html_content=body
-        )
+        message = Mail(from_email=from_email, to_emails=to, subject=subject, html_content=body)
 
         try:
             sg = SendGridAPIClient(sg_api_key)
@@ -222,7 +213,7 @@ class AuthenticationService(BaseService):
         if user:
             return user.profile
         return None
-    
+
     def upgrade_user_role(self, user: User):
         user.role = user.get_next_role()
         self.repository.session.add(user)
@@ -232,7 +223,7 @@ class AuthenticationService(BaseService):
         user.role = user.get_previous_role()
         self.repository.session.add(user)
         self.repository.session.commit()
-        
+
     def delete_user(self, user: User):
         # Borrar datasets y perfil del usuario antes de borrar el usuario
         datasets = self.repository.session.query(DataSet).filter_by(user_id=user.id).all()

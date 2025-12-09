@@ -2,11 +2,11 @@ import os
 import re
 import time
 
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.support.ui import WebDriverWait
 
 from core.environment.host import get_host_for_selenium_testing
 from core.selenium.common import close_driver, initialize_driver
@@ -27,6 +27,8 @@ def count_datasets(driver, host):
     except Exception:
         amount_datasets = 0
     return amount_datasets
+
+
 def _wait_visible_any(driver, locators, timeout=15):
     end_time = time.time() + timeout
     last_exc = None

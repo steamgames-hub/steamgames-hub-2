@@ -32,6 +32,12 @@ class DSMetaDataRepository(BaseRepository):
     def filter_by_doi(self, doi: str) -> Optional[DSMetaData]:
         return self.model.query.filter_by(dataset_doi=doi).first()
 
+    def get_all_versions_by_doi(self, doi: str):
+        return self.model.query.filter_by(dataset_doi=doi).order_by(desc(self.model.version)).all()
+
+    def get_all_versions_by_deposition_id(self, deposition_id: int):
+        return self.model.query.filter_by(deposition_id=deposition_id).order_by(self.model.version.asc()).all()
+
 
 class DSViewRecordRepository(BaseRepository):
     def __init__(self):
@@ -64,7 +70,11 @@ class DataSetRepository(BaseRepository):
     def get_synchronized(self, current_user_id: int) -> DataSet:
         return (
             self.model.query.join(DSMetaData)
-            .filter(DataSet.user_id == current_user_id, DataSet.draft_mode == False, DSMetaData.dataset_doi.isnot(None))
+            .filter(
+                DataSet.user_id == current_user_id,
+                not DataSet.draft_mode,
+                DSMetaData.dataset_doi.isnot(None),
+            )
             .filter(DSMetaData.is_latest.is_(True))
             .order_by(self.model.created_at.desc())
             .all()
@@ -73,7 +83,11 @@ class DataSetRepository(BaseRepository):
     def get_unsynchronized(self, current_user_id: int) -> DataSet:
         return (
             self.model.query.join(DSMetaData)
-            .filter(DataSet.user_id == current_user_id, DataSet.draft_mode == False, DSMetaData.dataset_doi.is_(None))
+            .filter(
+                DataSet.user_id == current_user_id,
+                not DataSet.draft_mode,
+                DSMetaData.dataset_doi.is_(None),
+            )
             .order_by(self.model.created_at.desc())
             .all()
         )
@@ -86,7 +100,12 @@ class DataSetRepository(BaseRepository):
         )
 
     def count_synchronized_datasets(self):
-        return self.model.query.join(DSMetaData).filter(DSMetaData.dataset_doi.isnot(None)).filter(DSMetaData.is_latest.is_(True)).count()
+        return (
+            self.model.query.join(DSMetaData)
+            .filter(DSMetaData.dataset_doi.isnot(None))
+            .filter(DSMetaData.is_latest.is_(True))
+            .count()
+        )
 
     def latest_synchronized(self):
         return (

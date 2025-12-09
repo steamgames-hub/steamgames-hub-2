@@ -1,4 +1,6 @@
-from flask import redirect, render_template, request, url_for, abort, flash, send_file
+import os
+
+from flask import abort, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
 
 from app.modules.community import community_bp
@@ -7,9 +9,7 @@ from app.modules.community.models import ProposalStatus
 from app.modules.community.services import CommunityProposalService, CommunityService
 from app.modules.dataset.services import DataSetService
 from core.services.MailService import MailService
-import os
 from core.storage import storage_service
-
 
 community_service = CommunityService()
 proposal_service = CommunityProposalService()
@@ -80,9 +80,7 @@ def accept_proposal(community_id: int, proposal_id: int):
         if user and user.email:
             title = proposal.dataset.ds_meta_data.title
             cname = community.name
-            body_text = (
-                "Good news! Your dataset '" + title + "' has been accepted into the community '" + cname + "'."
-            )
+            body_text = "Good news! Your dataset '" + title + "' has been accepted into the community '" + cname + "'."
             MailService().send_email(user.email, f"Your dataset was accepted into '{cname}'", body_text)
     except Exception:
         pass
@@ -148,7 +146,7 @@ def community_icon(community_id: int):
     return send_file(local_path)
 
 
-@community_bp.route("/community/mine", methods=["GET"])  
+@community_bp.route("/community/mine", methods=["GET"])
 @login_required
 def my_communities():
     communities = community_service.list_by_responsible(current_user.id)

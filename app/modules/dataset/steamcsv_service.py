@@ -53,10 +53,7 @@ class SteamCSVService:
             return f"{entry}: cannot read CSV ({exc})"
 
         if headers != self.REQUIRED_HEADERS:
-            return (
-                f"{entry}: invalid headers. Expected exactly: "
-                f"{', '.join(self.REQUIRED_HEADERS)} in this order"
-            )
+            return f"{entry}: invalid headers. Expected exactly: " f"{', '.join(self.REQUIRED_HEADERS)} in this order"
 
         if not rows or all(not any(cell.strip() for cell in row) for row in rows):
             return f"{entry}: must contain at least one data row"

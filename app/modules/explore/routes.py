@@ -1,5 +1,6 @@
 from datetime import datetime
-from flask import request, jsonify, render_template
+
+from flask import jsonify, render_template, request
 
 from app.modules.explore import explore_bp
 from app.modules.explore.forms import ExploreForm

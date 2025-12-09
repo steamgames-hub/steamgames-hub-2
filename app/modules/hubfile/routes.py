@@ -22,11 +22,13 @@ def download_file(file_id):
     if not os.path.exists(abs_file_path):
         # Clear diagnostic 404 to differentiate from route-not-found
         return (
-            jsonify({
-                "success": False,
-                "error": "File not found on disk",
-                "path": abs_file_path,
-            }),
+            jsonify(
+                {
+                    "success": False,
+                    "error": "File not found on disk",
+                    "path": abs_file_path,
+                }
+            ),
             404,
         )
 

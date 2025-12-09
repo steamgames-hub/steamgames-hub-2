@@ -1,9 +1,9 @@
-
 import time
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 from core.environment.host import get_host_for_selenium_testing
 from core.selenium.common import close_driver, initialize_driver
@@ -32,7 +32,7 @@ def test_explore_page_filters():
             "query": "Sample dataset 1",
             "author": "Author 1",
             "tags": "tag1, tag2",
-            "filenames": "file1.csv, file2.csv"
+            "filenames": "file1.csv, file2.csv",
         }
 
         for fid, value in test_inputs.items():
@@ -55,9 +55,7 @@ def test_explore_page_filters():
         driver.find_element(By.ID, "min_views").send_keys("100")
 
         # --- 7. Esperar resultados y validar existencia de contador ---
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.ID, "results_number"))
-        )
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "results_number")))
         results = driver.find_element(By.ID, "results_number")
         assert results.is_displayed(), "No se muestra el contador de resultados"
 
