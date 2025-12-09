@@ -1,0 +1,3 @@
+[run]
+
+omit = *locustfile.py*, *test_selenium*, *test_unit*

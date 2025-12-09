@@ -657,3 +657,60 @@ def test_verify_2fa_expired(test_client, auth_service):
     print("Resultado con código expirado:", result)
 
     assert result is False, "❌ La verificación con código expirado debería retornar False."
+
+def test_forgot_password_post_triggers_token_generation(test_client, monkeypatch):
+    called = {}
+
+    def fake_generate(email):
+        called["email"] = email
+        return None
+
+    monkeypatch.setattr("app.modules.auth.routes.authentication_service.generate_reset_token", fake_generate)
+
+    resp = test_client.post("/forgot-password", data={"email": "resetme@example.com"}, follow_redirects=True)
+    assert resp.status_code == 200
+    assert b"Si el email existe" in resp.data
+    assert called.get("email") == "resetme@example.com"
+
+
+def test_reset_password_get_invalid_token_returns_400(test_client, monkeypatch):
+    # Simulate invalid token
+    monkeypatch.setattr("app.modules.auth.routes.authentication_service.validate_reset_token", lambda t: False)
+    resp = test_client.get("/reset-password?token=bad-token", follow_redirects=True)
+    assert resp.status_code == 400
+
+
+def test_reset_password_get_valid_token_shows_form(test_client, monkeypatch):
+    # Simulate valid token -> returns email
+    monkeypatch.setattr("app.modules.auth.routes.authentication_service.validate_reset_token", lambda t: "user@example.com")
+    resp = test_client.get("/reset-password?token=good-token", follow_redirects=True)
+    assert resp.status_code == 200
+
+
+def test_reset_password_post_mismatched_passwords_shows_error(test_client, monkeypatch):
+    # Ensure route renders form with error when passwords don't match
+    token = "tkn"
+    resp = test_client.post(
+        "/reset-password",
+        data={"token": token, "password": "one", "confirm": "two"},
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200
+    assert "Las contraseñas no coinciden." in resp.get_data(as_text=True)
+
+
+def test_reset_password_post_success_consumes_token(test_client, monkeypatch):
+    token = "good-token"
+
+    def fake_consume(t, newpw):
+        return True
+
+    monkeypatch.setattr("app.modules.auth.routes.authentication_service.consume_reset_token", fake_consume)
+
+    resp = test_client.post(
+        "/reset-password",
+        data={"token": token, "password": "newpass123", "confirm": "newpass123"},
+        follow_redirects=True,
+    )
+
+    assert resp.status_code == 200
