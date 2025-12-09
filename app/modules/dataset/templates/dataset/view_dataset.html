@@ -3,17 +3,7 @@
 {% block title %}View dataset{% endblock %}
 
 {% block head_extra %}
-<style>
-    .option-button {
-        display: block;
-        width: 100%;
-        margin-bottom: 5px;
-    }
-
-    .option-button:last-child {
-        margin-bottom: 0;
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/related_datasets.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -148,6 +138,57 @@
         </div>
 
 
+        {% if related_datasets %}
+        <div class="related-section-container">
+            <div class="related-section-header">
+                <h3 class="related-section-title">Related Datasets</h3>
+                <span class="related-section-count">{{ related_datasets|length }} suggestions</span>
+            </div>
+
+            <div class="related-section-body">
+                <div class="related-section-grid">
+                    {% for item in related_datasets %}
+                    <div class="related-dataset-card">
+                        <div class="related-card-content">
+
+                            <div class="related-card-main">
+                                <a class="related-title" href="{{ url_for('dataset.subdomain_index', doi=item.dataset.ds_meta_data.dataset_doi) }}">
+                                    {{ item.dataset.ds_meta_data.title }}
+                                </a>
+
+                                <div class="related-meta">
+                                    {% set first_author = item.dataset.ds_meta_data.authors | first %}
+                                    {% if first_author %}
+                                        {{ first_author.name }}
+                                    {% endif %}
+                                    · {{ item.dataset.ds_meta_data.data_category.name.replace('_', ' ').title() }}
+                                </div>
+
+                                <div class="related-badges">
+                                    {% if item.accepted_community %}
+                                    <span class="badge related-badge">{{ item.accepted_community.name }}</span>
+                                    {% endif %}
+
+                                    {% set related_tags = item.dataset.ds_meta_data.tags.split(',') if item.dataset.ds_meta_data.tags else [] %}
+                                    {% for tag in related_tags[:3] %}
+                                    <span class="badge related-badge">{{ tag.strip() }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <div class="related-stats">
+                                <div><i data-feather="download" class="me-1"></i>{{ item.download_count or 0 }} downloads</div>
+                                <div><i data-feather="calendar" class="me-1"></i>{{ item.dataset.created_at.strftime('%b %d, %Y') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+
     </div>
 
     <div class="col-xl-4 col-lg-12 col-md-12 col-sm-12">
@@ -243,6 +284,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         feather.replace();
+        applyRelatedSectionStyles();
     });
 
     var currentFileId;
@@ -320,6 +362,78 @@
             console.log('Text copied to clipboard');
         }).catch(err => {
             console.error('Failed to copy text: ', err);
+        });
+    }
+
+    function applyRelatedSectionStyles() {
+        const containers = document.querySelectorAll('.related-section-container, .related-section-body');
+        if (!containers.length) {
+            return;
+        }
+
+        const containerStyles = {
+            background: '#fbfdff',
+            border: '1px solid rgba(15,23,42,0.06)',
+            borderRadius: '14px',
+            boxShadow: '0 10px 25px rgba(2,6,23,0.04)',
+            padding: '18px'
+        };
+
+        const cardStyles = {
+            background: 'linear-gradient(180deg,#ffffff 0%,#fbfdff 100%)',
+            border: '1px solid rgba(15,23,42,0.04)',
+            borderRadius: '12px',
+            boxShadow: '0 10px 22px rgba(2,6,23,0.03)',
+            padding: '12px',
+            transition: 'transform .12s ease, box-shadow .16s ease'
+        };
+
+        const titleStyles = {
+            color: '#0f172a',
+            fontWeight: '700',
+            textDecoration: 'none'
+        };
+
+        const metaStyles = {
+            color: '#6b7280'
+        };
+
+        const badgeStyles = {
+            background: '#f1f5f9',
+            color: '#0f172a',
+            border: '1px solid rgba(15,23,42,0.03)',
+            borderRadius: '999px',
+            fontSize: '0.72rem',
+            padding: '0.18rem 0.5rem'
+        };
+
+        const statsStyles = {
+            color: '#475569',
+            textAlign: 'right',
+            minWidth: '120px'
+        };
+
+        containers.forEach(el => Object.assign(el.style, containerStyles));
+
+        document.querySelectorAll('.related-dataset-card').forEach(card => {
+            card.classList.remove('card', 'shadow-sm');
+            Object.assign(card.style, cardStyles);
+        });
+
+        document.querySelectorAll('.related-title').forEach(title => {
+            Object.assign(title.style, titleStyles);
+        });
+
+        document.querySelectorAll('.related-meta').forEach(meta => {
+            Object.assign(meta.style, metaStyles);
+        });
+
+        document.querySelectorAll('.related-badge').forEach(badge => {
+            Object.assign(badge.style, badgeStyles);
+        });
+
+        document.querySelectorAll('.related-stats').forEach(stats => {
+            Object.assign(stats.style, statsStyles);
         });
     }
 </script>

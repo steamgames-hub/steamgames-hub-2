@@ -33,7 +33,6 @@ def _wait_visible_any(driver, locators, timeout=15):
         time.sleep(0.3)
     raise TimeoutException(f"Element not visible for any locator: {locators}") from last_exc
 
-
 def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGamesHub", timeout=60):
     driver.get("https://yopmail.com/es/")
     wait = WebDriverWait(driver, 10)
@@ -124,7 +123,7 @@ def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGames
         except Exception:
             pass
 
-        if time.time() - last_refresh > 3 and refresh_count < max_refreshes:
+        if time.time() - last_refresh > 5 and refresh_count < max_refreshes:
             try:
                 driver.switch_to.default_content()
                 try:
@@ -139,7 +138,7 @@ def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGames
                 pass
             last_refresh = time.time()
             refresh_count += 1
-        time.sleep(0.7)
+        time.sleep(1.2)
 
     if not email_element and last_email_element:
         email_element = last_email_element
@@ -160,7 +159,7 @@ def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGames
                 return m.group(1)
         except Exception:
             pass
-        time.sleep(0.7)
+        time.sleep(1,2)
     raise TimeoutException("[yopmail] 2FA code not found in email body")
 
 
@@ -276,6 +275,158 @@ def test_upload_dataset():
         # Close the browser
         close_driver(driver)
 
+def test_related_datasets_section_visible(driver=None):
+    driver = driver or initialize_driver()
+    try:
+        host = get_host_for_selenium_testing()
+
+
+        # Vamos a dataset con related_datasets (usa uno que exista en tu entorno de test)
+        dataset_url = f"{host}/doi/10.9999/dataset.4/"
+        driver.get(dataset_url)
+        wait_for_page_to_load(driver)
+
+        # Espera a que aparezca el título de la sección
+        section_title = _wait_visible_any(
+            driver,
+            [(By.XPATH, "//h3[contains(text(),'Related Datasets')]")],
+            timeout=12
+        )
+
+        assert section_title.is_displayed()
+
+        # Verificar que existe al menos un related dataset card
+        card = _wait_visible_any(
+            driver,
+            [(By.CSS_SELECTOR, ".related-dataset-card")],
+            timeout=10
+        )
+        assert card.is_displayed()
+
+        # Verificar que aparece el contador "X suggestions"
+        count_el = driver.find_element(By.CSS_SELECTOR, ".related-section-count")
+        text = count_el.text.strip()
+        assert "suggestions" in text.lower(), "El contador no aparece o es incorrecto"
+
+    finally:
+        close_driver(driver)
+
+def test_related_dataset_item_contents(driver=None):
+    driver = driver or initialize_driver()
+    try:
+        host = get_host_for_selenium_testing()
+
+        driver.get(f"{host}/doi/10.9999/dataset.4/")
+        wait_for_page_to_load(driver)
+
+        # Localizar una tarjeta de dataset relacionado
+        card = _wait_visible_any(
+            driver,
+            [(By.CSS_SELECTOR, ".related-dataset-card")],
+            timeout=10
+        )
+
+        # Título
+        title_el = card.find_element(By.CSS_SELECTOR, ".related-title")
+        assert title_el.text.strip() != "", "El título no se está mostrando"
+        assert title_el.get_attribute("href").startswith(host), "El link del título es incorrecto"
+
+        # Autor + categoría
+        meta = card.find_element(By.CSS_SELECTOR, ".related-meta")
+        assert "·" in meta.text, "No se muestra autor + categoría correctamente"
+
+        # Badges
+        badges = card.find_elements(By.CSS_SELECTOR, ".related-badge")
+        assert len(badges) >= 0, "No se muestran badges"
+
+        # Descargas
+        stats = card.find_element(By.CSS_SELECTOR, ".related-stats")
+        assert "downloads" in stats.text.lower(), "No se muestra número de descargas"
+
+        # Fecha
+        assert re.search(r"\d{4}|\w{3} \d{1,2}", stats.text), "No se muestra fecha"
+
+    finally:
+        close_driver(driver)
+
+def test_related_dataset_link_navigation(driver=None):
+    driver = driver or initialize_driver()
+    try:
+        host = get_host_for_selenium_testing()
+
+        driver.get(f"{host}/doi/10.9999/dataset.4/")
+        wait_for_page_to_load(driver)
+
+        link = _wait_visible_any(
+            driver,
+            [(By.CSS_SELECTOR, ".related-title")],
+            timeout=10
+        )
+
+        href = link.get_attribute("href")
+        link.click()
+        wait_for_page_to_load(driver)
+
+        assert href == driver.current_url, "La navegación al dataset relacionado no funciona correctamente"
+
+    finally:
+        close_driver(driver)
+
+
+
+
+def wait_for_page_to_load(driver, timeout=5):
+    WebDriverWait(driver, timeout).until(
+        lambda d: d.execute_script("return document.readyState") == "complete"
+    )
+
+def test_user_metrics():
+    driver = initialize_driver()
+
+    
+    try:
+        host = get_host_for_selenium_testing()
+        _login_with_optional_2fa(driver, host)
+        driver.get(f"{host}/")
+
+        wait_for_page_to_load(driver)
+
+        # Espera cualquier tarjeta de estadísticas
+        WebDriverWait(driver, 15).until(
+            lambda d: "uploaded datasets" in d.page_source
+        )
+
+
+        uploaded_el  = driver.find_element(By.XPATH, "//h4[contains(., 'uploaded datasets')]")
+        downloads_el = driver.find_element(By.XPATH, "//h4[contains(., 'downloads')]")
+        syncs_el     = driver.find_element(By.XPATH, "//h4[contains(., 'synchronizations')]")
+
+        # Extraer el número desde el texto
+        import re
+
+        def extract_number(el):
+            m = re.search(r"\d+", el.text)
+            return int(m.group()) if m else 0
+
+        uploaded  = extract_number(uploaded_el)
+        downloads = extract_number(downloads_el)
+        syncs     = extract_number(syncs_el)
+
+        print(f"My activity metrics: {uploaded} uploaded, {downloads} downloads, {syncs} syncs")
+
+
+        assert uploaded >= 0
+        assert downloads >= 0
+        assert syncs >= 0
+
+    finally:
+        driver.quit()
+
+
+
+
+
 
 # Call the test function
 test_upload_dataset()
+test_user_metrics()

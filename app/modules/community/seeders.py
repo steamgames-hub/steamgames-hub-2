@@ -36,34 +36,33 @@ class CommunitySeeder(BaseSeeder):
             # Nothing else to relate if datasets or communities are missing
             return
 
-        proposals = []
-
-        # Helper to create a proposal safely
-        def make_proposal(ds: DataSet, community: Community, status: str):
-            decided_at = datetime.utcnow() if status == ProposalStatus.ACCEPTED else None
-            return CommunityDatasetProposal(
-                dataset_id=ds.id,
-                community_id=community.id,
-                proposed_by_user_id=ds.user_id,
-                status=status,
-                decided_at=decided_at,
-            )
-
-        # Compose a small, deterministic set of proposals
-        # - First dataset accepted in first community (if both exist)
-        # - Second dataset pending in second community (if exists)
-        # - Third dataset pending in first community (if exists)
-        c1 = seeded_communities[0] if len(seeded_communities) >= 1 else None
-        c2 = seeded_communities[1] if len(seeded_communities) >= 2 else None
-
-        if c1 and len(datasets) >= 1:
-            proposals.append(make_proposal(datasets[0], c1, ProposalStatus.ACCEPTED))
-
-        if c2 and len(datasets) >= 2:
-            proposals.append(make_proposal(datasets[1], c2, ProposalStatus.PENDING))
-
-        if c1 and len(datasets) >= 3:
-            proposals.append(make_proposal(datasets[2], c1, ProposalStatus.PENDING))
-
+        proposals = self._build_proposals(datasets, seeded_communities)
         if proposals:
             self.seed(proposals)
+
+    def _build_proposals(self, datasets, communities):
+        proposals = []
+        plan = []
+        if len(communities) >= 1:
+            plan.append((0, communities[0], ProposalStatus.ACCEPTED))
+            plan.append((2, communities[0], ProposalStatus.ACCEPTED))
+        if len(communities) >= 2:
+            plan.append((1, communities[1], ProposalStatus.PENDING))
+            plan.append((3, communities[1], ProposalStatus.ACCEPTED))
+            plan.append((4, communities[1], ProposalStatus.PENDING))
+
+        for dataset_idx, community, status in plan:
+            if dataset_idx >= len(datasets):
+                continue
+            proposals.append(self._make_proposal(datasets[dataset_idx], community, status))
+        return proposals
+
+    def _make_proposal(self, dataset: DataSet, community: Community, status: str):
+        decided_at = datetime.utcnow() if status == ProposalStatus.ACCEPTED else None
+        return CommunityDatasetProposal(
+            dataset_id=dataset.id,
+            community_id=community.id,
+            proposed_by_user_id=dataset.user_id,
+            status=status,
+            decided_at=decided_at,
+        )

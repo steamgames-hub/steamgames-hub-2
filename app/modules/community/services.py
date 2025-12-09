@@ -4,11 +4,12 @@ from typing import List
 
 from werkzeug.utils import secure_filename
 from PIL import Image
+from flask import current_app
 
 from app.modules.community.models import Community, ProposalStatus
 from app.modules.community.repositories import CommunityProposalRepository, CommunityRepository
+from core.configuration.configuration import uploads_folder_name
 from core.services.BaseService import BaseService
-from core.storage import storage_service
 
 
 class CommunityService(BaseService):
@@ -67,11 +68,16 @@ class CommunityService(BaseService):
 
         if icon_file and icon_file.filename:
             filename = secure_filename(icon_file.filename)
-            relative_path = storage_service.community_icon_path(
-                community.id,
-                filename,
-            )
-            storage_service.save_fileobj(icon_file, relative_path)
+            # Build an absolute base directory
+            base_dir = os.getenv("WORKING_DIR")
+            if not base_dir:
+                # parent of app/ directory
+                base_dir = os.path.abspath(os.path.join(current_app.root_path, os.pardir))
+
+            dest_dir = os.path.join(base_dir, uploads_folder_name(), "communities", f"community_{community.id}")
+            os.makedirs(dest_dir, exist_ok=True)
+            icon_path = os.path.join(dest_dir, filename)
+            icon_file.save(icon_path)
             community.icon_path = filename
 
         self.repository.session.commit()
