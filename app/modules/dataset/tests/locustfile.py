@@ -1,11 +1,10 @@
 import os
+import re
 
 from locust import HttpUser, TaskSet, task
 
 from core.environment.host import get_host_for_locust_testing
 from core.locust.common import get_csrf_token
-import os
-import re
 
 # Adjust to a valid path in your environment
 locust_file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -51,9 +50,10 @@ class DatasetBehavior(TaskSet):
             print(f"Test CSV not found at {CSV_FILE_PATH}")
             return
 
-        files = {"file": open(CSV_FILE_PATH, "rb")}
         headers = {"X-CSRFToken": csrf_token}
-        response = self.client.post("/dataset/file/upload", files=files, headers=headers)
+        with open(CSV_FILE_PATH, "rb") as csv_file:
+            files = {"file": csv_file}
+            response = self.client.post("/dataset/file/upload", files=files, headers=headers)
         if response.status_code != 200:
             print("File upload failed:", response.text)
 

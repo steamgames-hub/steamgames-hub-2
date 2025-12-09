@@ -21,14 +21,13 @@ from flask import (
 from flask_login import current_user, login_required
 
 from app.modules.auth.models import UserRole
-from app.modules.auth.services import AuthenticationService
+from app.modules.community.models import ProposalStatus
 from app.modules.community.repositories import CommunityProposalRepository
 from app.modules.community.services import CommunityService
 from app.modules.dataset import dataset_bp
 from app.modules.dataset.forms import DataSetForm
-from app.modules.dataset.models import DataSet, DSDownloadRecord
+from app.modules.dataset.models import DataSet
 from app.modules.dataset.services import (
-    AuthorService,
     DataSetService,
     DOIMappingService,
     DSDownloadRecordService,
@@ -36,10 +35,6 @@ from app.modules.dataset.services import (
     DSViewRecordService,
     IssueService,
 )
-from app.modules.community.services import CommunityService
-from app.modules.community.repositories import CommunityProposalRepository
-from app.modules.hubfile.services import HubfileService
-from app.modules.fakenodo.services import FakenodoService
 from app.modules.dataset.steamcsv_service import SteamCSVService
 from app.modules.fakenodo.services import FakenodoService
 from app.modules.hubfile.services import HubfileService
@@ -49,7 +44,6 @@ logger = logging.getLogger(__name__)
 
 
 dataset_service = DataSetService()
-author_service = AuthorService()
 dsmetadata_service = DSMetaDataService()
 fakenodo_service = FakenodoService()  # MOD: Fakenodo
 doi_mapping_service = DOIMappingService()
@@ -80,30 +74,27 @@ def _write_dataset_zip(dataset, zip_path: str):
 @login_required
 def create_dataset():
     form = DataSetForm()
-    try:
-        if request.method != "POST":
-            try:
-                temp_dir = current_user.temp_folder()
-                if os.path.isdir(temp_dir):
-                    csv_files = [f for f in os.listdir(temp_dir) if f.lower().endswith(".csv")]
-                    if not csv_files:
-                        try:
-                            shutil.rmtree(temp_dir)
-                            logger.info(
-                                "[upload][cleanup] Removed empty temp folder for user %s: %s",
-                                current_user.id,
-                                temp_dir,
-                            )
-                        except Exception as cleanup_exc:
-                            logger.warning(
-                                "[upload][cleanup] Could not remove temp folder %s: %s",
-                                temp_dir,
-                                cleanup_exc,
-                            )
-            except Exception as diag_exc:
-                logger.warning("[upload][cleanup] Could not inspect temp folder for diagnostics: %s", diag_exc)
-    except Exception:
-        pass
+    if request.method != "POST":
+        try:
+            temp_dir = current_user.temp_folder()
+            if os.path.isdir(temp_dir):
+                csv_files = [f for f in os.listdir(temp_dir) if f.lower().endswith(".csv")]
+                if not csv_files:
+                    try:
+                        shutil.rmtree(temp_dir)
+                        logger.info(
+                            "[upload][cleanup] Removed empty temp folder for user %s: %s",
+                            current_user.id,
+                            temp_dir,
+                        )
+                    except Exception as cleanup_exc:
+                        logger.warning(
+                            "[upload][cleanup] Could not remove temp folder %s: %s",
+                            temp_dir,
+                            cleanup_exc,
+                        )
+        except Exception as diag_exc:
+            logger.warning("[upload][cleanup] Could not inspect temp folder for diagnostics: %s", diag_exc)
     if request.method == "POST":
 
         dataset = None
@@ -292,6 +283,7 @@ def upload():
 
 
 @dataset_bp.route("/dataset/file/delete", methods=["POST"])
+@login_required
 def delete():
     data = request.get_json()
     filename = data.get("file")
@@ -300,15 +292,24 @@ def delete():
 
     if os.path.exists(filepath):
         os.remove(filepath)
-        return jsonify({"message": "File deleted successfully"})
+        return jsonify({"message": "File deleted successfully"}), 200
 
-    return jsonify({"error": "Error: File not found"})
+    return jsonify({"error": "File not found"}), 404
 
 
 @dataset_bp.route("/dataset/<int:dataset_id>/draft/delete", methods=["DELETE"])
+@login_required
 def delete_draft(dataset_id):
     dataset = dataset_service.get_by_id(dataset_id)
-    dataset_service.delete_draft_dataset(dataset)
+    if not dataset or dataset.user_id != current_user.id:
+        abort(404)
+
+    try:
+        dataset_service.delete_draft_dataset(dataset)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    return jsonify({"message": "Draft dataset deleted"}), 200
 
 
 @dataset_bp.route("/dataset/file/clean_temp", methods=["POST"])
@@ -334,8 +335,7 @@ def clean_temp():
         logger.exception("Error cleaning temp folder: %s", exc)
         return jsonify({"message": str(exc)}), 500
 
-    # Redirect back to the upload page (this mirrors the original UI flow)
-    return redirect(url_for("dataset.create_dataset")), 302
+    return jsonify({"message": "Temp folder cleaned"}), 200
 
 
 @dataset_bp.route("/dataset/download/<int:dataset_id>", methods=["GET"])
@@ -402,15 +402,26 @@ def subdomain_index(doi):
     accepted_proposal = community_proposal_repo.get_accepted_for_dataset(dataset.id)
     accepted_community = accepted_proposal.community if accepted_proposal else None
     can_propose = accepted_proposal is None
+    communities = community_service.list_all()
+    proposals = community_proposal_repo.model.query.filter_by(dataset_id=dataset.id).all()
+    pending_proposals = [proposal for proposal in proposals if proposal.status == ProposalStatus.PENDING]
+    rejected_proposals = [proposal for proposal in proposals if proposal.status == ProposalStatus.REJECTED]
+    blocked_ids = {proposal.community_id for proposal in pending_proposals}
+    if accepted_community:
+        blocked_ids.add(accepted_community.id)
+    available_communities = [community for community in communities if community.id not in blocked_ids]
     related_datasets = dataset_service.get_related_datasets(dataset)
     resp = make_response(
         render_template(
             "dataset/view_dataset.html",
             dataset=dataset,
             fakenodo_url=FAKENODO_URL,
-            communities=community_service.list_all(),
+            communities=communities,
+            available_communities=available_communities,
             accepted_community=accepted_community,
             can_propose=can_propose,
+            pending_proposals=pending_proposals,
+            rejected_proposals=rejected_proposals,
             related_datasets=related_datasets,
         )
     )
@@ -431,14 +442,25 @@ def get_unsynchronized_dataset(dataset_id):
     accepted_proposal = community_proposal_repo.get_accepted_for_dataset(dataset.id)
     accepted_community = accepted_proposal.community if accepted_proposal else None
     can_propose = accepted_proposal is None
+    communities = community_service.list_all()
+    proposals = community_proposal_repo.model.query.filter_by(dataset_id=dataset.id).all()
+    pending_proposals = [proposal for proposal in proposals if proposal.status == ProposalStatus.PENDING]
+    rejected_proposals = [proposal for proposal in proposals if proposal.status == ProposalStatus.REJECTED]
+    blocked_ids = {proposal.community_id for proposal in pending_proposals}
+    if accepted_community:
+        blocked_ids.add(accepted_community.id)
+    available_communities = [community for community in communities if community.id not in blocked_ids]
     related_datasets = dataset_service.get_related_datasets(dataset)
     return render_template(
         "dataset/view_dataset.html",
         dataset=dataset,
         fakenodo_url=FAKENODO_URL,
-        communities=community_service.list_all(),
+        communities=communities,
+        available_communities=available_communities,
         accepted_community=accepted_community,
         can_propose=can_propose,
+        pending_proposals=pending_proposals,
+        rejected_proposals=rejected_proposals,
         related_datasets=related_datasets,
     )
 
@@ -472,10 +494,10 @@ def preview_csv(file_id: int):
 @dataset_bp.route("/dataset/<int:dataset_id>/draft_mode", methods=["PUT"])
 @login_required
 def change_draft_mode(dataset_id):
-    auth_service = AuthenticationService()
-    profile = auth_service.get_authenticated_user_profile
-    if not profile:
-        return redirect(url_for("public.index"))
+    dataset = dataset_service.get_by_id(dataset_id)
+    if not dataset or dataset.user_id != current_user.id:
+        abort(404)
+
     dataset_service.change_draft_mode(dataset_id)
     return list_dataset()
 

@@ -202,10 +202,6 @@
         <div class="list-group">
             {% include 'dataset/_files_block.html' ignore missing %}
         </div>
-        
-        
-    
-        <a href="/dataset/download/{{ dataset.id }}" class="btn btn-primary mt-3" style="border-radius: 5px;">
 
         {% if accepted_community %}
         <div class="card mt-3">
@@ -221,16 +217,60 @@
         </div>
         {% endif %}
 
+        {% if current_user.is_authenticated and current_user.id == dataset.user_id %}
+            {% if pending_proposals %}
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6 class="card-title">Pending community reviews</h6>
+                    <p class="text-muted small mb-2">We're waiting for these communities to review your proposal.</p>
+                    <ul class="list-group list-group-flush">
+                        {% for proposal in pending_proposals %}
+                        <li class="list-group-item d-flex align-items-center justify-content-between">
+                            <div>
+                                <div class="fw-semibold">{{ proposal.community.name }}</div>
+                                <small class="text-muted">Submitted on {{ proposal.created_at.strftime('%b %d, %Y') }}</small>
+                            </div>
+                            <span class="badge bg-warning text-dark">Pending</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if rejected_proposals %}
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6 class="card-title">Recently rejected</h6>
+                    <p class="text-muted small mb-2">Update your dataset and try again when you're ready.</p>
+                    {% for proposal in rejected_proposals %}
+                    <div class="d-flex align-items-center justify-content-between border rounded p-2 mb-2">
+                        <div>
+                            <div class="fw-semibold">{{ proposal.community.name }}</div>
+                            <small class="text-muted">Rejected on {{ proposal.decided_at.strftime('%b %d, %Y') if proposal.decided_at else 'Date unavailable' }}</small>
+                        </div>
+                        <form method="post" action="{{ url_for('community.propose_dataset_to_community') }}">
+                            <input type="hidden" name="dataset_id" value="{{ dataset.id }}" />
+                            <input type="hidden" name="community_id" value="{{ proposal.community.id }}" />
+                            <button class="btn btn-outline-primary btn-sm" type="submit">Resubmit</button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        {% endif %}
+
         {% if current_user.is_authenticated and current_user.id == dataset.user_id and can_propose %}
         <div class="card mt-3">
             <div class="card-body">
                 <h6 class="card-title">Propose to a community</h6>
-                {% if communities and communities|length > 0 %}
+                {% if available_communities and available_communities|length > 0 %}
                 <form method="post" action="{{ url_for('community.propose_dataset_to_community') }}">
                     <input type="hidden" name="dataset_id" value="{{ dataset.id }}" />
                     <div class="input-group">
                         <select name="community_id" class="form-select" required>
-                            {% for c in communities %}
+                            {% for c in available_communities %}
                             <option value="{{ c.id }}">{{ c.name }}</option>
                             {% endfor %}
                         </select>
@@ -238,7 +278,7 @@
                     </div>
                 </form>
                 {% else %}
-                <p class="text-muted">No communities available yet.</p>
+                <p class="text-muted">There's no community available to propose right now. Pending reviews must finish before sending it elsewhere.</p>
                 <a class="btn btn-sm btn-primary" href="{{ url_for('community.create_community') }}">Create one</a>
                 {% endif %}
             </div>

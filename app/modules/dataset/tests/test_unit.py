@@ -6,6 +6,7 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 from flask import Flask
@@ -1019,24 +1020,29 @@ def test_dataset_versions_route_returns_404_for_no_deposition_id(
     db.session.delete(ds)
     db.session.delete(md)
     db.session.commit()
-        form = FeatureModelForm(formdata=MultiDict({
-            "csv_filename": "file.csv",
-            "version": "",
-        }))
-        assert form.validate() is True
 
 
+def test_feature_model_form_accepts_empty_version():
+    form = FeatureModelForm(
+        formdata=MultiDict(
+            {
+                "csv_filename": "file.csv",
+                "version": "",
+            }
+        )
+    )
+    assert form.validate() is True
 
 
-# tests/test_dataset_service.py
-from unittest.mock import MagicMock, patch
 @pytest.fixture
 def mock_repo():
     return MagicMock()
 
+
 @pytest.fixture
 def mock_download_repo():
     return MagicMock()
+
 
 @pytest.fixture
 def service(mock_repo, mock_download_repo):
@@ -1045,18 +1051,19 @@ def service(mock_repo, mock_download_repo):
     svc.dsdownloadrecord_repository = mock_download_repo
     return svc
 
+
 def test_count_user_datasets(service, mock_repo):
     mock_repo.count_by_user.return_value = 5
     result = service.count_user_datasets(10)
     mock_repo.count_by_user.assert_called_once_with(10)
     assert result == 5
 
+
 def test_count_user_synchronized_datasets(service, mock_repo):
     mock_repo.count_synchronized_by_user.return_value = 3
     result = service.count_user_synchronized_datasets(10)
     mock_repo.count_synchronized_by_user.assert_called_once_with(10)
     assert result == 3
-
 
 
 def test_count_user_dataset_downloads():
@@ -1067,8 +1074,6 @@ def test_count_user_dataset_downloads():
     result = service.count_user_dataset_downloads(10)
     mock_download_repo.count_downloads_performed_by_user.assert_called_once_with(10)
     assert result == 7
-
-
 
 
 def test_user_metrics_authenticated():
@@ -1118,4 +1123,3 @@ def test_user_metrics_not_authenticated():
     dataset_service.count_user_datasets.assert_not_called()
     dataset_service.count_user_dataset_downloads.assert_not_called()
     dataset_service.count_user_synchronized_datasets.assert_not_called()
-

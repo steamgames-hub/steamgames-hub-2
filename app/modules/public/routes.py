@@ -1,9 +1,7 @@
 import logging
 
 from flask import jsonify, render_template, request, url_for
-
 from flask_login import current_user
-from flask import render_template, request, jsonify, url_for
 from app.modules.dataset.services import DataSetService
 from app.modules.featuremodel.services import FeatureModelService
 from app.modules.public import public_bp
@@ -51,22 +49,6 @@ def index():
             "downloads": dataset_service.count_user_dataset_downloads(current_user.id),
             "synchronizations": dataset_service.count_user_synchronized_datasets(current_user.id),
         }
-    latest = dataset_service.latest_synchronized()
-
-    try:
-        trending_raw = dataset_service.trending_datasets(period_days=7, by="views", limit=5)
-    except Exception:
-        logger.exception("Error obteniendo trending datasets")
-        trending_raw = []
-    trending = []
-    for item in trending_raw:
-        if isinstance(item, (list, tuple)):
-            dataset = item[0]
-            metric = int(item[1]) if len(item) > 1 else 0
-        else:
-            dataset = item
-            metric = 0
-        trending.append((dataset, metric))
 
     return render_template(
         "public/index.html",

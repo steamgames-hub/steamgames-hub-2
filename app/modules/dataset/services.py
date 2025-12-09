@@ -3,28 +3,15 @@ import logging
 import os
 import uuid
 from datetime import datetime, timedelta
-from typing import Optional
-
-from flask import request
-from sqlalchemy import desc, func
-
-from app.modules.auth.services import AuthenticationService
-from app.modules.community.models import CommunityDatasetProposal
-from app.modules.dataset.models import DataSet, DSDownloadRecord, DSMetaData, DSViewRecord
-from datetime import datetime
 from typing import List, Optional, Set
 
 from flask import request
-from datetime import datetime, timedelta
-from app.modules.dataset.models import DSDownloadRecord
-
-from app.modules.community.models import CommunityDatasetProposal
-from sqlalchemy import func, or_, desc
+from sqlalchemy import desc, func, or_
 
 from app import db
-
 from app.modules.auth.services import AuthenticationService
-from app.modules.dataset.models import Author, DataSet, DSMetaData, DSDownloadRecord, DSViewRecord
+from app.modules.community.models import CommunityDatasetProposal, ProposalStatus
+from app.modules.dataset.models import Author, DataSet, DSDownloadRecord, DSMetaData, DSViewRecord
 from app.modules.dataset.repositories import (
     AuthorRepository,
     DataSetRepository,
@@ -40,7 +27,6 @@ from app.modules.hubfile.repositories import (
     HubfileRepository,
     HubfileViewRecordRepository,
 )
-from app.modules.community.models import CommunityDatasetProposal, ProposalStatus
 from core.services.BaseService import BaseService
 from core.storage import storage_service
 
@@ -65,7 +51,7 @@ class DataSetService(BaseService):
         self.dsdownloadrecord_repository = DSDownloadRecordRepository()
         self.hubfiledownloadrecord_repository = HubfileDownloadRecordRepository()
         self.hubfilerepository = HubfileRepository()
-        self.dsviewrecord_repostory = DSViewRecordRepository()
+        self.dsviewrecord_repository = DSViewRecordRepository()
         self.hubfileviewrecord_repository = HubfileViewRecordRepository()
 
     def move_feature_models(self, dataset: DataSet):
@@ -98,7 +84,7 @@ class DataSetService(BaseService):
         return self.repository.count_synchronized_datasets()
 
     def count_feature_models(self):
-        return self.feature_model_service.count_feature_models()
+        return self.feature_model_repository.count_feature_models()
 
     def count_authors(self) -> int:
         return self.author_repository.count()
@@ -110,9 +96,8 @@ class DataSetService(BaseService):
         return self.dsdownloadrecord_repository.total_dataset_downloads()
 
     def total_dataset_views(self) -> int:
-        return self.dsviewrecord_repostory.total_dataset_views()
+        return self.dsviewrecord_repository.total_dataset_views()
 
-    def create_from_form(self, form, current_user, draft_mode) -> DataSet:
     def count_user_datasets(self, user_id: int) -> int:
         return self.repository.count_by_user(user_id)
 
@@ -125,7 +110,7 @@ class DataSetService(BaseService):
         hubfile_files = self.hubfiledownloadrecord_repository.count_downloads_performed_by_user(user_id)
         return dataset_archives + hubfile_files
 
-    def create_from_form(self, form, current_user) -> DataSet:
+    def create_from_form(self, form, current_user, draft_mode: bool = False) -> DataSet:
         main_author = {
             "name": f"{current_user.profile.surname}, {current_user.profile.name}",
             "affiliation": current_user.profile.affiliation,
@@ -140,7 +125,10 @@ class DataSetService(BaseService):
                 dsmetadata.authors.append(author)
 
             dataset = self.create(
-                commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id, draft_mode=draft_mode
+                commit=False,
+                user_id=current_user.id,
+                ds_meta_data_id=dsmetadata.id,
+                draft_mode=draft_mode,
             )
 
             for feature_model in form.feature_models:
@@ -178,12 +166,17 @@ class DataSetService(BaseService):
             raise exc
 
     def delete_draft_dataset(self, dataset):
+        if not dataset:
+            return
+
+        if not dataset.draft_mode:
+            raise ValueError("Only draft datasets can be deleted using this endpoint")
+
         try:
-            if dataset.draft_mode is True:
-                self.repository.session.delete(dataset)
-                self.repository.session.commit()
+            self.repository.session.delete(dataset)
+            self.repository.session.commit()
         except Exception as exc:
-            logger.exception(f"Exception deleting dataset: {exc}")
+            logger.exception(f"Exception deleting draft dataset: {exc}")
             self.repository.session.rollback()
             raise exc
 
@@ -194,94 +187,78 @@ class DataSetService(BaseService):
         domain = os.getenv("DOMAIN", "localhost")
         return f"http://{domain}/doi/{dataset.ds_meta_data.dataset_doi}"
 
-    def change_draft_mode(self, dataset_id):
+    def change_draft_mode(self, dataset_id: int):
         dataset = self.get_by_id(dataset_id)
-        is_draft_mode = dataset.draft_mode
-        return self.update(self, dataset_id, **{"draft_mode": not is_draft_mode})
+        if not dataset:
+            raise ValueError("Dataset not found")
 
-    def edit(self, dataset_id):
-        dataset = self.get_by_id(dataset_id)
-        if dataset.draft_mode is True:
-            return self.update(self, dataset_id)
+        new_value = not bool(dataset.draft_mode)
+        return self.update(dataset_id, draft_mode=new_value)
 
     def trending_datasets(self, period_days: int = 7, by: str = "views", limit: int = 5):
         try:
-            since = datetime.now() - timedelta(days=period_days)
-            session = self.repository.session
-
-            if by == "views":
-                ts_col = getattr(DSViewRecord, "view_date", None)
-                if ts_col is None:
-                    raise AttributeError("DSViewRecord no tiene 'view_date'")
-
-                subq = (
-                    session.query(
-                        DSViewRecord.dataset_id.label("dataset_id"),
-                        func.count(DSViewRecord.id).label("metric"),
-                    )
-                    .filter(ts_col >= since)
-                    .group_by(DSViewRecord.dataset_id)
-                    .subquery()
-                )
-
-                q = (
-                    session.query(DataSet, func.coalesce(subq.c.metric, 0).label("metric"))
-                    .outerjoin(subq, subq.c.dataset_id == DataSet.id)
-                    .order_by(desc("metric"))
-                    .limit(limit)
-                )
-                results = q.all()
-
-            elif by == "downloads":
-                ts_col = getattr(DSDownloadRecord, "download_date", None)
-                if ts_col is None:
-                    raise AttributeError("DSDownloadRecord no tiene 'download_date'")
-
-                subq = (
-                    session.query(
-                        DSDownloadRecord.dataset_id.label("dataset_id"),
-                        func.count(DSDownloadRecord.id).label("metric"),
-                    )
-                    .filter(ts_col >= since)
-                    .group_by(DSDownloadRecord.dataset_id)
-                    .subquery()
-                )
-
-                q = (
-                    session.query(DataSet, func.coalesce(subq.c.metric, 0).label("metric"))
-                    .outerjoin(subq, subq.c.dataset_id == DataSet.id)
-                    .order_by(desc("metric"))
-                    .limit(limit)
-                )
-                results = q.all()
-            else:
-                results = []
-
-            # Agregar comunidad aceptada a cada dataset
-            trending_with_community = []
-            for dataset, metric in results:
-                accepted_proposal = (
-                    session.query(CommunityDatasetProposal).filter_by(dataset_id=dataset.id, status="accepted").first()
-                )
-                dataset.accepted_community = accepted_proposal.community if accepted_proposal else None
-                trending_with_community.append((dataset, int(metric or 0)))
-
-            return trending_with_community
-
+            results = self._query_trending_metrics(period_days, by, limit)
+            if not results:
+                return []
+            return self._attach_accepted_communities(results)
         except Exception:
             logger.exception("Error al calcular trending_datasets; usando fallback.")
+        return self._fallback_trending(limit)
 
+    def _query_trending_metrics(self, period_days: int, by: str, limit: int):
+        since = datetime.now() - timedelta(days=period_days)
+        session = self.repository.session
+        metric_model = DSViewRecord if by == "views" else DSDownloadRecord if by == "downloads" else None
+        if metric_model is None:
+            return []
+
+        ts_col_name = "view_date" if metric_model is DSViewRecord else "download_date"
+        ts_col = getattr(metric_model, ts_col_name, None)
+        if ts_col is None:
+            raise AttributeError(f"{metric_model.__name__} no tiene '{ts_col_name}'")
+
+        subq = (
+            session.query(
+                metric_model.dataset_id.label("dataset_id"),
+                func.count(metric_model.id).label("metric"),
+            )
+            .filter(ts_col >= since)
+            .group_by(metric_model.dataset_id)
+            .subquery()
+        )
+
+        query = (
+            session.query(DataSet, func.coalesce(subq.c.metric, 0).label("metric"))
+            .outerjoin(subq, subq.c.dataset_id == DataSet.id)
+            .order_by(desc("metric"))
+            .limit(limit)
+        )
+        return query.all()
+
+    def _attach_accepted_communities(self, results):
+        session = self.repository.session
+        enriched = []
+        for dataset, metric in results:
+            accepted_proposal = (
+                session.query(CommunityDatasetProposal)
+                .filter_by(dataset_id=dataset.id, status=ProposalStatus.ACCEPTED)
+                .first()
+            )
+            dataset.accepted_community = accepted_proposal.community if accepted_proposal else None
+            enriched.append((dataset, int(metric or 0)))
+        return enriched
+
+    def _fallback_trending(self, limit: int):
         try:
             recent = (
                 self.repository.latest_synchronized()
                 if hasattr(self.repository, "latest_synchronized")
                 else self.latest_synchronized()
             )
-
-            recent = list(recent)[:limit]
-            for d in recent:
-                d.accepted_community = None
-            return [(d, 0) for d in recent]
+            recent_list = list(recent)[:limit]
+            for dataset in recent_list:
+                dataset.accepted_community = None
+            return [(dataset, 0) for dataset in recent_list]
         except Exception:
             logger.exception("Fallback de trending_datasets también ha fallado. Devolviendo lista vacía.")
             return []
