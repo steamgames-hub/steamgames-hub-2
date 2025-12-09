@@ -1,3 +1,13 @@
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function renderTrendingList(items, byLabel) {
     if (!items || items.length === 0) {
         return '<p class="text-muted">No trending datasets yet.</p>';
@@ -39,9 +49,11 @@ function renderTrendingList(items, byLabel) {
 }
 
 
-function fetchTrendingAndRender() {
-    var by = document.getElementById('trending-by').value || 'views';
-    var period = document.getElementById('trending-period').value || 'week';
+function fetchTrendingAndRender(byValue, periodValue) {
+    var bySelector = document.getElementById('trending-by');
+    var periodSelector = document.getElementById('trending-period');
+    var by = byValue || (bySelector ? bySelector.value : 'views');
+    var period = periodValue || (periodSelector ? periodSelector.value : 'week');
     var url = '/trending_datasets?by=' + encodeURIComponent(by) + '&period=' + encodeURIComponent(period) + '&limit=5';
 
     fetch(url, { method: 'GET', credentials: 'same-origin' })
@@ -53,19 +65,67 @@ function fetchTrendingAndRender() {
             var byLabel = (data.by === 'downloads') ? 'downloads' : 'views';
             var html = renderTrendingList(data.items, byLabel);
             var container = document.getElementById('trending-list');
-            if (container) container.innerHTML = html;
+            if (container) {
+                container.innerHTML = html;
+                container.setAttribute('data-by', data.by || by);
+                container.setAttribute('data-testid', 'trending-list-primary');
+            }
         })
         .catch(function(err) {
             console.error('Error fetching trending datasets:', err);
         });
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+function initializeTrendingWidget() {
+    if (window.__trendingWidgetInitialized) {
+        return;
+    }
+
     var bySelector = document.getElementById('trending-by');
     var periodSelector = document.getElementById('trending-period');
 
-    if (bySelector) bySelector.addEventListener('change', fetchTrendingAndRender);
-    if (periodSelector) periodSelector.addEventListener('change', fetchTrendingAndRender);
+    if (!bySelector && !periodSelector) {
+        return;
+    }
 
-    fetchTrendingAndRender();
-});
+    window.__trendingWidgetInitialized = true;
+    var lastBy;
+    var lastPeriod;
+
+    function maybeFetch(force) {
+        var currentBy = (bySelector && bySelector.value) || 'views';
+        var currentPeriod = (periodSelector && periodSelector.value) || 'week';
+
+        if (force || currentBy !== lastBy || currentPeriod !== lastPeriod) {
+            lastBy = currentBy;
+            lastPeriod = currentPeriod;
+            fetchTrendingAndRender(currentBy, currentPeriod);
+        }
+    }
+
+    if (bySelector) {
+        bySelector.addEventListener('change', function() {
+            maybeFetch(true);
+        });
+    }
+
+    if (periodSelector) {
+        periodSelector.addEventListener('change', function() {
+            maybeFetch(true);
+        });
+    }
+
+    maybeFetch(true);
+
+    if (!window.__trendingWidgetIntervalId) {
+        window.__trendingWidgetIntervalId = setInterval(function() {
+            maybeFetch(false);
+        }, 1200);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeTrendingWidget);
+} else {
+    initializeTrendingWidget();
+}

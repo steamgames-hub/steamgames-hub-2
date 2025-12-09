@@ -159,7 +159,7 @@ def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGames
             pass
 
         # 🔹 refresco máximo 2 veces
-        if time.time() - last_refresh > 3 and refresh_count < max_refreshes:
+        if time.time() - last_refresh > 5 and refresh_count < max_refreshes:
             try:
                 driver.switch_to.default_content()
                 try:
