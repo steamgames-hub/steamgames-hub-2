@@ -35,7 +35,7 @@ class CommunityDatasetProposal(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     decided_at = db.Column(db.DateTime, nullable=True)
 
-    dataset = db.relationship("DataSet", backref="community_proposals")
+    dataset = db.relationship("DataSet", backref=db.backref("community_proposals", cascade="all, delete-orphan"))
     proposed_by = db.relationship("User", backref="community_proposals_made")
 
     __table_args__ = (db.UniqueConstraint("dataset_id", "community_id", name="uq_dataset_community"),)
