@@ -141,6 +141,89 @@ class DataSetService(BaseService):
             raise exc
         return dataset
 
+    def create_new_version(self, dataset_id: int, form, current_user) -> DataSet:
+        """Create a new version of an existing dataset.
+
+        Steps:
+        - Load existing dataset and its metadata
+        - Mark existing metadata `is_latest=False` and set its dataset_doi to a versioned DOI
+        - Create new metadata with incremented version and assign the original (real) DOI to the new metadata
+        - Create a new DataSet row pointing to the new metadata and create feature models/files from the provided form
+        - Commit once
+        """
+        try:
+            # load previous dataset and metadata
+            prev_dataset = self.get_by_id(dataset_id)
+            if not prev_dataset:
+                raise ValueError(f"Dataset {dataset_id} not found")
+
+            prev_meta = prev_dataset.ds_meta_data
+
+            # build dsmetadata for new version from form
+            dsmetadata_data = form.get_dsmetadata()
+
+            # preserve original DOI: the 'real' DOI will be used for the new dataset
+            original_doi = prev_meta.dataset_doi
+
+            # increment version number (use integer increment for simplicity)
+            try:
+                new_version = float(prev_meta.version) + 1.0
+            except Exception:
+                new_version = float(int(prev_meta.version) + 1)
+
+            # create new metadata record; set dataset_doi to original_doi (if any)
+            dsmetadata_data["version"] = new_version
+            dsmetadata_data["is_latest"] = True
+            dsmetadata_data["dataset_doi"] = original_doi
+            new_meta = self.dsmetadata_repository.create(**dsmetadata_data)
+
+            # attach authors (main + fm authors will be attached later for FMs)
+            main_author = {
+                "name": f"{current_user.profile.surname}, {current_user.profile.name}",
+                "affiliation": current_user.profile.affiliation,
+                "orcid": current_user.profile.orcid,
+            }
+            for author_data in [main_author] + form.get_authors():
+                author = self.author_repository.create(commit=False, ds_meta_data_id=new_meta.id, **author_data)
+                new_meta.authors.append(author)
+
+            # update previous metadata: mark not latest and change its DOI to a versioned DOI
+            if original_doi:
+                prev_meta.dataset_doi = f"{original_doi}/v{int(prev_meta.version)}"
+            prev_meta.is_latest = False
+
+            # create new DataSet row
+            dataset = self.create(commit=False, user_id=prev_dataset.user_id, ds_meta_data_id=new_meta.id, draft_mode=False)
+
+            # create feature models and files from form for new dataset
+            for feature_model in form.feature_models:
+                csv_filename = feature_model.csv_filename.data
+                fmmetadata = self.fmmetadata_repository.create(commit=False, **feature_model.get_fmmetadata())
+                for author_data in feature_model.get_authors():
+                    author = self.author_repository.create(commit=False, fm_meta_data_id=fmmetadata.id, **author_data)
+                    fmmetadata.authors.append(author)
+
+                fm = self.feature_model_repository.create(
+                    commit=False, data_set_id=dataset.id, fm_meta_data_id=fmmetadata.id
+                )
+
+                # associated files in feature model
+                file_path = os.path.join(current_user.temp_folder(), csv_filename)
+                checksum, size = calculate_checksum_and_size(file_path)
+
+                file = self.hubfilerepository.create(
+                    commit=False, name=csv_filename, checksum=checksum, size=size, feature_model_id=fm.id
+                )
+                fm.files.append(file)
+            
+            # commit everything once
+            self.repository.session.commit()
+        except Exception as exc:
+            logger.info(f"Exception creating new dataset version: {exc}")
+            self.repository.session.rollback()
+            raise exc
+        return dataset
+
     def delete_dataset(self, dataset):
         try:
             self.repository.session.delete(dataset)
@@ -176,7 +259,7 @@ class DataSetService(BaseService):
         dataset = self.get_by_id(dataset_id)
         if dataset.draft_mode is True:
             return self.update(self, dataset_id)
-
+    
     def trending_datasets(self, period_days: int = 7, by: str = "views", limit: int = 5):
         try:
             since = datetime.now() - timedelta(days=period_days)

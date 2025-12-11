@@ -161,10 +161,6 @@ def create_dataset():
         # send dataset as deposition to Zenodo
         data = {}
         try:
-            # zenodo_response_json = zenodo_service.create_new_deposition(dataset)
-            # MOD: Fakenodo
-
-            # NOTE: To implement version creation feature, modify DEPOSITION_ID handling here
             fakenodo_response_json = fakenodo_service.create_new_deposition(dataset)
             response_data = json.dumps(fakenodo_response_json)
             data = json.loads(response_data)
@@ -179,19 +175,7 @@ def create_dataset():
             # update dataset with deposition id in Zenodo
             dataset_service.update_dsmetadata(dataset.ds_meta_data_id, deposition_id=deposition_id)
 
-            print("Patata1")
-
             try:
-                # iterate for each feature model (one feature model = one request to Zenodo)
-                # for feature_model in dataset.feature_models:
-                #     zenodo_service.upload_file(dataset, deposition_id, feature_model)
-
-                # publish deposition
-                # zenodo_service.publish_deposition(deposition_id)
-
-                # update DOI
-                # deposition_doi = zenodo_service.get_doi(deposition_id)
-                print("Patata2")
                 deposition_doi = fakenodo_service.get_doi(deposition_id)
                 print("DOI:")
                 print(deposition_doi)
@@ -211,6 +195,217 @@ def create_dataset():
     user_preference = current_user.profile.save_drafts
 
     return render_template("dataset/upload_dataset.html", form=form, save_drafts=user_preference)
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/edit", methods=["GET", "POST"])
+@login_required
+def update_dataset(dataset_id):
+    old_dataset = dataset_service.get_or_404(dataset_id)
+    if not old_dataset:
+        abort(404)
+    
+    form = DataSetForm()
+    # Cleanup: if user has no CSV files in their temp folder, remove the temp folder
+    try:
+        # Only run cleanup on GET (when not posting the form)
+        if request.method != "POST":
+            try:
+                temp_dir = current_user.temp_folder()
+                if os.path.isdir(temp_dir):
+                    csv_files = [f for f in os.listdir(temp_dir) if f.lower().endswith('.csv')]
+                    if not csv_files:
+                        try:
+                            shutil.rmtree(temp_dir)
+                            logger.info(
+                                "[upload][cleanup] Removed empty temp folder for user %s: %s",
+                                current_user.id,
+                                temp_dir,
+                            )
+                        except Exception as cleanup_exc:
+                            logger.warning(
+                                "[upload][cleanup] Could not remove temp folder %s: %s",
+                                temp_dir,
+                                cleanup_exc,
+                            )
+            except Exception as diag_exc:
+                logger.warning("[upload][cleanup] Could not inspect temp folder for diagnostics: %s", diag_exc)
+            
+            # returns the form pre-filled with existing dataset data
+            try:
+                # Load dataset and populate the form for editing
+                ds = dataset_service.get_by_id(dataset_id)
+                if ds:
+                    md = ds.ds_meta_data
+                    # basic metadata
+                    form.title.data = getattr(md, "title", "")
+                    form.desc.data = getattr(md, "description", "")
+                    # data_category stored as Enum -> use its value
+                    try:
+                        form.data_category.data = md.data_category.value
+                    except Exception:
+                        # fallback if stored as string
+                        form.data_category.data = getattr(md, "data_category", "")
+                    form.publication_doi.data = getattr(md, "publication_doi", "")
+                    form.dataset_doi.data = getattr(md, "dataset_doi", "")
+                    form.tags.data = getattr(md, "tags", "")
+
+                    # authors
+                    try:
+                        # clear existing entries then append
+                        form.authors.entries = []
+                        for a in getattr(md, "authors", []):
+                            form.authors.append_entry()
+                            last = form.authors.entries[-1].form
+                            last.name.data = getattr(a, "name", "")
+                            last.affiliation.data = getattr(a, "affiliation", "")
+                            last.orcid.data = getattr(a, "orcid", "")
+                    except Exception:
+                        pass
+
+                    # feature models
+                    try:
+                        form.feature_models.entries = []
+                        for fm in getattr(ds, "feature_models", []):
+                            meta = getattr(fm, "fm_meta_data", None)
+                            form.feature_models.append_entry()
+                            lastfm = form.feature_models.entries[-1].form
+                            if meta:
+                                lastfm.csv_filename.data = getattr(meta, "csv_filename", "")
+                                lastfm.title.data = getattr(meta, "title", "")
+                                lastfm.desc.data = getattr(meta, "description", "")
+                                try:
+                                    lastfm.data_category.data = meta.data_category.value
+                                except Exception:
+                                    lastfm.data_category.data = getattr(meta, "data_category", "")
+                                lastfm.publication_doi.data = getattr(meta, "publication_doi", "")
+                                lastfm.tags.data = getattr(meta, "tags", "")
+                                lastfm.version.data = getattr(meta, "csv_version", "")
+                                # fm authors
+                                try:
+                                    lastfm.authors.entries = []
+                                    for a in getattr(meta, "authors", []):
+                                        lastfm.authors.append_entry()
+                                        lasta = lastfm.authors.entries[-1].form
+                                        lasta.name.data = getattr(a, "name", "")
+                                        lasta.affiliation.data = getattr(a, "affiliation", "")
+                                        lasta.orcid.data = getattr(a, "orcid", "")
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+            except Exception:
+                # don't block rendering on prefill errors
+                logger.exception("Error pre-filling dataset edit form")
+    except Exception:
+        # Be defensive: never let cleanup prevent rendering the page
+        pass
+
+    if request.method == "POST":
+        dataset = None
+
+        if not form.validate_on_submit():
+            # Build user-friendly error message, especially for version field in files
+            messages = []
+            try:
+                # Iterate FeatureModel subforms to collect version-specific errors with filenames
+                for subform in getattr(form, "feature_models", []) or []:
+                    version_errors = getattr(subform, "version", None).errors if hasattr(subform, "version") else []
+                    if version_errors:
+                        filename = getattr(getattr(subform, "csv_filename", None), "data", None) or "file"
+                        messages.append(
+                            f"Invalid version for '{filename}': must follow x.y.z (e.g., 1.2.3)"
+                        )
+            except Exception:
+                # be defensive; fall back to generic errors
+                pass
+
+            # Fallback: include any remaining form.errors in a readable way
+            if not messages and isinstance(form.errors, dict):
+                for field, errs in form.errors.items():
+                    if isinstance(errs, (list, tuple)):
+                        for e in errs:
+                            messages.append(f"{field}: {e}")
+                    else:
+                        messages.append(f"{field}: {errs}")
+
+            message_text = "; ".join(messages) if messages else "Validation error"
+            return jsonify({"message": message_text}), 400
+
+        try:
+            # Validate pending files in temp folder (Steam CSV only)
+            # Diagnostics: log temp folder contents
+            try:
+                temp_dir = current_user.temp_folder()
+                dir_list = []
+                if os.path.isdir(temp_dir):
+                    dir_list = sorted(os.listdir(temp_dir))
+                logger.info("[upload] temp_folder='%s', files=%s", temp_dir, dir_list)
+
+                # If user uploaded files (temp folder not empty) -> create new version
+                files_changed = len(dir_list) > 0
+            except Exception as diag_exc:
+                logger.warning("[upload] Could not inspect temp folder for diagnostics: %s", diag_exc)
+                files_changed = False
+            service = SteamCSVService()
+            try:
+                service.validate_folder(current_user.temp_folder())
+            except ValueError as verr:
+                return jsonify({"message": str(verr)}), 400
+
+            logger.info("Creating/updating dataset...")
+
+            if files_changed:
+                # Create a new version only when files were modified/uploaded
+                dataset = dataset_service.create_new_version(dataset_id, form, current_user)
+                logger.info(f"Created new dataset version: {dataset}")
+                # move uploaded feature model files into storage
+                dataset_service.move_feature_models(dataset)
+            else:
+                # No file changes: update metadata in-place
+                dsmetadata_data = form.get_dsmetadata()
+                # update existing metadata fields
+                dataset = dataset_service.get_by_id(dataset_id)
+                dataset_service.update_dsmetadata(dataset.ds_meta_data_id, **dsmetadata_data)
+                logger.info(f"Updated dataset metadata for dataset_id={dataset_id}")
+        except Exception as exc:
+            logger.exception(f"Exception while create dataset data in local {exc}")
+            return jsonify({"Exception while create dataset data in local: ": str(exc)}), 400
+
+        # send dataset as deposition to Zenodo
+        data = {}
+        try:
+            fakenodo_response_json = fakenodo_service.create_new_deposition(dataset)
+            response_data = json.dumps(fakenodo_response_json)
+            data = json.loads(response_data)
+        except Exception as exc:
+            data = {}
+            fakenodo_response_json = {}
+            logger.exception(f"Exception while create dataset data in Fakenodo {exc}")
+
+        if data.get("conceptrecid"):
+            deposition_id = data.get("id")
+
+            # update dataset with deposition id in Zenodo
+            dataset_service.update_dsmetadata(dataset.ds_meta_data_id, deposition_id=deposition_id)
+
+            try:
+                deposition_doi = fakenodo_service.get_doi(deposition_id)
+                print("DOI:")
+                print(deposition_doi)
+                dataset_service.update_dsmetadata(dataset.ds_meta_data_id, dataset_doi=deposition_doi)
+            except Exception as e:
+                msg = f"it has not been possible upload feature models in Zenodo and update the DOI: {e}"
+                return jsonify({"message": msg}), 200
+
+        # Delete temp folder
+        file_path = current_user.temp_folder()
+        if os.path.exists(file_path) and os.path.isdir(file_path):
+            shutil.rmtree(file_path)
+
+        msg = "Everything works!"
+        return jsonify({"message": msg}), 200
+
+    return render_template("dataset/upload_dataset.html", form=form, save_drafts=False)
 
 
 @dataset_bp.route("/dataset/draft/upload", methods=["POST"])
