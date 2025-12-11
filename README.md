@@ -10,6 +10,13 @@ CSV dataset repository for Steam games. Upload, preview, and publish CSV dataset
 
 > Note: This project is a CSV-only refactor; prior UVL/UVLHub references have been removed.
 
+## .env file and app secrets
+
+Due to general security concerns, the pre-existing .env examples are lacking some important values. However, if you are 
+a part of the University of Seville organization, you can access the complete .env files, ready to use, in 
+the following [link](https://uses0-my.sharepoint.com/:f:/r/personal/albramvar1_alum_us_es/Documents/steamgames-hub-env?csf=1&web=1&e=SuQXbM).
+
+
 ## File storage (local vs AWS S3)
 
 The app now uses a unified storage layer that keeps uploads under `uploads/` when
