@@ -34,13 +34,6 @@
                                 <td>{{ dataset.ds_meta_data.data_category.name.replace('_', ' ').title() }}</td>
                                 <td><a href="{{ dataset.get_uvlhub_doi() }}"
                                        target="_blank">{{ dataset.get_uvlhub_doi() }}</a></td>
-                                {% if dataset.draft_mode == True %}       
-                                    <td>Yes</td>
-                                    <td>
-                                    <button class="btn btn-warning btn-sm dataset-edit" onclick="editDraft()"><i data-feather="edit"></i>Edit</button>
-                                    <button class="btn btn-danger btn-sm dataset-delete" onclick="deleteDraft()"><i data-feather="trash-2"></i>Delete</button>
-                                    </td>
-                                {% else %}
                                     <td>No</td>
                                     <td>
                                     <a href="{{ dataset.get_uvlhub_doi() }}">
@@ -50,7 +43,6 @@
                                         <i data-feather="download"></i>
                                     </a>
                                     </td>
-                                {% endif %}
                             </tr>
                         {% endfor %}
                         </tbody>
@@ -94,6 +86,7 @@
                                     <th>Title</th>
                                     <th>Description</th>
                                     <th>Publication type</th>
+                                    <th>Is Draft</th>
                                     <th>Options</th>
                                 </tr>
                                 </thead>
@@ -106,14 +99,17 @@
                                             </a>
                                         </td>
                                         <td>{{ local_dataset.ds_meta_data.description }}</td>
-                                        <td>{{ local_dataset.ds_meta_data.data_category.name.replace('_', ' ').title() }}</td>
+                                        <td>{{ local_dataset.ds_meta_data.data_category.name.replace('_', ' ').title() }}</td>     
+                                        <td>Yes</td>
                                         <td>
-                                            <a href="{{ url_for('dataset.get_unsynchronized_dataset', dataset_id=local_dataset.id) }}">
-                                                <i data-feather="eye"></i>
+                                            <a class="btn btn-warning btn-sm dataset-edit" href="{{ url_for('dataset.edit', dataset_id=local_dataset.id) }}">
+                                                <i data-feather="edit"></i>
+                                                Edit
                                             </a>
-                                            <a href="{{ url_for('dataset.download_dataset', dataset_id=local_dataset.id) }}">
-                                                <i data-feather="download"></i>
-                                            </a>
+                                            <button class="btn btn-danger btn-sm dataset-delete" data-id="{{ local_dataset.id }}">
+                                                <i data-feather="trash-2"></i>
+                                                Delete
+                                            </button>
                                         </td>
                                     </tr>
                                 {% endfor %}

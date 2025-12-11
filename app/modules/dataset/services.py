@@ -107,7 +107,14 @@ class DataSetService(BaseService):
             logger.info(f"Creating dsmetadata...: {form.get_dsmetadata()}")
             dsmetadata_data = form.get_dsmetadata()
             dsmetadata = self.dsmetadata_repository.create(**dsmetadata_data)
-            for author_data in [main_author] + form.get_authors():
+            # Build authors list and deduplicate by (name, orcid) to avoid duplicate main author
+            raw_authors = [main_author] + form.get_authors()
+            seen = set()
+            for author_data in raw_authors:
+                key = (author_data.get('name'), author_data.get('orcid'))
+                if key in seen:
+                    continue
+                seen.add(key)
                 author = self.author_repository.create(commit=False, ds_meta_data_id=dsmetadata.id, **author_data)
                 dsmetadata.authors.append(author)
 
@@ -118,7 +125,13 @@ class DataSetService(BaseService):
             for feature_model in form.feature_models:
                 csv_filename = feature_model.csv_filename.data
                 fmmetadata = self.fmmetadata_repository.create(commit=False, **feature_model.get_fmmetadata())
+                # Deduplicate FM authors by (name, orcid)
+                fm_seen = set()
                 for author_data in feature_model.get_authors():
+                    key = (author_data.get('name'), author_data.get('orcid'))
+                    if key in fm_seen:
+                        continue
+                    fm_seen.add(key)
                     author = self.author_repository.create(commit=False, fm_meta_data_id=fmmetadata.id, **author_data)
                     fmmetadata.authors.append(author)
 
@@ -184,6 +197,15 @@ class DataSetService(BaseService):
                 "orcid": current_user.profile.orcid,
             }
             for author_data in [main_author] + form.get_authors():
+                # Deduplicate dataset authors when creating new version
+                # We'll build a deduplicated list first
+                raw_auths = [main_author] + form.get_authors()
+                seen_new = set()
+            for author_data in raw_auths:
+                key = (author_data.get('name'), author_data.get('orcid'))
+                if key in seen_new:
+                    continue
+                seen_new.add(key)
                 author = self.author_repository.create(commit=False, ds_meta_data_id=new_meta.id, **author_data)
                 new_meta.authors.append(author)
 
@@ -201,7 +223,12 @@ class DataSetService(BaseService):
             for feature_model in form.feature_models:
                 csv_filename = feature_model.csv_filename.data
                 fmmetadata = self.fmmetadata_repository.create(commit=False, **feature_model.get_fmmetadata())
+                fm_seen = set()
                 for author_data in feature_model.get_authors():
+                    key = (author_data.get('name'), author_data.get('orcid'))
+                    if key in fm_seen:
+                        continue
+                    fm_seen.add(key)
                     author = self.author_repository.create(commit=False, fm_meta_data_id=fmmetadata.id, **author_data)
                     fmmetadata.authors.append(author)
 
@@ -225,6 +252,80 @@ class DataSetService(BaseService):
             self.repository.session.rollback()
             raise exc
         return dataset
+    
+    def create_draft(self, current_user, data: dict = None) -> DataSet:
+        try:
+            title = (data or {}).get("title") or "Untitled Dataset"
+            desc = (data or {}).get("desc") or ""
+            data_category = (data or {}).get("data_category") or "NONE"
+
+            dsmetadata = self.dsmetadata_repository.create(
+                title=title,
+                description=desc,
+                data_category=data_category,
+                publication_doi=None,
+                dataset_doi=None,
+                tags=(data or {}).get("tags"),
+            )
+
+            main_author = {
+                "name": f"{current_user.profile.surname}, {current_user.profile.name}",
+                "affiliation": current_user.profile.affiliation,
+                "orcid": current_user.profile.orcid,
+            }
+
+            author = self.author_repository.create(commit=False, ds_meta_data_id=dsmetadata.id, **main_author)
+            dsmetadata.authors.append(author)
+
+            dataset = self.create(commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id, draft_mode=True)
+
+            # Move CSV files from user's temp folder into persistent storage and create
+            # corresponding feature model and hubfile records so the draft appears
+            # with its files in the user's local datasets view.
+            temp_dir = current_user.temp_folder()
+            if os.path.isdir(temp_dir):
+                for filename in sorted(os.listdir(temp_dir)):
+                    if not filename.lower().endswith(".csv"):
+                        continue
+
+                    file_path = os.path.join(temp_dir, filename)
+                    try:
+                        checksum, size = calculate_checksum_and_size(file_path)
+
+                        fmmetadata = self.fmmetadata_repository.create(
+                            commit=False,
+                            csv_filename=filename,
+                            title="",
+                            description="",
+                            data_category=data_category,
+                            publication_doi=None,
+                            tags=None,
+                            csv_version=None,
+                        )
+
+                        # create a minimal author for the feature model
+                        fm_author = self.author_repository.create(commit=False, fm_meta_data_id=fmmetadata.id, **main_author)
+                        fmmetadata.authors.append(fm_author)
+
+                        fm = self.feature_model_repository.create(commit=False, data_set_id=dataset.id, fm_meta_data_id=fmmetadata.id)
+
+                        hubfile = self.hubfilerepository.create(
+                            commit=False, name=filename, checksum=checksum, size=size, feature_model_id=fm.id
+                        )
+                        fm.files.append(hubfile)
+
+                        # save the actual file into storage
+                        dest_relative = storage_service.dataset_file_path(current_user.id, dataset.id, filename)
+                        storage_service.save_local_file(file_path, dest_relative)
+                    except Exception:
+                        logger.exception("Failed to move and register file %s into draft dataset", filename)
+
+            self.repository.session.commit()
+            return dataset
+        except Exception as exc:
+            logger.exception(f"Exception creating draft dataset: {exc}")
+            self.repository.session.rollback()
+            raise
 
     def delete_dataset(self, dataset):
         try:
