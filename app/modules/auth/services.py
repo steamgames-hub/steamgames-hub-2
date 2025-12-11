@@ -116,7 +116,7 @@ class AuthenticationService(BaseService):
         db.session.add(token)
         db.session.commit()
         reset_link = url_for("auth.reset_password_form", token=raw_token, _external=True)
-        body = f"Usa este enlace para restablecer tu contraseña: {reset_link}"
+        body = render_template('auth/password_reset_email.html', reset_link=reset_link)
         self.send_email(user.email, "Restablecer contraseña", body)
 
     def validate_reset_token(self, raw_token: str):
