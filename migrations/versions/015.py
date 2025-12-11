@@ -1,4 +1,4 @@
-"""015
+"""Correct some previous migrations and drop unused zenodo table
 
 Revision ID: 015
 Revises: 014
