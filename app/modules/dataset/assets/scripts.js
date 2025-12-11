@@ -240,27 +240,34 @@ function showModal(event) {
 }
 
 function saveDraft(isPopup) {
-    window.location.href = urlToLeave;
+    const payload = {
+        title: document.querySelector('input[name="title"]') ? document.querySelector('input[name="title"]').value : undefined,
+        desc: document.querySelector('textarea[name="desc"]') ? document.querySelector('textarea[name="desc"]').value : undefined
+    };
+
     document.getElementById("myModal").style.display = "none";
     if(isPopup && document.getElementById("save_drafts_preference").checked === true){
         handleChangePreference();
     }
-    fetch('/dataset/draft/upload', {
-        method: 'POST'
-    })
-    .then(response => {
-        if (response.ok) {
-            console.log('Draft saved succesfully');
-        } else {
-            response.then(data => {
-                console.error('Error: ' + data.message);
 
-            });
+    try {
+        const body = JSON.stringify(payload || {});
+        if (navigator.sendBeacon) {
+            const blob = new Blob([body], { type: 'application/json' });
+            navigator.sendBeacon('/dataset/draft/save', blob);
+        } else {
+            fetch('/dataset/draft/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: body,
+                keepalive: true
+            }).catch(() => {});
         }
-    })
-    .catch(error => {
-        console.error('Error in POST request:', error);
-    });
+    } catch (e) {
+        console.warn('Draft send failed:', e);
+    }
+
+    window.location.href = urlToLeave;
 }
 
 function discardDraft() {

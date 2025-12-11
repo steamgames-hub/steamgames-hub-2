@@ -85,7 +85,6 @@ class DataSetRepository(BaseRepository):
             self.model.query.join(DSMetaData)
             .filter(
                 DataSet.user_id == current_user_id,
-                not DataSet.draft_mode,
                 DSMetaData.dataset_doi.is_(None),
             )
             .order_by(self.model.created_at.desc())
