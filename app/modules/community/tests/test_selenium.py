@@ -6,7 +6,11 @@ import tempfile
 import time
 
 from PIL import Image
-from selenium.common.exceptions import ElementClickInterceptedException, TimeoutException
+from selenium.common.exceptions import (
+    ElementClickInterceptedException,
+    NoSuchElementException,
+    TimeoutException,
+)
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
@@ -669,16 +673,55 @@ def _propose_dataset_to_community(driver, dataset_view_url, community_id):
     driver.get(dataset_view_url)
     wait_for_page_to_load(driver)
 
-    proposal_form = _wait_visible_any(driver, [(By.CSS_SELECTOR, "form[action*='/community/propose']")], timeout=25)
-    driver.execute_script("arguments[0].scrollIntoView({block:'center'});", proposal_form)
+    try:
+        proposal_form = _wait_visible_any(
+            driver,
+            [(By.CSS_SELECTOR, "form[action*='/community/propose']")],
+            timeout=15,
+        )
+    except TimeoutException:
+        proposal_form = None
 
-    select_el = proposal_form.find_element(By.CSS_SELECTOR, "select[name='community_id']")
-    select_el.click()
-    option = _wait_visible_any(driver, [(By.CSS_SELECTOR, f"option[value='{community_id}']")], timeout=10)
-    option.click()
+    select_el = None
+    if proposal_form:
+        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", proposal_form)
+        try:
+            select_el = proposal_form.find_element(By.CSS_SELECTOR, "select[name='community_id']")
+        except NoSuchElementException:
+            select_el = None
 
-    submit_btn = proposal_form.find_element(By.CSS_SELECTOR, "button[type='submit']")
-    submit_btn.click()
+    if select_el:
+        select_el.click()
+        option = _wait_visible_any(driver, [(By.CSS_SELECTOR, f"option[value='{community_id}']")], timeout=10)
+        option.click()
+
+        submit_btn = proposal_form.find_element(By.CSS_SELECTOR, "button[type='submit']")
+        submit_btn.click()
+        wait_for_page_to_load(driver)
+        return
+
+    def _find_resubmit_form(drv):
+        forms = drv.find_elements(By.CSS_SELECTOR, "form[action*='/community/propose']")
+        for form in forms:
+            try:
+                form.find_element(By.CSS_SELECTOR, f"input[name='community_id'][value='{community_id}']")
+                return form
+            except NoSuchElementException:
+                continue
+        return None
+
+    resubmit_form = WebDriverWait(driver, 15).until(
+        _find_resubmit_form,
+        message=f"Resubmit form for community {community_id} not found",
+    )
+
+    submit_btn = resubmit_form.find_element(By.CSS_SELECTOR, "button[type='submit']")
+    driver.execute_script("arguments[0].scrollIntoView({block:'center'});", submit_btn)
+    try:
+        submit_btn.click()
+    except ElementClickInterceptedException:
+        time.sleep(0.5)
+        submit_btn.click()
     wait_for_page_to_load(driver)
 
 
@@ -718,7 +761,7 @@ def _handle_proposal(driver, host, community_id, dataset_title, action):
         except Exception:
             return True
 
-    WebDriverWait(driver, 15).until(lambda d: _not_in_pending(d))
+    WebDriverWait(driver, 15).until(_not_in_pending)
 
     # If accepted, ensure it appears under "Datasets in this community"
     if action == "accept":
