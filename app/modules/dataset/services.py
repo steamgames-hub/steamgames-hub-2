@@ -193,7 +193,9 @@ class DataSetService(BaseService):
             prev_meta.is_latest = False
 
             # create new DataSet row
-            dataset = self.create(commit=False, user_id=prev_dataset.user_id, ds_meta_data_id=new_meta.id, draft_mode=False)
+            dataset = self.create(
+                commit=False, user_id=prev_dataset.user_id, ds_meta_data_id=new_meta.id, draft_mode=False
+            )
 
             # create feature models and files from form for new dataset
             for feature_model in form.feature_models:
@@ -215,7 +217,7 @@ class DataSetService(BaseService):
                     commit=False, name=csv_filename, checksum=checksum, size=size, feature_model_id=fm.id
                 )
                 fm.files.append(file)
-            
+
             # commit everything once
             self.repository.session.commit()
         except Exception as exc:
@@ -259,7 +261,7 @@ class DataSetService(BaseService):
         dataset = self.get_by_id(dataset_id)
         if dataset.draft_mode is True:
             return self.update(self, dataset_id)
-    
+
     def trending_datasets(self, period_days: int = 7, by: str = "views", limit: int = 5):
         try:
             since = datetime.now() - timedelta(days=period_days)

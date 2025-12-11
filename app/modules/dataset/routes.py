@@ -203,7 +203,7 @@ def update_dataset(dataset_id):
     old_dataset = dataset_service.get_or_404(dataset_id)
     if not old_dataset:
         abort(404)
-    
+
     form = DataSetForm()
     # Cleanup: if user has no CSV files in their temp folder, remove the temp folder
     try:
@@ -212,7 +212,7 @@ def update_dataset(dataset_id):
             try:
                 temp_dir = current_user.temp_folder()
                 if os.path.isdir(temp_dir):
-                    csv_files = [f for f in os.listdir(temp_dir) if f.lower().endswith('.csv')]
+                    csv_files = [f for f in os.listdir(temp_dir) if f.lower().endswith(".csv")]
                     if not csv_files:
                         try:
                             shutil.rmtree(temp_dir)
@@ -229,7 +229,7 @@ def update_dataset(dataset_id):
                             )
             except Exception as diag_exc:
                 logger.warning("[upload][cleanup] Could not inspect temp folder for diagnostics: %s", diag_exc)
-            
+
             # returns the form pre-filled with existing dataset data
             try:
                 # Load dataset and populate the form for editing
@@ -312,9 +312,7 @@ def update_dataset(dataset_id):
                     version_errors = getattr(subform, "version", None).errors if hasattr(subform, "version") else []
                     if version_errors:
                         filename = getattr(getattr(subform, "csv_filename", None), "data", None) or "file"
-                        messages.append(
-                            f"Invalid version for '{filename}': must follow x.y.z (e.g., 1.2.3)"
-                        )
+                        messages.append(f"Invalid version for '{filename}': must follow x.y.z (e.g., 1.2.3)")
             except Exception:
                 # be defensive; fall back to generic errors
                 pass
