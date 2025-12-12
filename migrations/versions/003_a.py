@@ -1,5 +1,4 @@
-"""
-CSV-only refactor: drop dataset_type and rename UVL columns to CSV.
+"""CSV-only refactor: drop dataset_type and rename UVL columns to CSV.
 
 Revision ID: 003_a
 Revises: 002

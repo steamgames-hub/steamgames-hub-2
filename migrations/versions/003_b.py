@@ -1,4 +1,4 @@
-"""empty message
+"""Add verified column to user table for email verification
 
 Revision ID: 003_b
 Revises: 003_a

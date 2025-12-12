@@ -1,4 +1,4 @@
-"""empty message
+"""Add identification of draft mode in DataSet
 
 Revision ID: 010_b
 Revises: 010_a'

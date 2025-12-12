@@ -1,4 +1,4 @@
-"""empty message
+"""Add preference for saving drafts in user_profile
 
 Revision ID: 006
 Revises: 005_b

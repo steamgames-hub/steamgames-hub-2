@@ -1,4 +1,4 @@
-"""add download_count to Hubfile model
+"""Add download_count to Hubfile model
 
 Revision ID: 008_b
 Revises: 008_a
