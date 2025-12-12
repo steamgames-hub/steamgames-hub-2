@@ -22,6 +22,7 @@ El objetivo es ofrecer una visión clara y estructurada del pipeline de automati
   - [Commits Syntax Checker](#commits-syntax-checker-ci_commitsyml)
   - [Python Lint](#python-lint-ci_lintyml)
   - [Pytest](#pytest-ci_pytestyml)
+  - [Selenium tests](#selenium-ci_seleniumyml)
   - [Codacy Analysis](#codacy-analysis-codacy-analysisyml)
 - [Workflows de Despliegue Continuo (CD)](#workflows-de-despliegue-continuo-cd)
   - [Deploy to preproduction Render](#deploy-to-preproduction-render-render-preproductionyml)
@@ -38,17 +39,20 @@ graph LR
         commits[Commits Syntax Checker]
         lint[Python Lint]
         pytest[Pytest]
+        selenium[Tests de Selenium]
         codacyanal[Codacy Analysis]
     end
 
     repo --> commits
     repo --> lint
     repo --> pytest
+    repo --> selenium
     repo --> codacyanal
 
     commits --> ci_ok
     lint --> ci_ok
     pytest --> ci_ok
+    selenium --> ci_ok
     codacyanal --> ci_ok
 
     ci_ok[Continual Integration OK] --> automerge
@@ -132,13 +136,29 @@ Ejecuta la suite de tests del proyecto levantando un contenedor de MariaDB para 
 
 #### ¿Cuándo se ejecuta?
 
-**> push**
+**> push, pull_request**
 
-Cuando se hace push a las ramas main, Trunk o bugfix.
+Cuando se hace push a cualquier rama o se abre pull request.
 
-**> pull request**
+### Selenium tests ([CI_selenium.yml](https://github.com/steamgames-hub/steamgames-hub-2/blob/main/.github/workflows/CI_selenium.yml))
 
-Cuando se abre o actualiza una pull request dirigida a main, Trunk o bugfix.
+Ejecuta la suite de tests del proyecto levantando un contenedor de MariaDB para pruebas.
+
+#### Acciones principales del workflow
+
+1. Configura variables de entorno para testing.
+2. Instala dependencias del proyecto.
+3. Levanta la base de datos y la aplicación.
+4. Comprueba que se haya inicializado bien.
+5. Espera a que Selenium esté listo.
+6. Ejecuta los tests de interfaz del repositorio.
+7. Detiene la aplicación.
+
+#### ¿Cuándo se ejecuta?
+
+**> push, pull_request**
+
+Cuando se hace push a cualquier rama o se abre pull request.
 
 ### Codacy Analysis ([CI_codacy_analysis.yml](https://github.com/steamgames-hub/steamgames-hub-2/blob/main/.github/workflows/CI_codacy_analysis.yml))
 
