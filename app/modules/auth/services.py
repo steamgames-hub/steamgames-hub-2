@@ -171,6 +171,10 @@ class AuthenticationService(BaseService):
     # --- Envío de correo con SendGrid ---
     def _send_via_sendgrid(self, to: str, subject: str, body: str):
         app = current_app._get_current_object()
+        if app.config.get("TESTING"):
+            app.logger.info(f"[TESTING] Simulando envío de correo a {to} vía SendGrid")
+            return
+
         sg_api_key = app.config.get("SENDGRID_API_KEY")
         from_email = app.config.get("FROM_EMAIL") or app.config.get("MAIL_DEFAULT_SENDER")
 
