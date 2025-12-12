@@ -1,11 +1,12 @@
 import re
 
 import unidecode
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_
 
 from app import db
 from app.modules.dataset.models import Author, DataCategory, DataSet, DSDownloadRecord, DSMetaData, DSViewRecord
 from app.modules.featuremodel.models import FeatureModel, FMMetaData
+from app.modules.community.models import Community, CommunityDatasetProposal, ProposalStatus
 from core.repositories.BaseRepository import BaseRepository
 
 
@@ -80,6 +81,28 @@ class ExploreRepository(BaseRepository):
             ]
             if tag_conds:
                 q = q.filter(or_(*tag_conds))
+
+        if community:
+            if isinstance(community, str):
+                communities = [value.strip() for value in community.split(",") if value.strip()]
+            elif isinstance(community, (list, tuple, set)):
+                communities = [str(value).strip() for value in community if str(value).strip()]
+            else:
+                communities = [str(community).strip()]
+
+            if communities:
+                name_filters = [Community.name.ilike(f"%{value}%") for value in communities]
+                q = (
+                    q.join(
+                        CommunityDatasetProposal,
+                        and_(
+                            CommunityDatasetProposal.dataset_id == DataSet.id,
+                            CommunityDatasetProposal.status == ProposalStatus.ACCEPTED,
+                        ),
+                    )
+                    .join(Community, Community.id == CommunityDatasetProposal.community_id)
+                    .filter(or_(*name_filters))
+                )
 
         if filenames:
             if isinstance(filenames, str):
