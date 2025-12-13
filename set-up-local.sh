@@ -80,6 +80,7 @@ sudo python3.12 -m venv venv
 echo ""
 echo "Activating virtual environment..."
 . ./venv/bin/activate
+sudo rm -rf rosemary.egg-info
 pip install --upgrade pip --quiet
 pip install -r requirements.txt --quiet
 pip install -e ./ --quiet
