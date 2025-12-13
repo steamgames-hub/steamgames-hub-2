@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 from app.modules.auth.models import User
 from app.modules.dataset.models import Author, DataSet, DSMetaData, DSMetrics, DataCategory, DSDownloadRecord
-from app.modules.featuremodel.models import FeatureModel, FMMetaData
+from app.modules.datasetfile.models import DatasetFile, DatasetFileMetaData
 from app.modules.hubfile.models import Hubfile
 from core.seeders.BaseSeeder import BaseSeeder
 
@@ -123,15 +123,16 @@ class DataSetSeeder(BaseSeeder):
         if not user1 or not user2:
             raise Exception("Users not found. Please seed users first.")
 
-        seeded_ds_metrics = self.seed([DSMetrics(number_of_models="5", number_of_features="50")])[0]
+        total_seed_files = len(DATASET_BLUEPRINTS) * self.FILES_PER_DATASET
+        seeded_ds_metrics = self.seed([DSMetrics(number_of_files=str(total_seed_files))])[0]
 
         dataset_specs = self._build_dataset_specs(user1.id, user2.id)
         seeded_ds_meta_data = self._seed_ds_metadata(dataset_specs, seeded_ds_metrics.id)
         self._seed_authors(dataset_specs, seeded_ds_meta_data)
         seeded_datasets = self._seed_datasets(dataset_specs, seeded_ds_meta_data)
 
-        seeded_fm_meta_data, seeded_feature_models = self._seed_feature_models(dataset_specs, seeded_datasets)
-        self._seed_hubfiles(seeded_fm_meta_data, seeded_feature_models, seeded_datasets)
+        seeded_file_metadata, seeded_dataset_files = self._seed_dataset_files(dataset_specs, seeded_datasets)
+        self._seed_hubfiles(seeded_file_metadata, seeded_dataset_files, seeded_datasets)
         self._seed_download_records(seeded_datasets)
 
     def _build_dataset_specs(self, user1_id: int, user2_id: int):
@@ -193,57 +194,57 @@ class DataSetSeeder(BaseSeeder):
             )
         return self.seed(dataset_records)
 
-    def _seed_feature_models(self, dataset_specs, seeded_datasets):
-        total_fm = len(dataset_specs) * self.FILES_PER_DATASET
-        fm_meta_data_list = []
-        for idx in range(total_fm):
+    def _seed_dataset_files(self, dataset_specs, seeded_datasets):
+        total_files = len(dataset_specs) * self.FILES_PER_DATASET
+        file_metadata_list = []
+        for idx in range(total_files):
             ds_index = idx // self.FILES_PER_DATASET
             file_slot = idx % self.FILES_PER_DATASET + 1
-            fm_meta_data_list.append(
-                FMMetaData(
+            file_metadata_list.append(
+                DatasetFileMetaData(
                     csv_filename=f"file{idx + 1}.csv",
-                    title=f"{dataset_specs[ds_index]['title']} FM {file_slot}",
-                    description=f"Feature model {file_slot} for {dataset_specs[ds_index]['title']}",
+                    title=f"{dataset_specs[ds_index]['title']} File {file_slot}",
+                    description=f"Dataset file {file_slot} for {dataset_specs[ds_index]['title']}",
                     data_category=DataCategory.USER_REVIEWS,
                     publication_doi=f"10.9999/fm.{idx + 1}",
                     tags=", ".join(dataset_specs[ds_index]["tags"]),
                     csv_version="1.0",
                 )
             )
-        seeded_fm_meta_data = self.seed(fm_meta_data_list)
+        seeded_file_metadata = self.seed(file_metadata_list)
 
         fm_author_records = []
-        for idx, fm_meta in enumerate(seeded_fm_meta_data, start=1):
+        for idx, file_meta in enumerate(seeded_file_metadata, start=1):
             fm_author_records.append(
                 Author(
                     name=f"FM Author {idx}",
                     affiliation="Automated Seeder",
                     orcid=f"0000-0000-0000-9{idx:03d}",
-                    fm_meta_data_id=fm_meta.id,
+                    fm_meta_data_id=file_meta.id,
                 )
             )
         if fm_author_records:
             self.seed(fm_author_records)
 
-        feature_models = []
+        dataset_files = []
         for ds_index, dataset in enumerate(seeded_datasets):
             for offset in range(self.FILES_PER_DATASET):
                 fm_idx = ds_index * self.FILES_PER_DATASET + offset
-                feature_models.append(
-                    FeatureModel(data_set_id=dataset.id, fm_meta_data_id=seeded_fm_meta_data[fm_idx].id)
+                dataset_files.append(
+                    DatasetFile(data_set_id=dataset.id, metadata_id=seeded_file_metadata[fm_idx].id)
                 )
-        seeded_feature_models = self.seed(feature_models)
-        return seeded_fm_meta_data, seeded_feature_models
+        seeded_dataset_files = self.seed(dataset_files)
+        return seeded_file_metadata, seeded_dataset_files
 
-    def _seed_hubfiles(self, seeded_fm_meta_data, seeded_feature_models, seeded_datasets):
+    def _seed_hubfiles(self, seeded_file_metadata, seeded_dataset_files, seeded_datasets):
         load_dotenv()
         working_dir = os.getenv("WORKING_DIR", "")
         src_folder = os.path.join(working_dir, "app", "modules", "dataset", "csv_examples")
         dataset_by_id = {ds.id: ds for ds in seeded_datasets}
         hubfile_records = []
-        for idx, feature_model in enumerate(seeded_feature_models):
-            file_name = seeded_fm_meta_data[idx].csv_filename
-            dataset = dataset_by_id[feature_model.data_set_id]
+        for idx, dataset_file in enumerate(seeded_dataset_files):
+            file_name = seeded_file_metadata[idx].csv_filename
+            dataset = dataset_by_id[dataset_file.data_set_id]
             user_id = dataset.user_id
 
             dest_folder = os.path.join(working_dir, "uploads", f"user_{user_id}", f"dataset_{dataset.id}")
@@ -256,7 +257,7 @@ class DataSetSeeder(BaseSeeder):
                     name=file_name,
                     checksum=f"checksum{idx + 1}",
                     size=os.path.getsize(file_path),
-                    feature_model_id=feature_model.id,
+                    dataset_file_id=dataset_file.id,
                 )
             )
         if hubfile_records:

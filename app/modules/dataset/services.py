@@ -21,7 +21,7 @@ from app.modules.dataset.repositories import (
     DSViewRecordRepository,
     IssueRepository,
 )
-from app.modules.featuremodel.repositories import FeatureModelRepository, FMMetaDataRepository
+from app.modules.datasetfile.repositories import DatasetFileMetaDataRepository, DatasetFileRepository
 from app.modules.hubfile.repositories import (
     HubfileDownloadRecordRepository,
     HubfileRepository,
@@ -44,22 +44,22 @@ def calculate_checksum_and_size(file_path):
 class DataSetService(BaseService):
     def __init__(self):
         super().__init__(DataSetRepository())
-        self.feature_model_repository = FeatureModelRepository()
+        self.dataset_file_repository = DatasetFileRepository()
         self.author_repository = AuthorRepository()
         self.dsmetadata_repository = DSMetaDataRepository()
-        self.fmmetadata_repository = FMMetaDataRepository()
+        self.dataset_file_metadata_repository = DatasetFileMetaDataRepository()
         self.dsdownloadrecord_repository = DSDownloadRecordRepository()
         self.hubfiledownloadrecord_repository = HubfileDownloadRecordRepository()
         self.hubfilerepository = HubfileRepository()
         self.dsviewrecord_repository = DSViewRecordRepository()
         self.hubfileviewrecord_repository = HubfileViewRecordRepository()
 
-    def move_feature_models(self, dataset: DataSet):
+    def move_dataset_files(self, dataset: DataSet):
         current_user = AuthenticationService().get_authenticated_user()
         source_dir = current_user.temp_folder()
 
-        for feature_model in dataset.feature_models:
-            csv_filename = feature_model.fm_meta_data.csv_filename
+        for dataset_file in dataset.dataset_files:
+            csv_filename = dataset_file.metadata.csv_filename
             src_path = os.path.join(source_dir, csv_filename)
             dest_relative = storage_service.dataset_file_path(
                 current_user.id,
@@ -83,8 +83,8 @@ class DataSetService(BaseService):
     def count_synchronized_datasets(self):
         return self.repository.count_synchronized_datasets()
 
-    def count_feature_models(self):
-        return self.feature_model_repository.count_feature_models()
+    def count_dataset_files(self):
+        return self.dataset_file_repository.count_files()
 
     def count_authors(self) -> int:
         return self.author_repository.count()
@@ -131,24 +131,28 @@ class DataSetService(BaseService):
                 draft_mode=draft_mode,
             )
 
-            for feature_model in form.feature_models:
-                csv_filename = feature_model.csv_filename.data
-                fmmetadata = self.fmmetadata_repository.create(commit=False, **feature_model.get_fmmetadata())
-                for author_data in feature_model.get_authors():
-                    author = self.author_repository.create(commit=False, fm_meta_data_id=fmmetadata.id, **author_data)
-                    fmmetadata.authors.append(author)
+            for dataset_file_form in form.dataset_files:
+                csv_filename = dataset_file_form.csv_filename.data
+                file_metadata = self.dataset_file_metadata_repository.create(
+                    commit=False, **dataset_file_form.get_file_metadata()
+                )
+                for author_data in dataset_file_form.get_authors():
+                    author = self.author_repository.create(
+                        commit=False, fm_meta_data_id=file_metadata.id, **author_data
+                    )
+                    file_metadata.authors.append(author)
 
-                fm = self.feature_model_repository.create(
-                    commit=False, data_set_id=dataset.id, fm_meta_data_id=fmmetadata.id
+                dataset_file = self.dataset_file_repository.create(
+                    commit=False, data_set_id=dataset.id, metadata_id=file_metadata.id
                 )
 
                 file_path = os.path.join(current_user.temp_folder(), csv_filename)
                 checksum, size = calculate_checksum_and_size(file_path)
 
                 file = self.hubfilerepository.create(
-                    commit=False, name=csv_filename, checksum=checksum, size=size, feature_model_id=fm.id
+                    commit=False, name=csv_filename, checksum=checksum, size=size, dataset_file_id=dataset_file.id
                 )
-                fm.files.append(file)
+                dataset_file.files.append(file)
             self.repository.session.commit()
         except Exception as exc:
             logger.info(f"Exception creating dataset from form...: {exc}")

@@ -14,7 +14,7 @@ class Hubfile(db.Model):
     checksum = db.Column(db.String(120), nullable=False)
     size = db.Column(db.Integer, nullable=False)
     download_count = db.Column(db.Integer, nullable=False, default=0)
-    feature_model_id = db.Column(db.Integer, db.ForeignKey("feature_model.id"), nullable=False)
+    dataset_file_id = db.Column("feature_model_id", db.Integer, db.ForeignKey("feature_model.id"), nullable=False)
 
     def get_formatted_size(self):
         from app.modules.dataset.services import SizeService
@@ -51,8 +51,8 @@ class Hubfile(db.Model):
         This mirrors UVL behavior and is reused for CSV files for consistency.
         """
         try:
-            fmmd = self.feature_model.fm_meta_data if self.feature_model else None
-            version = getattr(fmmd, "csv_version", None)
+            metadata = self.dataset_file.metadata if self.dataset_file else None
+            version = getattr(metadata, "csv_version", None)
             if version:
                 return str(version)
             # Fallback: short hash from checksum

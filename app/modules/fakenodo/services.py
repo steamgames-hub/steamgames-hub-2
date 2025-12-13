@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 from flask_login import current_user
 
 from app.modules.dataset.models import DataSet
+from app.modules.datasetfile.models import DatasetFile
 from app.modules.fakenodo.repositories import FakenodoRepository
-from app.modules.featuremodel.models import FeatureModel
 from core.services.BaseService import BaseService
 from core.storage import storage_service
 
@@ -50,7 +50,7 @@ class FakenodoService(BaseService):
         self,
         dataset: DataSet,
         deposition_id: int,
-        feature_model: FeatureModel,
+        dataset_file: DatasetFile,
         user=None,
     ) -> dict:
         """
@@ -58,13 +58,13 @@ class FakenodoService(BaseService):
 
         Args:
             deposition_id (int): The ID of the deposition in Fakenodo.
-            feature_model (FeatureModel): The FeatureModel object representing the feature model.
-            user (FeatureModel): The User object representing the file owner.
+            dataset_file (DatasetFile): The DatasetFile object representing the CSV entry.
+            user (User): The optional owner overriding the authenticated user.
 
         Returns:
             dict: The response in JSON format with the details of the uploaded file.
         """
-        csv_filename = feature_model.fm_meta_data.csv_filename
+        csv_filename = dataset_file.metadata.csv_filename
         user_id = current_user.id if user is None else user.id
         relative_path = storage_service.dataset_file_path(
             user_id,

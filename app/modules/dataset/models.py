@@ -32,11 +32,10 @@ class Author(db.Model):
 
 class DSMetrics(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    number_of_models = db.Column(db.String(120))
-    number_of_features = db.Column(db.String(120))
+    number_of_files = db.Column(db.String(120))
 
     def __repr__(self):
-        return f"DSMetrics<models={self.number_of_models}, features={self.number_of_features}>"
+        return f"DSMetrics<files={self.number_of_files}>"
 
 
 class DSMetaData(db.Model):
@@ -65,13 +64,13 @@ class DataSet(db.Model):
     draft_mode = db.Column(db.Boolean(), nullable=False, default=True)
 
     ds_meta_data = db.relationship("DSMetaData", backref=db.backref("data_set", uselist=False), cascade="all, delete")
-    feature_models = db.relationship("FeatureModel", backref="data_set", lazy=True, cascade="all, delete")
+    dataset_files = db.relationship("DatasetFile", backref="data_set", lazy=True, cascade="all, delete")
 
     def name(self):
         return self.ds_meta_data.title
 
     def files(self):
-        return [file for fm in self.feature_models for file in fm.files]
+        return [file for df in self.dataset_files for file in df.files]
 
     def delete(self):
         db.session.delete(self)
@@ -92,10 +91,10 @@ class DataSet(db.Model):
         )
 
     def get_files_count(self):
-        return sum(len(fm.files) for fm in self.feature_models)
+        return sum(len(df.files) for df in self.dataset_files)
 
     def get_file_total_size(self):
-        return sum(file.size for fm in self.feature_models for file in fm.files)
+        return sum(file.size for df in self.dataset_files for file in df.files)
 
     def get_file_total_size_for_human(self):
         from app.modules.dataset.services import SizeService
@@ -123,7 +122,7 @@ class DataSet(db.Model):
             "download": f'{request.host_url.rstrip("/")}/dataset/download/{self.id}',
             # "zenodo": self.get_zenodo_url(), MOD: Fakenodo
             "zenodo": self.get_fakenodo_url(),
-            "files": [file.to_dict() for fm in self.feature_models for file in fm.files],
+            "files": [file.to_dict() for df in self.dataset_files for file in df.files],
             "files_count": self.get_files_count(),
             "total_size_in_bytes": self.get_file_total_size(),
             "total_size_in_human_format": self.get_file_total_size_for_human(),
