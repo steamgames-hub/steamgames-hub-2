@@ -1,13 +1,12 @@
-import os
-import re
-import time
-
+import os, re, time
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from app import create_app
+from app.modules.auth.models import User
 from core.environment.host import get_host_for_selenium_testing
 from core.selenium.common import close_driver, initialize_driver
 
@@ -176,6 +175,7 @@ def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGames
 
 
 def _login_with_optional_2fa(driver, host):
+    app = create_app()
     wait = WebDriverWait(driver, 25)
     driver.get(f"{host}/login")
     wait_for_page_to_load(driver)
@@ -208,12 +208,13 @@ def _login_with_optional_2fa(driver, host):
         time.sleep(0.3)
 
     if two_factor:
-        main = driver.current_window_handle
-        driver.execute_script("window.open('');")
-        driver.switch_to.window(driver.window_handles[-1])
-        code = fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGamesHub")
-        driver.close()
-        driver.switch_to.window(main)
+        # --- Get 2FA ---
+        with app.app_context():
+            user = User.query.filter_by(email="user1@yopmail.com").first()
+            code = user.two_factor_code
+            app.logger.info(f"[test] Moqueando la obtención del código. Código 2FA obtenido: {code}")
+
+        code_field = wait.until(EC.presence_of_element_located((By.NAME, "code")))
 
         code_field = wait.until(EC.presence_of_element_located((By.NAME, "code")))
         code_field.clear()

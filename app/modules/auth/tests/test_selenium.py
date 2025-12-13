@@ -14,7 +14,7 @@ from core.selenium.common import close_driver, initialize_driver
 
 @pytest.fixture
 def driver():
-    drv = initialize_driver(headless=True)
+    drv = initialize_driver()
     yield drv
 
     close_driver(drv)

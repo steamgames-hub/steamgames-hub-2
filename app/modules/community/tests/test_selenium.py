@@ -1,10 +1,5 @@
-import csv
-import os
-import random
-import re
-import tempfile
+import csv, os, random, re, tempfile
 import time
-
 from PIL import Image
 from selenium.common.exceptions import ElementClickInterceptedException, TimeoutException
 from selenium.webdriver.common.by import By
@@ -12,6 +7,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from app import create_app
+from app.modules.auth.models import User
 from core.environment.host import get_host_for_selenium_testing
 from core.selenium.common import close_driver, initialize_driver
 
@@ -63,149 +60,9 @@ def _make_repo_png_file() -> str:
     return path
 
 
-def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGamesHub", timeout=60, debug=False):
-    """Best-effort: extract 6-digit 2FA code from Yopmail inbox."""
-    driver.get("https://yopmail.com/es/")
-    wait = WebDriverWait(driver, 10)
-
-    # Dismiss cookie consent if present
-    consent_xpaths = [
-        "//button[contains(., 'Consent')]",
-        "//button[contains(., 'Aceptar')]",
-        "//button[contains(., 'Agree')]",
-        "//button[contains(., 'Aceptar todo')]",
-        "//a[contains(., 'Aceptar') or contains(., 'Accept')]",
-    ]
-    for xp in consent_xpaths:
-        try:
-            btn = wait.until(EC.element_to_be_clickable((By.XPATH, xp)))
-            btn.click()
-            time.sleep(0.4)
-            break
-        except Exception:
-            continue
-
-    # Enter mailbox
-    input_box = wait.until(EC.presence_of_element_located((By.ID, "login")))
-    input_box.clear()
-    input_box.send_keys(username)
-    input_box.send_keys(Keys.RETURN)
-    time.sleep(1.2)
-
-    # Switch to inbox iframe
-    inbox_frame = None
-    for f in driver.find_elements(By.TAG_NAME, "iframe"):
-        fid = (f.get_attribute("id") or f.get_attribute("name") or "").lower()
-        if "inbox" in fid or "ifinbox" in fid or "mail" in fid:
-            inbox_frame = f
-            break
-    if not inbox_frame:
-        raise TimeoutException("[yopmail] inbox iframe not found")
-
-    driver.switch_to.frame(inbox_frame)
-
-    # Snapshot of existing ids
-    existing_ids = set()
-    try:
-        for el in driver.find_elements(By.CSS_SELECTOR, "div.m"):
-            eid = el.get_attribute("id")
-            if eid:
-                existing_ids.add(eid)
-    except Exception:
-        pass
-
-    email_element = None
-    last_email_element = None
-    start = time.time()
-    last_refresh = 0
-    refresh_count = 0
-    max_refreshes = 2
-    while time.time() - start < timeout:
-        try:
-            # Prefer elements containing sender text
-            for s in driver.find_elements(By.XPATH, f"//span[contains(., '{sender_contains}')]"):
-                parent = s
-                for _ in range(5):
-                    parent = parent.find_element(By.XPATH, "..")
-                    eid = parent.get_attribute("id")
-                    if eid:
-                        if eid not in existing_ids:
-                            email_element = parent
-                        break
-                if email_element:
-                    break
-
-            if not email_element:
-                items = driver.find_elements(By.CSS_SELECTOR, "div.m")
-                for it in items:
-                    eid = it.get_attribute("id")
-                    if eid and eid not in existing_ids:
-                        email_element = it
-                        break
-                    last_email_element = it
-
-            if email_element:
-                try:
-                    btn = email_element.find_element(By.CSS_SELECTOR, "button.lm")
-                    btn.click()
-                except Exception:
-                    try:
-                        email_element.click()
-                    except Exception:
-                        driver.execute_script("arguments[0].click();", email_element)
-                time.sleep(1.2)
-                break
-        except Exception:
-            pass
-
-        if time.time() - last_refresh > 3 and refresh_count < max_refreshes:
-            try:
-                driver.switch_to.default_content()
-                try:
-                    driver.find_element(By.ID, "refresh").click()
-                except Exception:
-                    try:
-                        driver.execute_script("if (typeof r === 'function') { r(); }")
-                    except Exception:
-                        pass
-                driver.switch_to.frame(inbox_frame)
-            except Exception:
-                pass
-            last_refresh = time.time()
-            refresh_count += 1
-        time.sleep(0.7)
-
-    if not email_element and last_email_element:
-        email_element = last_email_element
-
-    if not email_element:
-        raise TimeoutException("[yopmail] no email found")
-
-    # Switch to email content iframe
-    driver.switch_to.default_content()
-    mail_frame = None
-    try:
-        mail_frame = WebDriverWait(driver, 8).until(lambda d: d.find_element(By.ID, "ifmail"))
-    except Exception:
-        mail_frame = driver.find_element(By.ID, "ifmail")
-    driver.switch_to.frame(mail_frame)
-
-    # Extract 6-digit code
-    start_body = time.time()
-    while time.time() - start_body < timeout:
-        try:
-            body_text = driver.find_element(By.TAG_NAME, "body").text
-            m = re.search(r"\b(\d{6})\b", body_text)
-            if m:
-                return m.group(1)
-        except Exception:
-            pass
-        time.sleep(0.7)
-    raise TimeoutException("[yopmail] 2FA code not found in email body")
-
-
 def _login_with_optional_2fa(driver, host):
     """Log in as user1, handling optional 2FA via Yopmail, and verify session is active."""
+    app = create_app()
     wait = WebDriverWait(driver, 25)
     driver.get(f"{host}/login")
     wait_for_page_to_load(driver)
@@ -243,13 +100,11 @@ def _login_with_optional_2fa(driver, host):
         time.sleep(0.3)
 
     if two_factor:
-        # Complete 2FA via Yopmail
-        main_window = driver.current_window_handle
-        driver.execute_script("window.open('');")
-        driver.switch_to.window(driver.window_handles[-1])
-        code = fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGamesHub")
-        driver.close()
-        driver.switch_to.window(main_window)
+        # --- Get 2FA ---
+        with app.app_context():
+            user = User.query.filter_by(email="user1@yopmail.com").first()
+            code = user.two_factor_code
+            app.logger.info(f"[test] Moqueando la obtención del código. Código 2FA obtenido: {code}")
 
         code_field = wait.until(EC.presence_of_element_located((By.NAME, "code")))
         code_field.clear()
@@ -286,12 +141,11 @@ def _login_with_optional_2fa(driver, host):
             # Allow for 2FA or redirect
             try:
                 WebDriverWait(driver, 15).until(EC.url_contains("/two-factor/"))
-                main_window = driver.current_window_handle
-                driver.execute_script("window.open('');")
-                driver.switch_to.window(driver.window_handles[-1])
-                code = fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGamesHub")
-                driver.close()
-                driver.switch_to.window(main_window)
+                # --- Get 2FA ---
+                with app.app_context():
+                    user = User.query.filter_by(email="user1@yopmail.com").first()
+                    code = user.two_factor_code
+                    app.logger.info(f"[test] Moqueando la obtención del código. Código 2FA obtenido: {code}")
                 code_field = wait.until(EC.presence_of_element_located((By.NAME, "code")))
                 code_field.clear()
                 code_field.send_keys(code)
