@@ -658,6 +658,7 @@ def test_verify_2fa_expired(test_client, auth_service):
 
     assert result is False, "❌ La verificación con código expirado debería retornar False."
 
+
 def test_forgot_password_post_triggers_token_generation(test_client, monkeypatch):
     called = {}
 
@@ -682,7 +683,9 @@ def test_reset_password_get_invalid_token_returns_400(test_client, monkeypatch):
 
 def test_reset_password_get_valid_token_shows_form(test_client, monkeypatch):
     # Simulate valid token -> returns email
-    monkeypatch.setattr("app.modules.auth.routes.authentication_service.validate_reset_token", lambda t: "user@example.com")
+    monkeypatch.setattr(
+        "app.modules.auth.routes.authentication_service.validate_reset_token", lambda t: "user@example.com"
+    )
     resp = test_client.get("/reset-password?token=good-token", follow_redirects=True)
     assert resp.status_code == 200
 

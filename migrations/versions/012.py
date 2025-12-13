@@ -1,4 +1,4 @@
-"""Added column draft_mode to data_set table
+"""Add column draft_mode to data_set table
 
 Revision ID: 012
 Revises: 011

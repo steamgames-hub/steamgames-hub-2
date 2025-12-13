@@ -180,6 +180,18 @@ def create_dataset():
                 print("DOI:")
                 print(deposition_doi)
                 dataset_service.update_dsmetadata(dataset.ds_meta_data_id, dataset_doi=deposition_doi)
+                # If this upload was created by editing an existing draft, delete the original draft
+                try:
+                    editing_id = request.form.get('editing_dataset_id')
+                    if editing_id:
+                        try:
+                            orig = dataset_service.get_by_id(int(editing_id))
+                            if orig:
+                                dataset_service.delete_draft_dataset(orig)
+                        except Exception:
+                            logger.exception('Could not delete original draft %s', editing_id)
+                except Exception:
+                    pass
             except Exception as e:
                 msg = f"it has not been possible upload feature models in Zenodo and update the DOI: {e}"
                 return jsonify({"message": msg}), 200
@@ -203,7 +215,7 @@ def update_dataset(dataset_id):
     old_dataset = dataset_service.get_or_404(dataset_id)
     if not old_dataset:
         abort(404)
-    
+
     form = DataSetForm()
     # Cleanup: if user has no CSV files in their temp folder, remove the temp folder
     try:
@@ -212,7 +224,7 @@ def update_dataset(dataset_id):
             try:
                 temp_dir = current_user.temp_folder()
                 if os.path.isdir(temp_dir):
-                    csv_files = [f for f in os.listdir(temp_dir) if f.lower().endswith('.csv')]
+                    csv_files = [f for f in os.listdir(temp_dir) if f.lower().endswith(".csv")]
                     if not csv_files:
                         try:
                             shutil.rmtree(temp_dir)
@@ -229,7 +241,7 @@ def update_dataset(dataset_id):
                             )
             except Exception as diag_exc:
                 logger.warning("[upload][cleanup] Could not inspect temp folder for diagnostics: %s", diag_exc)
-            
+
             # returns the form pre-filled with existing dataset data
             try:
                 # Load dataset and populate the form for editing
@@ -312,9 +324,7 @@ def update_dataset(dataset_id):
                     version_errors = getattr(subform, "version", None).errors if hasattr(subform, "version") else []
                     if version_errors:
                         filename = getattr(getattr(subform, "csv_filename", None), "data", None) or "file"
-                        messages.append(
-                            f"Invalid version for '{filename}': must follow x.y.z (e.g., 1.2.3)"
-                        )
+                        messages.append(f"Invalid version for '{filename}': must follow x.y.z (e.g., 1.2.3)")
             except Exception:
                 # be defensive; fall back to generic errors
                 pass
@@ -408,43 +418,17 @@ def update_dataset(dataset_id):
     return render_template("dataset/upload_dataset.html", form=form, save_drafts=False)
 
 
-@dataset_bp.route("/dataset/draft/upload", methods=["POST"])
+@dataset_bp.route("/dataset/draft/save", methods=["POST"])
 @login_required
-def save_draft_dataset():
-    form = DataSetForm()
-
-    dataset = None
-
-    if not form.validate_on_submit():
-        return jsonify({"message": form.errors}), 400
-
+def save_draft():
+    data = request.get_json() or {}
     try:
-        # Validate pending files in temp folder (Steam CSV only)
-        # Diagnostics: log temp folder contents
-        try:
-            temp_dir = current_user.temp_folder()
-            dir_list = []
-            if os.path.isdir(temp_dir):
-                dir_list = sorted(os.listdir(temp_dir))
-            logger.info("[upload] temp_folder='%s', files=%s", temp_dir, dir_list)
-        except Exception as diag_exc:
-            logger.warning("[upload] Could not inspect temp folder for diagnostics: %s", diag_exc)
-        service = SteamCSVService()
-        try:
-            service.validate_folder(current_user.temp_folder())
-        except ValueError as verr:
-            return jsonify({"message": str(verr)}), 400
-
-        logger.info("Creating dataset...")
-        dataset = dataset_service.create_from_form(form=form, current_user=current_user, draft_mode=True)
-        logger.info(f"Created dataset: {dataset}")
-        dataset_service.move_feature_models(dataset)
+        dataset = dataset_service.create_draft(current_user=current_user, data=data)
     except Exception as exc:
-        logger.exception(f"Exception while create dataset data in local {exc}")
-        return jsonify({"Exception while create dataset data in local: ": str(exc)}), 400
+        logger.exception(f"Exception while saving draft dataset: {exc}")
+        return jsonify({"message": str(exc)}), 400
 
-    msg = "Everything works!"
-    return jsonify({"message": msg}), 200
+    return jsonify({"id": dataset.id, "message": "Draft created"}), 200
 
 
 @dataset_bp.route("/dataset/list", methods=["GET", "POST"])
@@ -525,9 +509,25 @@ def delete():
 
 
 @dataset_bp.route("/dataset/<int:dataset_id>/draft/delete", methods=["DELETE"])
+@login_required
 def delete_draft(dataset_id):
     dataset = dataset_service.get_by_id(dataset_id)
-    dataset_service.delete_draft_dataset(dataset)
+    if not dataset:
+        return jsonify({"message": "Dataset not found"}), 404
+
+    # Only owner or admin can delete a draft
+    if getattr(current_user, 'id', None) != dataset.user_id and getattr(current_user, 'role', None) != UserRole.ADMIN:
+        return jsonify({"message": "Forbidden"}), 403
+
+    if not getattr(dataset, 'draft_mode', False):
+        return jsonify({"message": "Dataset is not a draft"}), 400
+
+    try:
+        dataset_service.delete_draft_dataset(dataset)
+        return jsonify({"message": "Draft deleted"}), 200
+    except Exception as exc:
+        logger.exception(f"Error deleting draft {dataset_id}: {exc}")
+        return jsonify({"message": str(exc)}), 500
 
 
 @dataset_bp.route("/dataset/file/clean_temp", methods=["POST"])
@@ -643,6 +643,22 @@ def subdomain_index(doi):
 
     # Get dataset
     dataset = ds_meta_data.data_set
+    
+    versions = []
+    deposition_id = getattr(dataset.ds_meta_data, "deposition_id", None)
+
+    if deposition_id:
+        versions_meta = dsmetadata_service.get_all_versions_by_deposition_id(deposition_id)
+        for meta in versions_meta:
+            ds = DataSet.query.filter_by(ds_meta_data_id=meta.id).first()
+            if ds:
+                versions.append({
+                    "version": meta.version,
+                    "is_latest": meta.is_latest,
+                    "dataset_id": ds.id,
+                    "metadata": meta,
+                    "created_at": ds.created_at,
+                })
 
     # Save the cookie to the user's browser
     user_cookie = ds_view_record_service.create_cookie(dataset=dataset)
@@ -654,6 +670,7 @@ def subdomain_index(doi):
         render_template(
             "dataset/view_dataset.html",
             dataset=dataset,
+            versions=versions,
             fakenodo_url=FAKENODO_URL,
             communities=community_service.list_all(),
             accepted_community=accepted_community,
@@ -725,16 +742,89 @@ def change_draft_mode(dataset_id):
     return list_dataset()
 
 
-@dataset_bp.route("/dataset/<int:dataset_id>/draft/edit", methods=["PUT"])
+@dataset_bp.route("/dataset/<int:dataset_id>/draft/edit", methods=["GET"])
 @login_required
-def edit(dataset_id):  # Arreglar
-    # auth_service = AuthenticationService()
-    # profile = auth_service.get_authenticated_user_profile
-    # if not profile:
-    #     return redirect(url_for("public.index"))
-    # current_user = UserProfileService().get_by_id(profile().id)
-    # dataset_service.edit(dataset_id, current_user)
-    return list_dataset()
+def edit(dataset_id):
+    # Render the upload form pre-filled with the draft dataset so the user can edit and upload normally.
+    dataset = dataset_service.get_unsynchronized_dataset(current_user.id, dataset_id)
+    if not dataset:
+        abort(404)
+
+    # Build form pre-filled
+    form = DataSetForm()
+    try:
+        form.title.data = dataset.ds_meta_data.title
+        form.desc.data = dataset.ds_meta_data.description
+        # DataCategory stored as enum name; the form expects the enum value
+        try:
+            form.data_category.data = dataset.ds_meta_data.data_category.value
+        except Exception:
+            form.data_category.data = None
+        form.publication_doi.data = dataset.ds_meta_data.publication_doi
+        form.dataset_doi.data = dataset.ds_meta_data.dataset_doi
+        form.tags.data = dataset.ds_meta_data.tags
+
+        # Authors - populate FieldList of FormField correctly
+        # Clear existing entries and append new ones
+        try:
+            # reset entries
+            form.authors.entries = []
+        except Exception:
+            pass
+        for author in dataset.ds_meta_data.authors:
+            entry = form.authors.append_entry()
+            try:
+                # entry is a FormField; inner form fields are under entry.form
+                entry.form.name.data = author.name
+                entry.form.affiliation.data = author.affiliation
+                entry.form.orcid.data = author.orcid
+            except Exception:
+                # best-effort: try legacy attribute names
+                try:
+                    entry.name.data = author.name
+                    entry.affiliation.data = author.affiliation
+                    entry.orcid.data = author.orcid
+                except Exception:
+                    logger.exception('Could not populate author form entry for dataset %s', dataset_id)
+
+        # Feature models: prepare a simple representation for the template to render
+        editing_files = []
+        for idx, fm in enumerate(dataset.feature_models):
+            fm_md = fm.fm_meta_data
+            filename = fm_md.csv_filename
+            editing_files.append({
+                'csv_filename': filename,
+                'title': fm_md.title,
+                'description': fm_md.description,
+                'data_category': getattr(fm_md.data_category, 'value', None),
+                'publication_doi': fm_md.publication_doi,
+                'tags': fm_md.tags,
+                'version': fm_md.csv_version,
+            })
+
+            # Copy stored file into user's temp folder so the upload flow can find it
+            try:
+                temp_dir = current_user.temp_folder()
+                if not os.path.exists(temp_dir):
+                    os.makedirs(temp_dir, exist_ok=True)
+                stored_key = storage_service.dataset_file_path(dataset.user_id, dataset.id, filename)
+                with storage_service.as_local_path(stored_key) as local_file_path:
+                    shutil.copy(local_file_path, os.path.join(temp_dir, filename))
+            except Exception:
+                logger.exception("Could not copy stored file %s to temp folder for editing", filename)
+
+    except Exception:
+        logger.exception('Error preparing edit form for dataset %s', dataset_id)
+        return list_dataset()
+
+    user_preference = current_user.profile.save_drafts
+    return render_template(
+        'dataset/upload_dataset.html',
+        form=form,
+        save_drafts=user_preference,
+        editing_dataset=dataset,
+        editing_files=editing_files,
+    )
 
 
 @dataset_bp.route("/dataset/issues", methods=["POST"])
@@ -841,3 +931,32 @@ def open_issue(issue_id):
     issue_service.open_or_close(issue_id)
     issues = issue_service.list_all()
     return render_template("dataset/list_issues.html", issues=issues)
+
+@dataset_bp.route("/dataset/view/<int:dataset_id>", methods=["GET"])
+def view_dataset_by_id(dataset_id):
+    dataset = dataset_service.get_by_id(dataset_id)
+    if not dataset or dataset.draft_mode:
+        abort(404)
+        
+    doi = getattr(dataset.ds_meta_data, "dataset_doi", None)
+    if doi:
+        return redirect(url_for("dataset.subdomain_index", doi=doi))
+
+    versions = []
+    deposition_id = getattr(dataset.ds_meta_data, "deposition_id", None)
+    if deposition_id:
+        versions_meta = dsmetadata_service.get_all_versions_by_deposition_id(deposition_id)
+        for meta in versions_meta:
+            ds = DataSet.query.filter_by(ds_meta_data_id=meta.id).first()
+            if ds:
+                versions.append({
+                    "version": meta.version,
+                    "is_latest": meta.is_latest,
+                    "dataset_id": ds.id,
+                    "metadata": meta,
+                    "created_at": ds.created_at,
+                })
+
+    return render_template("dataset/view_dataset.html", dataset=dataset, versions=versions)
+
+

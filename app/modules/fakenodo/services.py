@@ -103,3 +103,59 @@ class FakenodoService(BaseService):
         """
 
         return self.get_deposition(deposition_id).associated_doi
+    
+    def test_full_connection(self):
+        try:
+            dataset = DataSet.query.order_by(DataSet.id.desc()).first()
+        except Exception:
+            dataset = None
+
+        try:
+            feature_model = FeatureModel.query.order_by(FeatureModel.id.desc()).first()
+        except Exception:
+            feature_model = None
+
+        if not dataset or not feature_model:
+            return {
+                "created": False,
+                "error": "missing_resources",
+                "dataset_found": bool(dataset),
+                "feature_model_found": bool(feature_model),
+            }
+
+        create_resp = self.create_new_deposition(dataset)
+
+        deposition_id = create_resp.get("id") or create_resp.get("conceptrecid") or create_resp.get("dataset_id")
+        try:
+            deposition_id = int(deposition_id) if deposition_id is not None else None
+        except Exception:
+            deposition_id = None
+
+        upload_result = None
+        deposition = None
+        doi = None
+
+        if deposition_id is not None:
+            try:
+                upload_result = self.upload_file(dataset, deposition_id, feature_model, user=None)
+            except Exception as e:
+                upload_result = {"error": "upload_failed", "exception": str(e)}
+
+            try:
+                deposition = self.get_deposition(deposition_id)
+            except Exception:
+                deposition = None
+
+            try:
+                doi = self.get_doi(deposition_id)
+            except Exception:
+                doi = None
+
+        return {
+            "created": bool(create_resp),
+            "create_response": create_resp,
+            "deposition_id": deposition_id,
+            "upload": upload_result,
+            "deposition": deposition,
+            "doi": doi,
+        }

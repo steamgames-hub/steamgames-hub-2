@@ -1,4 +1,4 @@
-"""create issue table
+"""Create issue table
 
 Revision ID: 007
 Revises: 006

@@ -1,4 +1,4 @@
-"""002
+"""Delete webhook table and added role column to user table
 
 Revision ID: 004
 Revises: 003_b

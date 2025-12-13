@@ -1,4 +1,4 @@
-"""008
+"""Make some corrections and simplifications to previous migrations
 
 Revision ID: 008_a
 Revises: 007

@@ -19,10 +19,10 @@ El objetivo es ofrecer una visión clara y estructurada del pipeline de automati
 - [Diagrama de flujo CI/CD](#diagrama-de-flujo-cicd)
 - [Workflows de Integración Continua (CI)](#workflows-de-integración-continua-ci)
   - [Auto Release](#auto-release-ci_auto_releaseyml)
-  - [Codacy CI](#codacy-ci-ci_codacyyml)
   - [Commits Syntax Checker](#commits-syntax-checker-ci_commitsyml)
   - [Python Lint](#python-lint-ci_lintyml)
   - [Pytest](#pytest-ci_pytestyml)
+  - [Selenium tests](#selenium-ci_seleniumyml)
   - [Codacy Analysis](#codacy-analysis-codacy-analysisyml)
 - [Workflows de Despliegue Continuo (CD)](#workflows-de-despliegue-continuo-cd)
   - [Deploy to preproduction Render](#deploy-to-preproduction-render-render-preproductionyml)
@@ -36,31 +36,35 @@ graph LR
     user((Usuario)) -->|push / PR| repo[Repositorio GitHub]
 
     subgraph CI[Workflows de CI]
-        codacyci[Codacy CI]
         commits[Commits Syntax Checker]
         lint[Python Lint]
         pytest[Pytest]
+        selenium[Tests de Selenium]
         codacyanal[Codacy Analysis]
     end
 
-    repo --> codacyci
     repo --> commits
     repo --> lint
     repo --> pytest
+    repo --> selenium
     repo --> codacyanal
 
-    codacyci --> ciok(Checks de CI superados)
-    commits --> ciok
-    lint --> ciok
-    pytest --> ciok
-    codacyanal --> ciok
+    commits --> ci_ok
+    lint --> ci_ok
+    pytest --> ci_ok
+    selenium --> ci_ok
+    codacyanal --> ci_ok
 
-    ciok --> review(Revisión y merge a main)
+    ci_ok[Continual Integration OK] --> automerge
 
-    review --> main[main]
+    subgraph Merge[Automatización de merge a main]
+        automerge[Auto Merge]
+    end
+
+    automerge --> main[main]
 
     subgraph Release[Automatización de releases]
-        autorelease[Auto Release]
+        autorelease[Auto Release] 
     end
 
     main --> autorelease
@@ -79,7 +83,7 @@ graph LR
 
 ## Workflows de Integración Continua (CI)
 
-### Auto Release ([CI_Auto_Release.yml](https://github.com/steamgames-hub/steamgames-hub-2/blob/main/.github/workflows/CI_Auto_Release.yml))
+### Auto Release ([CI_auto_release.yml](https://github.com/steamgames-hub/steamgames-hub-2/blob/main/.github/workflows/CI_auto_release.yml))
 
 Genera automáticamente un nuevo tag y una Release de GitHub cada vez que se actualiza la rama main.
 
@@ -96,50 +100,6 @@ Genera automáticamente un nuevo tag y una Release de GitHub cada vez que se act
 **> push**
 
 Cuando se hace push a la rama main.
-
-### Codacy CI ([CI_codacy.yml](https://github.com/steamgames-hub/steamgames-hub-2/blob/main/.github/workflows/CI_codacy.yml))
-
-Ejecuta los tests, genera cobertura y envía los resultados a Codacy para su análisis.
-
-#### Acciones principales del workflow
-
-1. Levanta un servicio temporal MySQL 5.7.
-2. Descarga el repositorio.
-3. Configura Python 3.12 e instala dependencias.
-4. Ejecuta tests con coverage.
-5. Genera coverage.xml.
-6. Envía resultados a Codacy.
-7. Configura variables de entorno para simular el entorno real.
-
-#### ¿Cuándo se ejecuta?
-
-**> push**
-
-Cuando se hace un push hacia las ramas: main, Trunk o bugfix.
-
-**> pull request**
-
-Cuando se abre o actualiza una pull request dirigida a estas mismas ramas.
-
-### Commits Syntax Checker ([CI_commits.yml](https://github.com/steamgames-hub/steamgames-hub-2/blob/main/.github/workflows/CI_commits.yml))
-
-Valida que los mensajes de commit cumplen el estándar Conventional Commits.
-
-#### Acciones principales del workflow
-
-1. Analiza todos los commits del push o pull request.
-2. Usa webiny/action-conventional-commits.
-3. Falla si algún commit no cumple el formato establecido.
-
-#### ¿Cuándo se ejecuta?
-
-**> push**
-
-Cuando se hace un push a cualquier rama.
-
-**> pull request**
-
-Cuando se abre, se actualiza o se sincroniza con cambios nuevos.
 
 ### Python Lint ([CI_lint.yml](https://github.com/steamgames-hub/steamgames-hub-2/blob/main/.github/workflows/CI_lint.yml))
 
@@ -176,15 +136,31 @@ Ejecuta la suite de tests del proyecto levantando un contenedor de MariaDB para 
 
 #### ¿Cuándo se ejecuta?
 
-**> push**
+**> push, pull_request**
 
-Cuando se hace push a las ramas main, Trunk o bugfix.
+Cuando se hace push a cualquier rama o se abre pull request.
 
-**> pull request**
+### Selenium tests ([CI_selenium.yml](https://github.com/steamgames-hub/steamgames-hub-2/blob/main/.github/workflows/CI_selenium.yml))
 
-Cuando se abre o actualiza una pull request dirigida a main, Trunk o bugfix.
+Ejecuta la suite de tests del proyecto levantando un contenedor de MariaDB para pruebas.
 
-### Codacy Analysis ([codacy-analysis.yml](https://github.com/steamgames-hub/steamgames-hub-2/blob/main/.github/workflows/codacy-analysis.yml))
+#### Acciones principales del workflow
+
+1. Configura variables de entorno para testing.
+2. Instala dependencias del proyecto.
+3. Levanta la base de datos y la aplicación.
+4. Comprueba que se haya inicializado bien.
+5. Espera a que Selenium esté listo.
+6. Ejecuta los tests de interfaz del repositorio.
+7. Detiene la aplicación.
+
+#### ¿Cuándo se ejecuta?
+
+**> push, pull_request**
+
+Cuando se hace push a cualquier rama o se abre pull request.
+
+### Codacy Analysis ([CI_codacy_analysis.yml](https://github.com/steamgames-hub/steamgames-hub-2/blob/main/.github/workflows/CI_codacy_analysis.yml))
 
 Ejecuta el análisis de calidad mediante la CLI oficial de Codacy y sube los resultados.
 
@@ -205,9 +181,23 @@ Cuando se hace push a las ramas main, Trunk o bugfix.
 
 Cuando se abre o actualiza una pull request dirigida a main, Trunk o bugfix.
 
+### Merge automático de trunk a main ([CI_merge_trunk_to_main](https://github.com/steamgames-hub/steamgames-hub-2/blob/main/.github/workflows/CI_merge_trunk_to_main.yml))
+
+Hace periódicamente un merge de main a trunk.
+
+#### Acciones principales del workflow
+
+1. Descarga el repositorio.
+2. Establece el bot auxiliar.
+3. Hace merge de trunk a main.
+
+#### ¿Cuándo se ejecuta?
+
+Automáticamente los domingos a las 00:00.
+
 ## Workflows de Despliegue Continuo (CD)
 
-### Deploy to preproduction Render ([render-preproduction.yml](https://github.com/steamgames-hub/steamgames-hub-2/blob/main/.github/workflows/render-preproduction.yml))
+### Deploy to preproduction Render ([CD_render_preproduction.yml](https://github.com/steamgames-hub/steamgames-hub-2/blob/main/.github/workflows/CD_render_preproduction.yml))
 
 Ejecuta tests y despliega automáticamente en el entorno de preproducción de Render cuando estos finalizan correctamente.
 
@@ -227,7 +217,7 @@ Cuando se hace push a las ramas main, Trunk o bugfix.
 
 Cuando se abre o actualiza una pull request dirigida a main, Trunk o bugfix.
 
-### Deploy to Render ([render.yml](https://github.com/steamgames-hub/steamgames-hub-2/blob/main/.github/workflows/render.yml))
+### Deploy to Render ([CD_render_production.yml](https://github.com/steamgames-hub/steamgames-hub-2/blob/main/.github/workflows/CD_render_production.yml))
 
 Realiza el despliegue automático en producción tras pasar los tests. Solo afecta a la rama principal.
 
@@ -241,6 +231,22 @@ Realiza el despliegue automático en producción tras pasar los tests. Solo afec
 **> push**
 
 Cuando se hace push a la rama main.
+
+### Publish image in Dockerhub ([render.yml](https://github.com/steamgames-hub/steamgames-hub-2/blob/main/.github/workflows/CD_dockerhub.yml))
+
+Sube la imagen del proyecto a Dockerhub.
+
+#### Acciones principales del workflow
+
+1. Se descarga el repositorio.
+2. Se registra en Dockerhub.
+3. Construye y publica la imagen.
+
+#### ¿Cuándo se ejecuta?
+
+**> release**
+
+Cuando se hace release y esté está publicado.
 
 ## Notas finales
 

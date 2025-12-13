@@ -1,4 +1,4 @@
-"""add dataset_type to ds_meta_data
+"""Add dataset_type to ds_meta_data
 
 Revision ID: 002
 Revises: 001

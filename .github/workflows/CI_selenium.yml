@@ -1,0 +1,89 @@
+name: Selenium tests
+
+on: [push, pull_request]
+
+
+jobs:
+  selenium-tests:
+    name: Selenium tests
+    runs-on: ubuntu-latest
+
+    env:
+      MARIADB_ROOT_PASSWORD: uvlhub_root_password
+      MARIADB_DATABASE: uvlhubdb_test
+      MARIADB_TEST_DATABASE: uvlhubdb_test
+      MARIADB_USER: uvlhub_user
+      MARIADB_PASSWORD: uvlhub_password
+      MARIADB_HOSTNAME: 127.0.0.1
+      MARIADB_PORT: 3306
+    
+    services:
+      firefox:
+        image: selenium/standalone-firefox:latest
+        ports:
+          - 4444:4444
+        options: --shm-size=2g
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+        
+      - name: Install database server
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mariadb-server
+          sudo service mysql start
+          sudo mysql -e "CREATE DATABASE IF NOT EXISTS ${{ env.MARIADB_DATABASE }};"
+          sudo mysql -e "CREATE USER IF NOT EXISTS '${{ env.MARIADB_USER }}'@'localhost' IDENTIFIED BY '${{ env.MARIADB_PASSWORD }}';"
+          sudo mysql -e "GRANT ALL PRIVILEGES ON ${{ env.MARIADB_DATABASE }}.* TO '${{ env.MARIADB_USER }}'@'localhost';"
+          sudo mysql -e "FLUSH PRIVILEGES;"
+          sudo systemctl start mariadb
+
+      - name: Build and start application and database
+        run: |
+          flask db upgrade
+          rosemary db:seed
+          flask run --host=0.0.0.0 --port=5000 &
+          echo $! > flask.pid
+          sleep 10
+        
+      - name: Verification
+        run: |
+          curl -f http://localhost:5000/ || exit 1
+          echo "Aplicación funcionando"
+
+      - name: Wait for Selenium
+        run: |
+          echo "Waiting for Selenium hub on localhost:4444..."
+          for i in {1..30}; do
+            if curl -sS http://localhost:4444/status | grep -q '"ready":true' ; then
+              echo "Selenium hub ready"; break
+            fi
+            sleep 2
+          done
+
+      - name: Run Selenium Tests
+        env:
+          SELENIUM_REMOTE_URL: http://localhost:4444/wd/hub
+          BASE_URL: http://localhost:5000
+        run: |
+          rosemary selenium
+        continue-on-error: false
+      
+      - name: Stop Flask application
+        if: always()
+        run: |
+          if [ -f flask.pid ]; then
+            kill $(cat flask.pid) || true
+          fi
