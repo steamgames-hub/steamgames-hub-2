@@ -931,3 +931,32 @@ def open_issue(issue_id):
     issue_service.open_or_close(issue_id)
     issues = issue_service.list_all()
     return render_template("dataset/list_issues.html", issues=issues)
+
+@dataset_bp.route("/dataset/view/<int:dataset_id>", methods=["GET"])
+def view_dataset_by_id(dataset_id):
+    dataset = dataset_service.get_by_id(dataset_id)
+    if not dataset or dataset.draft_mode:
+        abort(404)
+        
+    doi = getattr(dataset.ds_meta_data, "dataset_doi", None)
+    if doi:
+        return redirect(url_for("dataset.subdomain_index", doi=doi))
+
+    versions = []
+    deposition_id = getattr(dataset.ds_meta_data, "deposition_id", None)
+    if deposition_id:
+        versions_meta = dsmetadata_service.get_all_versions_by_deposition_id(deposition_id)
+        for meta in versions_meta:
+            ds = DataSet.query.filter_by(ds_meta_data_id=meta.id).first()
+            if ds:
+                versions.append({
+                    "version": meta.version,
+                    "is_latest": meta.is_latest,
+                    "dataset_id": ds.id,
+                    "metadata": meta,
+                    "created_at": ds.created_at,
+                })
+
+    return render_template("dataset/view_dataset.html", dataset=dataset, versions=versions)
+
+

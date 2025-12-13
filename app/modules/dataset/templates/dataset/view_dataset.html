@@ -176,15 +176,22 @@
                                     </td>
                                     <td>{{ v.created_at.strftime('%B %d, %Y') if v.created_at else '' }}</td>
                                     <td class="text-end">
-                                    {% if not is_current %}
-                                        <a class="btn btn-outline-primary btn-sm"
-                                        href="{{ url_for('dataset.subdomain_index', doi=v.dataset_doi) }}">
-                                        Ver
-                                        </a>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                    </td>
+                                        {% if not is_current %}
+                                            {% if v.dataset_doi %}
+                                                <a class="btn btn-outline-primary btn-sm"
+                                                    href="{{ url_for('dataset.subdomain_index', doi=v.dataset_doi) }}">
+                                                    Ver
+                                                </a>
+                                            {% else %}
+                                                <a class="btn btn-outline-primary btn-sm"
+                                                    href="{{ url_for('dataset.view_dataset_by_id', dataset_id=v.dataset_id) }}">
+                                                    Ver
+                                                </a>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                        </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
