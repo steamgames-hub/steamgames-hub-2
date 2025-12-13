@@ -1464,3 +1464,160 @@ def test_update_dataset_unauthorized_user_denied(test_app, test_client):
 
         # Should be denied or redirect
         assert response.status_code in [403, 302, 401]
+
+
+def test_rollback_dataset_version_success(test_client, test_app):
+    with test_app.app_context():
+
+        admin = User.query.filter_by(email="test@example.com").first()
+        admin.role = UserRole.ADMIN
+        admin_id = admin.id
+        db.session.commit()
+
+    deposition_id = 777
+    md_v1 = DSMetaData(
+        title="Dataset v1",
+        description="v1",
+        data_category=DataCategory.GENERAL,
+        dataset_doi="10.1234/ds/v1",
+        version=1.0,
+        is_latest=False,
+        deposition_id=deposition_id,
+    )
+    md_v2 = DSMetaData(
+        title="Dataset v2",
+        description="v2",
+        data_category=DataCategory.GENERAL,
+        dataset_doi="10.1234/ds",
+        version=2.0,
+        is_latest=True,
+        deposition_id=deposition_id,
+    )
+    db.session.add(md_v1)
+    db.session.add(md_v2)
+    db.session.flush()
+
+    md_v1_id = md_v1.id
+    md_v2_id = md_v2.id
+
+    md_v2_publication_doi = md_v2.publication_doi
+    md_v2_dataset_doi = md_v2.dataset_doi
+
+    ds_v1 = DataSet(user_id=admin_id, ds_meta_data_id=md_v1.id, draft_mode=False)
+    ds_v2 = DataSet(user_id=admin_id, ds_meta_data_id=md_v2.id, draft_mode=False)
+
+    db.session.add(ds_v1)
+    db.session.add(ds_v2)
+    db.session.commit()
+
+    latest_dataset_id = ds_v2.id
+
+    test_client.get("/logout", follow_redirects=True)
+    resp = test_client.post("/login", data={"email": "test@example.com", "password": "test1234"},
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200
+
+    response = test_client.post(
+        f"/dataset/versions/rollback/{latest_dataset_id}",
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+
+    with test_app.app_context():
+        db.session.expire_all()
+
+        v1 = db.session.get(DSMetaData, md_v1_id)
+        assert v1.is_latest is True
+        assert v1.publication_doi == md_v2_publication_doi
+        assert v1.dataset_doi == md_v2_dataset_doi
+
+        v2 = db.session.get(DataSet, md_v2_id)
+        assert v2 is None
+
+
+
+def test_rollback_dataset_version_unsuccess(test_client, test_app):
+    with test_app.app_context():
+
+        admin = User.query.filter_by(email="test@example.com").first()
+        admin.role = UserRole.ADMIN
+        admin_id = admin.id
+        db.session.commit()
+
+    deposition_id = 777
+
+    md_v1 = DSMetaData(
+        title="Dataset v1",
+        description="v1",
+        data_category=DataCategory.GENERAL,
+        dataset_doi="10.1234/ds",
+        is_latest=True,
+        deposition_id=deposition_id,
+    )
+
+    db.session.add(md_v1)
+    db.session.flush()
+
+    ds_v1 = DataSet(user_id=admin_id, ds_meta_data_id=md_v1.id, draft_mode=False)
+    db.session.add(ds_v1)
+    db.session.commit()
+
+    latest_dataset_id = ds_v1.id
+
+    test_client.get("/logout", follow_redirects=True)
+    resp = test_client.post("/login", data={"email": "test@example.com", "password": "test1234"},
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200
+
+    response = test_client.post(
+        f"/dataset/versions/rollback/{latest_dataset_id}"
+    )
+
+    data = response.get_json()
+    assert data["message"] == "No previous version available for rollback"
+    assert response.status_code == 400
+
+def test_rollback_dataset_version_unauthorized(test_client, test_app):
+    with test_app.app_context():
+
+        user = User.query.filter_by(email="test@example.com").first()
+        user.role = UserRole.USER
+        db.session.commit()
+
+    deposition_id = 777
+    md_v1 = DSMetaData(
+        title="Dataset v1",
+        description="v1",
+        data_category=DataCategory.GENERAL,
+        dataset_doi="10.1234/ds/v1",
+        version=1.0,
+        is_latest=False,
+        deposition_id=deposition_id,
+    )
+    db.session.add(md_v1)
+    db.session.flush()
+
+    other_user = User(email=f"other_user{uuid.uuid4()}@example.com", password="test1234")
+    db.session.add(other_user)
+    db.session.commit()
+
+    ds_v1 = DataSet(user_id=other_user.id, ds_meta_data_id=md_v1.id, draft_mode=False)
+    db.session.add(ds_v1)
+    db.session.commit()
+
+    latest_dataset_id = ds_v1.id
+
+    test_client.get("/logout", follow_redirects=True)
+    resp = test_client.post("/login", data={"email": "test@example.com", "password": "test1234"},
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200
+
+    response = test_client.post(
+        f"/dataset/versions/rollback/{latest_dataset_id}"
+    )
+
+    assert response.status_code == 403, "Unauthorized"
