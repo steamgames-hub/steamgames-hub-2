@@ -143,6 +143,64 @@
 
                 </div>
 
+                <div class="row mb-2 mt-4">
+                    <div class="col-md-4 col-12">
+                        <span class="text-secondary">Versiones</span>
+                    </div>
+
+                    <div class="col-md-8 col-12">
+                        {% if not versions %}
+                        <span class="text-muted">No hay historial de versiones (aún).</span>
+                        {% else %}
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                <th>Versión</th>
+                                <th>Fecha</th>
+                                <th class="text-end"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for v in versions %}
+                                {% set is_current = (v.dataset_id == dataset.id) %}
+                                <tr class="{{ 'table-primary' if is_current else '' }}">
+                                    <td>
+                                    <strong>{{ "%.1f"|format(v.version) }}</strong>
+                                    {% if v.is_latest %}
+                                        <span class="badge bg-primary ms-2">Actual</span>
+                                    {% endif %}
+                                    {% if is_current and not v.is_latest %}
+                                        <span class="badge bg-secondary ms-2">Viendo</span>
+                                    {% endif %}
+                                    </td>
+                                    <td>{{ v.created_at.strftime('%B %d, %Y') if v.created_at else '' }}</td>
+                                    <td class="text-end">
+                                    {% if not is_current %}
+                                        <a class="btn btn-outline-primary btn-sm"
+                                        href="{{ url_for('dataset.subdomain_index', doi=v.dataset_doi) }}">
+                                        Ver
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-2">
+                            <a class="btn btn-outline-primary btn-sm"
+                            href="{{ url_for('dataset.dataset_versions', dataset_id=dataset.id) }}">
+                            Ver timeline
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+
                 {% if not dataset.ds_meta_data.is_latest %}
                     <div class="alert-error">
                         <p>Atención: Versión desactualizada</p>

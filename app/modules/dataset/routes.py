@@ -643,6 +643,22 @@ def subdomain_index(doi):
 
     # Get dataset
     dataset = ds_meta_data.data_set
+    
+    versions = []
+    deposition_id = getattr(dataset.ds_meta_data, "deposition_id", None)
+
+    if deposition_id:
+        versions_meta = dsmetadata_service.get_all_versions_by_deposition_id(deposition_id)
+        for meta in versions_meta:
+            ds = DataSet.query.filter_by(ds_meta_data_id=meta.id).first()
+            if ds:
+                versions.append({
+                    "version": meta.version,
+                    "is_latest": meta.is_latest,
+                    "dataset_id": ds.id,
+                    "metadata": meta,
+                    "created_at": ds.created_at,
+                })
 
     # Save the cookie to the user's browser
     user_cookie = ds_view_record_service.create_cookie(dataset=dataset)
@@ -654,6 +670,7 @@ def subdomain_index(doi):
         render_template(
             "dataset/view_dataset.html",
             dataset=dataset,
+            versions=versions,
             fakenodo_url=FAKENODO_URL,
             communities=community_service.list_all(),
             accepted_community=accepted_community,
