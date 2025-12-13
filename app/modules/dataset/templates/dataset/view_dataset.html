@@ -273,7 +273,7 @@
             Download all ({{ dataset.get_file_total_size_for_human() }})
         </a>
 
-        {% if dataset.ds_meta_data.is_latest and versions and versions|length > 1 and (current_user.id == dataset.user_id or current_user.role.name == 'ADMIN')%}
+        {% if current_user.is_authenticated and dataset.ds_meta_data.is_latest and versions and versions|length > 1 and (current_user.id == dataset.user_id or current_user.role.name == 'ADMIN')%}
         <form method="POST" action="/dataset/versions/rollback/{{ dataset.id }}"
             onsubmit="return confirm('Do you want to roll back to the previous version?\n\nThe current version will be removed and the previous one will become active.');"
             style="display: inline;">
