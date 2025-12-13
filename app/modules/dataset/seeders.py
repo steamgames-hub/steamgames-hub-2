@@ -40,20 +40,35 @@ class DataSetSeeder(BaseSeeder):
                 ds_metrics_id=seeded_ds_metrics.id,
                 is_latest=i != 3,
             )
-            for i in range(4)
+            for i in range(3)
         ]
 
         ds_meta_data_list.append(
             DSMetaData(
                 deposition_id=4,
+                title="Sample dataset 4",
+                description="Description for dataset 4 v1.0",
+                data_category=DataCategory.SALES,
+                publication_doi="10.1234/dataset4/v1.0",
+                dataset_doi="10.1234/dataset4/v1.0",
+                tags="tag1, tag2",
+                ds_metrics_id=seeded_ds_metrics.id,
+                version=1.0,
+                is_latest=False,
+            )
+        )
+
+        ds_meta_data_list.append(
+            DSMetaData(
+                deposition_id=4,
                 title="New version of sample dataset 4",
-                description="Description for dataset 4 v1.1",
+                description="Description for dataset 4 v2.0",
                 data_category=DataCategory.GENERAL,
-                publication_doi="10.1234/dataset4/1.1",
-                dataset_doi="10.1234/dataset4/1.1",
+                publication_doi="10.1234/dataset4",
+                dataset_doi="10.1234/dataset4",
                 tags="tag1, tag3, tag5",
                 ds_metrics_id=seeded_ds_metrics.id,
-                version=1.1,
+                version=2.0,
                 is_latest=True,
             )
         )

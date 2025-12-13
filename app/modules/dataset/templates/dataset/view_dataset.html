@@ -206,7 +206,30 @@
                         {% endif %}
                     </div>
                 </div>
+                
+                {% if dataset.ds_meta_data.dataset_doi %}
+                <div class="card-body" style="padding-top: 0px">
 
+                    <div id="dataset_doi_uvlhub" style="display: none">
+                        {{ dataset.get_steamgameshub_doi() }}
+                    </div>
+
+                    <button type="button" class="btn doi_button btn-sm" onclick="copyText('dataset_doi_uvlhub')">
+                        <span class="button_doi_id">
+                            <i data-feather="clipboard" class="center-button-icon" style="cursor: pointer"></i>
+                            <b>DOI</b>
+                        </span>
+                        <span class="doi_text">
+                            {{ dataset.get_steamgameshub_doi() }}
+                        </span>
+                    </button>
+
+                    <div id="dataset_doi_uvlhub" style="display: none">
+                        {{ dataset.get_steamgameshub_doi() }}
+                    </div>
+
+                </div>
+                {% endif %}
 
                 {% if not dataset.ds_meta_data.is_latest %}
                     <div class="alert-error">
@@ -229,7 +252,6 @@
         
         
     
-        <a href="/dataset/download/{{ dataset.id }}" class="btn btn-primary mt-3" style="border-radius: 5px;">
 
         {% if accepted_community %}
         <div class="card mt-3">

@@ -300,11 +300,11 @@ def test_dataset_service_delegations():
     assert svc.count_synchronized_datasets() == 7
 
 
-def test_get_uvlhub_doi_uses_domain_env(monkeypatch):
+def test_get_steamgameshub_doi_uses_domain_env(monkeypatch):
     svc = DataSetService()
     ds = SimpleNamespace(ds_meta_data=SimpleNamespace(dataset_doi="abc123"))
     monkeypatch.setenv("DOMAIN", "example.com")
-    url = svc.get_uvlhub_doi(ds)
+    url = svc.get_steamgameshub_doi(ds)
     assert url == "http://example.com/doi/abc123"
 
 

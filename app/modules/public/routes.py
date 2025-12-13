@@ -107,7 +107,7 @@ def trending_datasets_api():
             community_url = ""
 
         try:
-            url = dataset.get_uvlhub_doi()
+            url = dataset.get_steamgameshub_doi()
         except Exception:
             try:
                 url = url_for("dataset.view", dataset_id=dataset.id)

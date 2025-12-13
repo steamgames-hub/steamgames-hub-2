@@ -26,17 +26,17 @@
                         {% for dataset in datasets %}
                             <tr>
                                 <td>
-                                    <a href="{{ dataset.get_uvlhub_doi() }}">
+                                    <a href="{{ dataset.get_steamgameshub_doi() }}">
                                         {{ dataset.ds_meta_data.title }}
                                     </a>
                                 </td>
                                 <td>{{ dataset.ds_meta_data.description }}</td>
                                 <td>{{ dataset.ds_meta_data.data_category.name.replace('_', ' ').title() }}</td>
-                                <td><a href="{{ dataset.get_uvlhub_doi() }}"
-                                       target="_blank">{{ dataset.get_uvlhub_doi() }}</a></td>
+                                <td><a href="{{ dataset.get_steamgameshub_doi() }}"
+                                       target="_blank">{{ dataset.get_steamgameshub_doi() }}</a></td>
                                     <td>No</td>
                                     <td>
-                                    <a href="{{ dataset.get_uvlhub_doi() }}">
+                                    <a href="{{ dataset.get_steamgameshub_doi() }}">
                                         <i data-feather="eye"></i>
                                     </a>
                                     <a href="{{ url_for('dataset.download_dataset', dataset_id=dataset.id) }}">
