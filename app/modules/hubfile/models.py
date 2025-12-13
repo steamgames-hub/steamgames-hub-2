@@ -51,7 +51,7 @@ class Hubfile(db.Model):
         This mirrors UVL behavior and is reused for CSV files for consistency.
         """
         try:
-            metadata = self.dataset_file.metadata if self.dataset_file else None
+            metadata = self.dataset_file.file_metadata if self.dataset_file else None
             version = getattr(metadata, "csv_version", None)
             if version:
                 return str(version)

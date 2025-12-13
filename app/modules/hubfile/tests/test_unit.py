@@ -36,7 +36,7 @@ def test_get_version_label_prefers_manual_version():
     hf.checksum = "abcdef1234567890"
     hf.size = 10
     dataset_file = DatasetFile()
-    dataset_file.metadata = DatasetFileMetaData(csv_version="1.2.3")
+    dataset_file.file_metadata = DatasetFileMetaData(csv_version="1.2.3")
     hf.dataset_file = dataset_file
 
     assert hf.get_version_label() == "1.2.3"
@@ -48,7 +48,7 @@ def test_get_version_label_falls_back_to_short_checksum():
     hf.checksum = "abcdef1234567890"
     hf.size = 10
     dataset_file = DatasetFile()
-    dataset_file.metadata = DatasetFileMetaData(csv_version=None)
+    dataset_file.file_metadata = DatasetFileMetaData(csv_version=None)
     hf.dataset_file = dataset_file
 
     assert hf.get_version_label() == "abcdef1"

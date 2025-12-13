@@ -64,7 +64,7 @@ class FakenodoService(BaseService):
         Returns:
             dict: The response in JSON format with the details of the uploaded file.
         """
-        csv_filename = dataset_file.metadata.csv_filename
+        csv_filename = dataset_file.file_metadata.csv_filename
         user_id = current_user.id if user is None else user.id
         relative_path = storage_service.dataset_file_path(
             user_id,

@@ -59,7 +59,7 @@ class DataSetService(BaseService):
         source_dir = current_user.temp_folder()
 
         for dataset_file in dataset.dataset_files:
-            csv_filename = dataset_file.metadata.csv_filename
+            csv_filename = dataset_file.file_metadata.csv_filename
             src_path = os.path.join(source_dir, csv_filename)
             dest_relative = storage_service.dataset_file_path(
                 current_user.id,
