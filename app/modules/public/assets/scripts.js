@@ -103,6 +103,10 @@ function initializeTrendingWidget() {
         }
     }
 
+    window.__trendingWidgetForceRefresh = function(force) {
+        maybeFetch(force !== false);
+    };
+
     if (bySelector) {
         bySelector.addEventListener('change', function() {
             maybeFetch(true);
@@ -124,8 +128,35 @@ function initializeTrendingWidget() {
     }
 }
 
+function ensureTrendingVisibilityListeners() {
+    if (window.__trendingVisibilityListenersAttached) {
+        return;
+    }
+    window.__trendingVisibilityListenersAttached = true;
+
+    function refreshTrending() {
+        if (typeof window.__trendingWidgetForceRefresh === 'function') {
+            window.__trendingWidgetForceRefresh(true);
+        }
+    }
+
+    window.addEventListener('pageshow', function() {
+        refreshTrending();
+    });
+
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            refreshTrending();
+        }
+    });
+
+    window.addEventListener('focus', refreshTrending);
+}
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeTrendingWidget);
 } else {
     initializeTrendingWidget();
 }
+
+ensureTrendingVisibilityListeners();
