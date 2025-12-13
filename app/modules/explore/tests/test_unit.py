@@ -4,6 +4,7 @@ import pytest
 
 from app import db
 from app.modules.auth.models import User
+from app.modules.community.models import Community, CommunityDatasetProposal, ProposalStatus
 from app.modules.dataset.models import Author, DataCategory, DataSet, DSDownloadRecord, DSMetaData, DSViewRecord
 from app.modules.explore.repositories import ExploreRepository
 from app.modules.featuremodel.models import FeatureModel, FMMetaData
@@ -95,6 +96,19 @@ def populated_db(test_client, clean_database):
 
         ds3 = DataSet(user_id=user.id, ds_meta_data_id=md3.id, created_at=datetime.utcnow())
         db.session.add(ds3)
+
+        # Community assignments
+        community = Community(name="Indie Lovers", description="Indie datasets", responsible_user_id=user.id)
+        db.session.add(community)
+        db.session.flush()
+
+        proposal = CommunityDatasetProposal(
+            dataset_id=ds1.id,
+            community_id=community.id,
+            proposed_by_user_id=user.id,
+            status=ProposalStatus.ACCEPTED,
+        )
+        db.session.add(proposal)
 
         db.session.commit()
 
@@ -229,6 +243,12 @@ def test_repo_search_author_and_tag(repo, populated_db):
     results = repo.filter(author="Alice", tags="indie")
     titles = sorted([r.ds_meta_data.title for r in results])
     assert titles == ["Dataset One"], f"Expected only Dataset One for author Alice + tag indie, got: {titles}"
+
+
+def test_repo_search_by_community(repo, populated_db):
+    results = repo.filter(community="Indie")
+    titles = sorted([r.ds_meta_data.title for r in results])
+    assert titles == ["Dataset One"], f"Expected Dataset One for community Indie, got: {titles}"
 
 
 def test_repo_sorting_newest_oldest(repo, populated_db):
