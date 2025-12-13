@@ -5,7 +5,7 @@ from sqlalchemy import and_, func, or_
 
 from app import db
 from app.modules.dataset.models import Author, DataCategory, DataSet, DSDownloadRecord, DSMetaData, DSViewRecord
-from app.modules.featuremodel.models import FeatureModel, FMMetaData
+from app.modules.datasetfile.models import DatasetFile, DatasetFileMetaData
 from app.modules.community.models import Community, CommunityDatasetProposal, ProposalStatus
 from core.repositories.BaseRepository import BaseRepository
 
@@ -35,8 +35,8 @@ class ExploreRepository(BaseRepository):
         q = (
             self.model.query.join(DataSet.ds_meta_data)
             .outerjoin(DSMetaData.authors)
-            .outerjoin(DataSet.feature_models)
-            .outerjoin(FeatureModel.fm_meta_data)
+            .outerjoin(DataSet.dataset_files)
+            .outerjoin(DatasetFile.file_metadata)
         )
 
         if query:
@@ -50,11 +50,11 @@ class ExploreRepository(BaseRepository):
                 filters.append(Author.name.ilike(like))
                 filters.append(Author.affiliation.ilike(like))
                 filters.append(Author.orcid.ilike(like))
-                filters.append(FMMetaData.csv_filename.ilike(like))
-                filters.append(FMMetaData.title.ilike(like))
-                filters.append(FMMetaData.description.ilike(like))
-                filters.append(FMMetaData.publication_doi.ilike(like))
-                filters.append(FMMetaData.tags.ilike(like))
+                filters.append(DatasetFileMetaData.csv_filename.ilike(like))
+                filters.append(DatasetFileMetaData.title.ilike(like))
+                filters.append(DatasetFileMetaData.description.ilike(like))
+                filters.append(DatasetFileMetaData.publication_doi.ilike(like))
+                filters.append(DatasetFileMetaData.tags.ilike(like))
                 filters.append(DSMetaData.tags.ilike(like))
             if filters:
                 q = q.filter(or_(*filters))
@@ -77,7 +77,7 @@ class ExploreRepository(BaseRepository):
             if isinstance(tags, str):
                 tags = [t.strip() for t in tags.split(",") if t.strip()]
             tag_conds = [DSMetaData.tags.ilike(f"%{t}%") for t in tags] + [
-                FMMetaData.tags.ilike(f"%{t}%") for t in tags
+                DatasetFileMetaData.tags.ilike(f"%{t}%") for t in tags
             ]
             if tag_conds:
                 q = q.filter(or_(*tag_conds))
@@ -108,17 +108,17 @@ class ExploreRepository(BaseRepository):
             if isinstance(filenames, str):
                 names = [name.strip() for name in filenames.split(",") if name.strip()]
 
-            filters = [FMMetaData.csv_filename.ilike(f"%{n}%") for n in names]
+            filters = [DatasetFileMetaData.csv_filename.ilike(f"%{n}%") for n in names]
 
-            fm_sub = (
-                db.session.query(FeatureModel.data_set_id)
-                .join(FMMetaData)
+            dataset_file_sub = (
+                db.session.query(DatasetFile.data_set_id)
+                .join(DatasetFileMetaData)
                 .filter(or_(*filters))
-                .group_by(FeatureModel.data_set_id)
+                .group_by(DatasetFile.data_set_id)
                 .subquery()
             )
 
-            q = q.join(fm_sub, fm_sub.c.data_set_id == DataSet.id)
+            q = q.join(dataset_file_sub, dataset_file_sub.c.data_set_id == DataSet.id)
 
         if date_from:
             q = q.filter(DataSet.created_at >= date_from)

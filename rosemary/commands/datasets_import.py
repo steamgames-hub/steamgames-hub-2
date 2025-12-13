@@ -15,7 +15,7 @@ from app.modules.dataset.models import (
     DSMetaData,
     DSMetrics,
 )
-from app.modules.featuremodel.models import FeatureModel, FMMetaData
+from app.modules.datasetfile.models import DatasetFile, DatasetFileMetaData
 from app.modules.hubfile.models import Hubfile
 
 
@@ -94,7 +94,7 @@ def _create_dataset(
     dataset_publication: str,
     csv_count: int,
 ) -> DataSet:
-    ds_metrics = DSMetrics(number_of_models=str(csv_count), number_of_features="")
+    ds_metrics = DSMetrics(number_of_files=str(csv_count))
     db.session.add(ds_metrics)
     db.session.flush()
 
@@ -135,7 +135,7 @@ def _attach_csv_files(
     for name in sorted(csv_files):
         src_path = os.path.join(csv_dir, name)
 
-        fm_md = FMMetaData(
+        dataset_file_metadata = DatasetFileMetaData(
             csv_filename=name,
             title=os.path.splitext(name)[0],
             description=f"CSV file {name}",
@@ -144,11 +144,11 @@ def _attach_csv_files(
             tags=tags,
             csv_version=(version or None),
         )
-        db.session.add(fm_md)
+        db.session.add(dataset_file_metadata)
         db.session.flush()
 
-        feature_model = FeatureModel(data_set_id=dataset.id, fm_meta_data_id=fm_md.id)
-        db.session.add(feature_model)
+        dataset_file = DatasetFile(data_set_id=dataset.id, metadata_id=dataset_file_metadata.id)
+        db.session.add(dataset_file)
         db.session.flush()
 
         dst_path = os.path.join(dest_folder, name)
@@ -158,7 +158,7 @@ def _attach_csv_files(
             name=name,
             checksum=sha256_of_file(dst_path),
             size=os.path.getsize(dst_path),
-            feature_model_id=feature_model.id,
+            dataset_file_id=dataset_file.id,
         )
         db.session.add(hubfile)
         created += 1

@@ -378,7 +378,7 @@
 
                                 // remove button
                                 let removeButton = document.createElement('button');
-                                removeButton.innerHTML = 'Delete model';
+                                removeButton.innerHTML = 'Delete file';
                                 removeButton.classList.add("remove-button", "btn", "btn-outline-danger", "btn-sm", "remove-button");
                                 removeButton.style.borderRadius = '5px';
 
@@ -431,25 +431,25 @@
 
                                 formContainer.innerHTML = `
                                     <div class="row">
-                                        <input type="hidden" value="${response.filename}" name="feature_models-${formUniqueId}-csv_filename">
+                                        <input type="hidden" value="${response.filename}" name="dataset_files-${formUniqueId}-csv_filename">
                                         <div class="col-12">
                                             <div class="row">
                                                 <div class="col-12">
                                                     <div class="mb-3">
                                                         <label class="form-label">Title</label>
-                                                        <input type="text" class="form-control" name="feature_models-${formUniqueId}-title">
+                                                        <input type="text" class="form-control" name="dataset_files-${formUniqueId}-title">
                                                     </div>
                                                 </div>
                                                 <div class="col-12">
                                                     <div class="mb-3">
                                                         <label class="form-label">Description</label>
-                                                        <textarea rows="4" class="form-control" name="feature_models-${formUniqueId}-desc"></textarea>
+                                                        <textarea rows="4" class="form-control" name="dataset_files-${formUniqueId}-desc"></textarea>
                                                     </div>
                                                 </div>
                                                 <div class="col-lg-6 col-12">
                                                     <div class="mb-3">
                                                         <label class="form-label" for="data_category">Publication type</label>
-                                                        <select class="form-control" name="feature_models-${formUniqueId}-data_category">
+                                                        <select class="form-control" name="dataset_files-${formUniqueId}-data_category">
                                                             <option value="none">None</option>
                                                             <option value="annotationcollection">Annotation Collection</option>
                                                             <option value="book">Book</option>
@@ -475,13 +475,13 @@
                                                 <div class="col-lg-6 col-6">
                                                     <div class="mb-3">
                                                         <label class="form-label" for="publication_doi">Publication DOI</label>
-                                                        <input class="form-control" name="feature_models-${formUniqueId}-publication_doi" type="text" value="">
+                                                        <input class="form-control" name="dataset_files-${formUniqueId}-publication_doi" type="text" value="">
                                                     </div>
                                                 </div>
                                                 <div class="col-6">
                                                     <div class="mb-3">
                                                         <label class="form-label">Tags (separated by commas)</label>
-                                                        <input type="text" class="form-control" name="feature_models-${formUniqueId}-tags">
+                                                        <input type="text" class="form-control" name="dataset_files-${formUniqueId}-tags">
                                                     </div>
                                                 </div>
                                                 <div class="col-6">
@@ -489,7 +489,7 @@
                                 <label class="form-label">File version</label>
                                 <input type="text"
                                     class="form-control"
-                                    name="feature_models-${formUniqueId}-version"
+                                    name="dataset_files-${formUniqueId}-version"
                                     placeholder="e.g., 1.2.3"
                                     pattern="^\\d+\\.\\d+\\.\\d+$"
                                     title="Version must follow x.y.z format (e.g., 1.2.3)">
@@ -545,7 +545,7 @@
                 <label class="form-check">
                     <input id="agreeCheckbox" class="form-check-input" type="checkbox" value="">
                     <span class="form-check-label" style="font-size: 15px">
-                                I agree to have my feature models automatically uploaded to Zenodo and made available to the public according to the <a
+                                I agree to have my files (CSV) automatically uploaded to Fakenodo and made available to the public according to the <a
                             href="https://en.wikipedia.org/wiki/Open_science" target="_blank">Open Science</a> manifesto
                             </span>
                 </label>

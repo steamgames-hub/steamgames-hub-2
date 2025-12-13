@@ -26,8 +26,7 @@ def upgrade():
     )
     op.create_table('ds_metrics',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('number_of_models', sa.String(length=120), nullable=True),
-    sa.Column('number_of_features', sa.String(length=120), nullable=True),
+    sa.Column('number_of_files', sa.String(length=120), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('fm_metrics',
