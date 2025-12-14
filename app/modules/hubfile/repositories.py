@@ -3,7 +3,7 @@ from sqlalchemy import func
 from app import db
 from app.modules.auth.models import User
 from app.modules.dataset.models import DataSet
-from app.modules.featuremodel.models import FeatureModel
+from app.modules.datasetfile.models import DatasetFile
 from app.modules.hubfile.models import Hubfile, HubfileDownloadRecord, HubfileViewRecord
 from core.repositories.BaseRepository import BaseRepository
 
@@ -16,14 +16,14 @@ class HubfileRepository(BaseRepository):
         return (
             db.session.query(User)
             .join(DataSet)
-            .join(FeatureModel)
+            .join(DatasetFile)
             .join(Hubfile)
             .filter(Hubfile.id == hubfile.id)
             .first()
         )
 
     def get_dataset_by_hubfile(self, hubfile: Hubfile) -> DataSet:
-        return db.session.query(DataSet).join(FeatureModel).join(Hubfile).filter(Hubfile.id == hubfile.id).first()
+        return db.session.query(DataSet).join(DatasetFile).join(Hubfile).filter(Hubfile.id == hubfile.id).first()
 
 
 class HubfileViewRecordRepository(BaseRepository):
@@ -42,3 +42,8 @@ class HubfileDownloadRecordRepository(BaseRepository):
     def total_hubfile_downloads(self) -> int:
         max_id = self.model.query.with_entities(func.max(self.model.id)).scalar()
         return max_id if max_id is not None else 0
+
+    def count_downloads_performed_by_user(self, user_id: int) -> int:
+        if not user_id:
+            return 0
+        return self.model.query.filter(self.model.user_id == user_id).count()

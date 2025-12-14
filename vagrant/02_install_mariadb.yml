@@ -30,6 +30,7 @@
         login_password: ''
         name: 'root'
         password: '{{ mariadb_root_password }}'
+        plugin: mysql_native_password
         state: present
       when: mariadb_root_check.failed
 
@@ -40,6 +41,7 @@
           [client]
           user=root
           password={{ mariadb_root_password }}
+          host=localhost
         owner: root
         mode: '0600'
 
@@ -55,7 +57,7 @@
         dest: /tmp/setup.sql
 
     - name: Import SQL script
-      command: bash -c "mysql < /tmp/setup.sql"
+      shell: mysql --defaults-extra-file=/root/.my.cnf < /tmp/setup.sql
 
     - name: Remove temporary SQL script
       file:

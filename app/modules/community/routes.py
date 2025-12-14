@@ -1,6 +1,13 @@
-import os
-
-from flask import abort, flash, redirect, render_template, request, send_file, url_for
+from flask import (
+    abort,
+    flash,
+    redirect,
+    render_template,
+    request,
+    url_for,
+    send_from_directory,
+    current_app,
+)
 from flask_login import current_user, login_required
 
 from app.modules.community import community_bp
@@ -10,6 +17,8 @@ from app.modules.community.services import CommunityProposalService, CommunitySe
 from app.modules.dataset.services import DataSetService
 from core.services.MailService import MailService
 from core.storage import storage_service
+import os
+from core.configuration.configuration import uploads_folder_name
 
 community_service = CommunityService()
 proposal_service = CommunityProposalService()
@@ -49,12 +58,11 @@ def create_community():
 def view_community(community_id: int):
     community = community_service.get_or_404(community_id)
 
+    accepted = [p for p in community.proposals if p.status == ProposalStatus.ACCEPTED]
     pending = []
-    accepted = []
     if current_user.is_authenticated and current_user.id == community.responsible_user_id:
         # show proposals for responsible
         pending = [p for p in community.proposals if p.status == ProposalStatus.PENDING]
-        accepted = [p for p in community.proposals if p.status == ProposalStatus.ACCEPTED]
 
     return render_template(
         "community/view.html",
@@ -136,14 +144,11 @@ def community_icon(community_id: int):
     community = community_service.get_or_404(community_id)
     if not community.icon_path:
         abort(404)
-    relative_path = storage_service.community_icon_path(
-        community.id,
-        community.icon_path,
-    )
-    local_path = storage_service.ensure_local_copy(relative_path)
-    if not os.path.exists(local_path):
-        abort(404)
-    return send_file(local_path)
+    base_dir = os.getenv("WORKING_DIR")
+    if not base_dir:
+        base_dir = os.path.abspath(os.path.join(current_app.root_path, os.pardir))
+    directory = os.path.join(base_dir, uploads_folder_name(), "communities", f"community_{community.id}")
+    return send_from_directory(directory, community.icon_path)
 
 
 @community_bp.route("/community/mine", methods=["GET"])

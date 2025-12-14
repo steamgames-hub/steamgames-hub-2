@@ -7,8 +7,8 @@
     </div>
 </div>
 
-{% for feature_model in dataset.feature_models %}
-    {% for file in feature_model.files %}
+{% for dataset_file in dataset.dataset_files %}
+    {% for file in dataset_file.files %}
         <div class="list-group-item">
             <div class="row">
                 <div class="col-12">

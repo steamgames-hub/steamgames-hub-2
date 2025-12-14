@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 from flask import Flask
@@ -15,7 +16,7 @@ from werkzeug.datastructures import MultiDict
 import app.modules.dataset.routes as routes_mod
 from app import db
 from app.modules.auth.models import User, UserRole
-from app.modules.dataset.forms import FeatureModelForm
+from app.modules.dataset.forms import DatasetFileForm
 from app.modules.dataset.models import DataCategory, DataSet, DSMetaData
 from app.modules.dataset.repositories import DSMetaDataRepository
 from app.modules.dataset.services import (
@@ -128,11 +129,11 @@ def test_create_from_form_with_mocks(tmp_path):
     current_user.temp_folder = lambda: str(tmp_path)
 
     # Fake form
-    class FakeFM:
+    class FakeDatasetFile:
         def __init__(self, name):
             self.csv_filename = SimpleNamespace(data=name)
 
-        def get_fmmetadata(self):
+        def get_file_metadata(self):
             return {"title": "fm"}
 
         def get_authors(self):
@@ -141,7 +142,7 @@ def test_create_from_form_with_mocks(tmp_path):
     form = SimpleNamespace()
     form.get_dsmetadata = lambda: {"title": "ds"}
     form.get_authors = lambda: []
-    form.feature_models = [FakeFM(csv_name)]
+    form.dataset_files = [FakeDatasetFile(csv_name)]
 
     # Fake draftmode
     draft_mode = False
@@ -156,9 +157,9 @@ def test_create_from_form_with_mocks(tmp_path):
             counter["v"] += 1
             if kind == "dsmetadata":
                 obj.authors = []
-            if kind == "fmmetadata":
+            if kind == "datasetfilemetadata":
                 obj.authors = []
-            if kind == "fm":
+            if kind == "datasetfile":
                 obj.files = []
             return obj
 
@@ -168,8 +169,8 @@ def test_create_from_form_with_mocks(tmp_path):
     fake_author_repo = SimpleNamespace(
         create=lambda **kwargs: SimpleNamespace(**{k: v for k, v in kwargs.items() if not k.startswith("commit")})
     )
-    fake_fmmeta_repo = SimpleNamespace(create=make_create("fmmetadata"))
-    fake_feature_repo = SimpleNamespace(create=make_create("fm"))
+    fake_dataset_file_meta_repo = SimpleNamespace(create=make_create("datasetfilemetadata"))
+    fake_dataset_file_repo = SimpleNamespace(create=make_create("datasetfile"))
 
     created_hubfile = {}
 
@@ -186,8 +187,8 @@ def test_create_from_form_with_mocks(tmp_path):
     svc = DataSetService()
     svc.dsmetadata_repository = fake_dsmeta_repo
     svc.author_repository = fake_author_repo
-    svc.fmmetadata_repository = fake_fmmeta_repo
-    svc.feature_model_repository = fake_feature_repo
+    svc.dataset_file_metadata_repository = fake_dataset_file_meta_repo
+    svc.dataset_file_repository = fake_dataset_file_repo
     svc.hubfilerepository = fake_hubfile_repo
     svc.repository = fake_repository
 
@@ -518,8 +519,8 @@ def test_dataset_stats_route(monkeypatch, test_client):
         SimpleNamespace(name="a.uvl", download_count=2),
         SimpleNamespace(name="b.uvl", download_count=5),
     ]
-    fake_feature_model = SimpleNamespace(files=fake_files)
-    fake_dataset = SimpleNamespace(id=123, feature_models=[fake_feature_model])
+    fake_dataset_file = SimpleNamespace(files=fake_files)
+    fake_dataset = SimpleNamespace(id=123, dataset_files=[fake_dataset_file])
 
     fake_service = SimpleNamespace(get_or_404=lambda _id: fake_dataset)
 
@@ -537,7 +538,7 @@ def test_dataset_stats_route(monkeypatch, test_client):
 
 def test_dataset_stats_route_empty(monkeypatch, test_client):
 
-    fake_dataset = SimpleNamespace(id=99, feature_models=[])
+    fake_dataset = SimpleNamespace(id=99, dataset_files=[])
 
     fake_service = SimpleNamespace(get_or_404=lambda _id: fake_dataset)
     monkeypatch.setattr(routes_mod, "dataset_service", fake_service)
@@ -683,10 +684,10 @@ def test_open_issue_success(test_client, monkeypatch):
     assert b"Toggled issue" in r.data
 
 
-def test_feature_model_version_accepts_valid_semver(test_app):
+def test_dataset_file_version_accepts_valid_semver(test_app):
     # Use POST request context to let FlaskForm read formdata
     with test_app.test_request_context("/", method="POST"):
-        form = FeatureModelForm(
+        form = DatasetFileForm(
             formdata=MultiDict(
                 {
                     "csv_filename": "file.csv",
@@ -700,9 +701,9 @@ def test_feature_model_version_accepts_valid_semver(test_app):
 essa = "1.2"  # to keep flake8 from complaining about magic values reuse
 
 
-def test_feature_model_version_rejects_invalid_format(test_app):
+def test_dataset_file_version_rejects_invalid_format(test_app):
     with test_app.test_request_context("/", method="POST"):
-        form = FeatureModelForm(
+        form = DatasetFileForm(
             formdata=MultiDict(
                 {
                     "csv_filename": "file.csv",
@@ -714,9 +715,9 @@ def test_feature_model_version_rejects_invalid_format(test_app):
         assert "x.y.z" in ";".join(form.version.errors)
 
 
-def test_feature_model_version_optional_when_empty(test_app):
+def test_dataset_file_version_optional_when_empty(test_app):
     with test_app.test_request_context("/", method="POST"):
-        form = FeatureModelForm(
+        form = DatasetFileForm(
             formdata=MultiDict(
                 {
                     "csv_filename": "file.csv",
@@ -1621,3 +1622,104 @@ def test_rollback_dataset_version_unauthorized(test_client, test_app):
     )
 
     assert response.status_code == 403, "Unauthorized"
+def test_dataset_file_form_accepts_empty_version():
+    form = DatasetFileForm(
+        formdata=MultiDict(
+            {
+                "csv_filename": "file.csv",
+                "version": "",
+            }
+        )
+    )
+    assert form.validate() is True
+
+
+@pytest.fixture
+def mock_repo():
+    return MagicMock()
+
+
+@pytest.fixture
+def mock_download_repo():
+    return MagicMock()
+
+
+@pytest.fixture
+def service(mock_repo, mock_download_repo):
+    svc = DataSetService()
+    svc.repository = mock_repo
+    svc.dsdownloadrecord_repository = mock_download_repo
+    return svc
+
+
+def test_count_user_datasets(service, mock_repo):
+    mock_repo.count_by_user.return_value = 5
+    result = service.count_user_datasets(10)
+    mock_repo.count_by_user.assert_called_once_with(10)
+    assert result == 5
+
+
+def test_count_user_synchronized_datasets(service, mock_repo):
+    mock_repo.count_synchronized_by_user.return_value = 3
+    result = service.count_user_synchronized_datasets(10)
+    mock_repo.count_synchronized_by_user.assert_called_once_with(10)
+    assert result == 3
+
+
+def test_count_user_dataset_downloads():
+    service = DataSetService()
+    mock_download_repo = MagicMock()
+    mock_download_repo.count_downloads_performed_by_user.return_value = 7
+    service.dsdownloadrecord_repository = mock_download_repo
+    result = service.count_user_dataset_downloads(10)
+    mock_download_repo.count_downloads_performed_by_user.assert_called_once_with(10)
+    assert result == 7
+
+
+def test_user_metrics_authenticated():
+    current_user = MagicMock()
+    current_user.is_authenticated = True
+    current_user.id = 42
+
+    dataset_service = MagicMock()
+    dataset_service.count_user_datasets.return_value = 5
+    dataset_service.count_user_dataset_downloads.return_value = 12
+    dataset_service.count_user_synchronized_datasets.return_value = 3
+
+    user_metrics = None
+    if current_user.is_authenticated:
+        user_metrics = {
+            "uploaded_datasets": dataset_service.count_user_datasets(current_user.id),
+            "downloads": dataset_service.count_user_dataset_downloads(current_user.id),
+            "synchronizations": dataset_service.count_user_synchronized_datasets(current_user.id),
+        }
+
+    assert user_metrics == {
+        "uploaded_datasets": 5,
+        "downloads": 12,
+        "synchronizations": 3,
+    }
+
+    dataset_service.count_user_datasets.assert_called_once_with(42)
+    dataset_service.count_user_dataset_downloads.assert_called_once_with(42)
+    dataset_service.count_user_synchronized_datasets.assert_called_once_with(42)
+
+
+def test_user_metrics_not_authenticated():
+    current_user = MagicMock()
+    current_user.is_authenticated = False
+
+    dataset_service = MagicMock()
+
+    user_metrics = None
+    if current_user.is_authenticated:
+        user_metrics = {
+            "uploaded_datasets": dataset_service.count_user_datasets(current_user.id),
+            "downloads": dataset_service.count_user_dataset_downloads(current_user.id),
+            "synchronizations": dataset_service.count_user_synchronized_datasets(current_user.id),
+        }
+
+    assert user_metrics is None
+    dataset_service.count_user_datasets.assert_not_called()
+    dataset_service.count_user_dataset_downloads.assert_not_called()
+    dataset_service.count_user_synchronized_datasets.assert_not_called()

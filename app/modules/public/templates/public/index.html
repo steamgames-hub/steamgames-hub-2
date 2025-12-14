@@ -162,7 +162,7 @@
                             </h4>
                     
                             <h4 class="h4 mb-3" class="stats-color">
-                                <i data-feather="file" class="align-middle mr-2 stats-color"></i>&nbsp;{{ feature_models_counter }} feature models
+                                <i data-feather="file" class="align-middle mr-2 stats-color"></i>&nbsp;{{ dataset_files_counter }} files
                             </h4>
                     
                             <h4 class="h4 mb-3" class="stats-color">
@@ -170,7 +170,7 @@
                             </h4>
                     
                             <h4 class="h4 mb-3" class="stats-color">
-                                <i data-feather="eye" class="align-middle mr-2 stats-color"></i>&nbsp;{{ total_feature_model_views }} feature models viewed
+                                <i data-feather="eye" class="align-middle mr-2 stats-color"></i>&nbsp;{{ total_dataset_file_views }} files viewed
                             </h4>
                     
                             <h4 class="h4 mb-3" class="stats-color">
@@ -178,7 +178,7 @@
                             </h4>
                     
                             <h4 class="h4" class="stats-color">
-                                <i data-feather="download" class="align-middle mr-2 stats-color"></i>&nbsp;{{ total_feature_model_downloads }} feature models downloaded
+                                <i data-feather="download" class="align-middle mr-2 stats-color"></i>&nbsp;{{ total_dataset_file_downloads }} files downloaded
                             </h4>
                     
                         </h1>
@@ -187,6 +187,38 @@
 
                 </div>
             </div>
+
+                {% if user_metrics %}
+                <div class="col-12 mt-3">
+
+                    <div class="card">
+
+                        <div class="card-body">
+
+                            <h2> <b>My activity</b> </h2>
+
+                            <h1 class="h2 mb-3">
+
+                                <h4 class="h4 mb-3" class="stats-color">
+                                    <i data-feather="upload" class="align-middle mr-2 stats-color"></i>&nbsp;{{ user_metrics.uploaded_datasets }} uploaded datasets
+                                </h4>
+
+                                <h4 class="h4 mb-3" class="stats-color">
+                                    <i data-feather="download" class="align-middle mr-2 stats-color"></i>&nbsp;{{ user_metrics.downloads }} downloads
+                                </h4>
+
+                                <h4 class="h4 mb-3" class="stats-color">
+                                    <i data-feather="refresh-cw" class="align-middle mr-2 stats-color"></i>&nbsp;{{ user_metrics.synchronizations }} synchronizations
+                                </h4>
+
+                            </h1>
+
+                        </div>
+
+                    </div>
+
+                </div>
+                {% endif %}
 
                 <div class="col-12">
                     <div class="card mt-3">
@@ -211,7 +243,7 @@
                                 </div>
                             </div>
 
-                            <div id="trending-list">
+                            <div id="trending-list" data-testid="trending-list-primary" data-by="views" data-period="week">
                                 {% if trending_datasets %}
                                     <ul class="list-unstyled mb-0">
                                         {% for item in trending_datasets %}
@@ -229,7 +261,6 @@
                                                         <a href="{{ dataset.get_steamgameshub_doi() }}">
                                                             <strong>{{ dataset.ds_meta_data.title }}</strong>
                                                         </a>
-                                                        
                                                         <div class="small text-secondary">
                                                             {% if dataset.ds_meta_data.authors and dataset.ds_meta_data.authors|length > 0 %}
                                                                 {{ dataset.ds_meta_data.authors[0].name }}
@@ -313,7 +344,7 @@
 
                             <div class="card-body card-body-slim">
 
-                                What are you waiting for to upload your fantastic feature models in UVL format?
+                                Share your curated Steam datasets and let the community explore your insights.
 
                                 <div class="row mt-2">
 
@@ -349,13 +380,15 @@
                     <div class="card card-dark">
 
                         <h2 class="card-title card-title-light">
-                            What is <b>uvlhub.io</b>?
+                            What is <b>steamgameshub.io</b>?
                         </h2>
 
                         <div class="card-body card-body-slim">
 
                             <strong>uvlhub.io</strong> is a repository of feature models in UVL format integrated with
-                            Zenodo and FlamaPy developed by DiversoLab
+                            Zenodo and FlamaPy developed by DiversoLab. <strong>steamgameshub.io</strong> grows as a fork of
+                            <a href="https://github.com/diverso-lab/uvlhub" target="_blank">uvlhub</a> to focus on
+                            curated Steam datasets and community-driven research assets.
 
                         </div>
 
@@ -365,13 +398,18 @@
 
                         <div class="card-body card-body-slim">
 
-                            Sure! You can make a fork of our official repository on GitHub,
-                            create fantastic features and then make a pull request to us.
+                            Absolutely! You can keep collaborating with the original
+                            <a href="https://github.com/diverso-lab/uvlhub" target="_blank">uvlhub repository</a> and
+                            also contribute directly to the
+                            <a href="https://github.com/steamgames-hub/steamgames-hub" target="_blank">SteamGamesHub repository</a>
+                            with new datasets, tooling, or documentation updates.
 
                             <br><br>
 
-                            <a href="https://github.com/diverso-lab/uvlhub" target="_blank" class="btn btn-primary">
-                                Go to GitHub</a>
+                            <a href="https://github.com/diverso-lab/uvlhub" target="_blank" class="btn btn-primary me-2 mb-2">
+                                Visit uvlhub on GitHub</a>
+                            <a href="https://github.com/steamgames-hub/steamgames-hub" target="_blank" class="btn btn-outline-primary mb-2">
+                                Visit SteamGamesHub on GitHub</a>
 
                         </div>
 

@@ -16,7 +16,7 @@
       </div>
     </div>
 
-    {% if accepted_proposals and current_user.is_authenticated and current_user.id == community.responsible_user_id %}
+    {% if accepted_proposals %}
     <div class="card mb-3">
       <div class="card-header">Datasets in this community</div>
       <ul class="list-group list-group-flush">

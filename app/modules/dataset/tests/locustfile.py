@@ -1,4 +1,5 @@
 import os
+import re
 
 from locust import HttpUser, TaskSet, task
 
@@ -49,9 +50,10 @@ class DatasetBehavior(TaskSet):
             print(f"Test CSV not found at {CSV_FILE_PATH}")
             return
 
-        files = {"file": open(CSV_FILE_PATH, "rb")}
         headers = {"X-CSRFToken": csrf_token}
-        response = self.client.post("/dataset/file/upload", files=files, headers=headers)
+        with open(CSV_FILE_PATH, "rb") as csv_file:
+            files = {"file": csv_file}
+            response = self.client.post("/dataset/file/upload", files=files, headers=headers)
         if response.status_code != 200:
             print("File upload failed:", response.text)
 
@@ -70,6 +72,33 @@ class DatasetBehavior(TaskSet):
         get_csrf_token(response)
         if response.status_code != 200:
             print("Error in /dataset/list:", response.status_code)
+
+    @task(10)
+    def get_user_metrics_from_index(self):
+        print("Executing metrics task")
+        """Accede a / y parsea métricas del usuario si está autenticado"""
+        response = self.client.get("/")
+        if response.status_code != 200:
+            print("Failed to access index:", response.text)
+            return
+
+        html = response.text
+
+        # Ejemplo usando regex para extraer métricas
+        uploaded = re.search(r'Uploaded Datasets:\s*(\d+)', html)
+        downloads = re.search(r'Downloads:\s*(\d+)', html)
+        syncs = re.search(r'Synchronizations:\s*(\d+)', html)
+
+        if uploaded and downloads and syncs:
+            metrics = {
+                "uploaded_datasets": int(uploaded.group(1)),
+                "downloads": int(downloads.group(1)),
+                "synchronizations": int(syncs.group(1)),
+            }
+            print("User metrics:", metrics)
+        else:
+            print("Metrics not found in index page.")
+
 
 
 class DatasetUser(HttpUser):

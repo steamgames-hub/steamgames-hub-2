@@ -4,9 +4,10 @@ import pytest
 
 from app import db
 from app.modules.auth.models import User
+from app.modules.community.models import Community, CommunityDatasetProposal, ProposalStatus
 from app.modules.dataset.models import Author, DataCategory, DataSet, DSDownloadRecord, DSMetaData, DSViewRecord
 from app.modules.explore.repositories import ExploreRepository
-from app.modules.featuremodel.models import FeatureModel, FMMetaData
+from app.modules.datasetfile.models import DatasetFile, DatasetFileMetaData
 
 
 @pytest.fixture(scope="module")
@@ -40,18 +41,18 @@ def populated_db(test_client, clean_database):
         db.session.add(ds1)
         db.session.flush()
 
-        fm1_meta = FMMetaData(
+        dataset_file_meta_one = DatasetFileMetaData(
             csv_filename="games.csv",
             title="FM1",
             description="FM1 desc",
             tags="indie,action",
             data_category=DataCategory.NONE,
         )
-        db.session.add(fm1_meta)
+        db.session.add(dataset_file_meta_one)
         db.session.flush()
 
-        fm1 = FeatureModel(data_set_id=ds1.id, fm_meta_data=fm1_meta)
-        db.session.add(fm1)
+        dataset_file_one = DatasetFile(data_set_id=ds1.id, file_metadata=dataset_file_meta_one)
+        db.session.add(dataset_file_one)
 
         for i in range(3):
             db.session.add(DSViewRecord(user_id=None, dataset_id=ds1.id, view_cookie=f"vc{i}"))
@@ -71,18 +72,18 @@ def populated_db(test_client, clean_database):
         db.session.add(ds2)
         db.session.flush()
 
-        fm2_meta = FMMetaData(
+        dataset_file_meta_two = DatasetFileMetaData(
             csv_filename="monsters.csv",
             title="FM2",
             description="FM2 desc",
             tags="rpg",
             data_category=DataCategory.NONE,
         )
-        db.session.add(fm2_meta)
+        db.session.add(dataset_file_meta_two)
         db.session.flush()
 
-        fm2 = FeatureModel(data_set_id=ds2.id, fm_meta_data=fm2_meta)
-        db.session.add(fm2)
+        dataset_file_two = DatasetFile(data_set_id=ds2.id, file_metadata=dataset_file_meta_two)
+        db.session.add(dataset_file_two)
 
         # Dataset 3: no tags, recent date
         md3 = DSMetaData(title="Dataset Three", description="Third dataset", tags="", data_category=DataCategory.NONE)
@@ -95,6 +96,19 @@ def populated_db(test_client, clean_database):
 
         ds3 = DataSet(user_id=user.id, ds_meta_data_id=md3.id, created_at=datetime.utcnow())
         db.session.add(ds3)
+
+        # Community assignments
+        community = Community(name="Indie Lovers", description="Indie datasets", responsible_user_id=user.id)
+        db.session.add(community)
+        db.session.flush()
+
+        proposal = CommunityDatasetProposal(
+            dataset_id=ds1.id,
+            community_id=community.id,
+            proposed_by_user_id=user.id,
+            status=ProposalStatus.ACCEPTED,
+        )
+        db.session.add(proposal)
 
         db.session.commit()
 
@@ -229,6 +243,12 @@ def test_repo_search_author_and_tag(repo, populated_db):
     results = repo.filter(author="Alice", tags="indie")
     titles = sorted([r.ds_meta_data.title for r in results])
     assert titles == ["Dataset One"], f"Expected only Dataset One for author Alice + tag indie, got: {titles}"
+
+
+def test_repo_search_by_community(repo, populated_db):
+    results = repo.filter(community="Indie")
+    titles = sorted([r.ds_meta_data.title for r in results])
+    assert titles == ["Dataset One"], f"Expected Dataset One for community Indie, got: {titles}"
 
 
 def test_repo_sorting_newest_oldest(repo, populated_db):

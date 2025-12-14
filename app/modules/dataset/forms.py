@@ -22,7 +22,7 @@ class AuthorForm(FlaskForm):
         }
 
 
-class FeatureModelForm(FlaskForm):
+class DatasetFileForm(FlaskForm):
     csv_filename = StringField("CSV Filename", validators=[DataRequired()])
     title = StringField("Title", validators=[Optional()])
     desc = TextAreaField("Description", validators=[Optional()])
@@ -45,7 +45,7 @@ class FeatureModelForm(FlaskForm):
     def get_authors(self):
         return [author.get_author() for author in self.authors]
 
-    def get_fmmetadata(self):
+    def get_file_metadata(self):
         return {
             "csv_filename": self.csv_filename.data,
             "title": self.title.data,
@@ -69,7 +69,7 @@ class DataSetForm(FlaskForm):
     dataset_doi = StringField("Dataset DOI", validators=[Optional(), URL()])
     tags = StringField("Tags (separated by commas)")
     authors = FieldList(FormField(AuthorForm))
-    feature_models = FieldList(FormField(FeatureModelForm), min_entries=1)
+    dataset_files = FieldList(FormField(DatasetFileForm), min_entries=1)
 
     submit = SubmitField("Submit")
 
@@ -95,5 +95,5 @@ class DataSetForm(FlaskForm):
     def get_authors(self):
         return [author.get_author() for author in self.authors]
 
-    def get_feature_models(self):
-        return [fm.get_feature_model() for fm in self.feature_models]
+    def get_dataset_files(self):
+        return [df.get_file_metadata() for df in self.dataset_files]
