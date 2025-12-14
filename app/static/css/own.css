@@ -185,3 +185,43 @@ s.error {
     padding: 5px;
     border-radius: 3px;
 }
+
+#myModal.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+  padding: 1rem;
+  overflow: auto;
+}
+
+#myModal .modal-content {
+  width: 100%;
+  max-width: 800px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  max-height: calc(100vh - 3rem);
+  overflow: auto;
+  margin-bottom: 20px;
+}
+
+#myModal .modal-buttons-container {
+  display: flex;
+  gap: .10rem;
+  align-items: center;
+  justify-content: space-evenly;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+@media (max-width: 576px) {
+  #myModal .modal-content {
+    max-width: 95%;
+    padding: 1rem;
+  }
+}
