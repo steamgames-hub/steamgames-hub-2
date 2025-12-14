@@ -750,8 +750,7 @@
                             });
 
                             // Determine URL: if editing, use edit endpoint
-                            const editingId = document.querySelector('input[name="editing_dataset_id"]')?.value;
-                            const url = editingId ? `/dataset/${editingId}/edit` : '/dataset/upload';
+                            const url = '/dataset/upload';
 
                             const resp = await fetch(url, {
                                 method: 'POST',
@@ -812,7 +811,6 @@
 
                             // Determine URL: if editing, use edit endpoint
                             const editingId = document.querySelector('input[name="editing_dataset_id"]')?.value;
-                            console.log('Editing ID:', editingId);
                             const url = editingId ? `/dataset/${editingId}/edit` : '/dataset/upload';
 
                             const resp = await fetch(url, {
