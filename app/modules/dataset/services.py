@@ -167,7 +167,7 @@ class DataSetService(BaseService):
             raise exc
         return dataset
 
-    def create_new_version(self, dataset_id: int, form, current_user) -> DataSet:
+    def create_new_version(self, dataset_id: int, form, current_user, version_increment_type: str = 'major') -> DataSet:
         """Create a new version of an existing dataset.
 
         Steps:
@@ -191,11 +191,27 @@ class DataSetService(BaseService):
             # preserve original DOI: the 'real' DOI will be used for the new dataset
             original_doi = prev_meta.dataset_doi
 
-            # increment version number (use integer increment for simplicity)
-            try:
-                new_version = float(prev_meta.version) + 1.0
-            except Exception:
-                new_version = float(int(prev_meta.version) + 1)
+            # increment version number based on type
+            current_version = str(prev_meta.version)
+            if '.' in current_version:
+                parts = current_version.split('.')
+                if len(parts) == 2:
+                    major, minor = map(int, parts)
+                else:
+                    major, minor = map(int, parts[:2])
+            else:
+                major = int(float(current_version))
+                minor = 0
+
+            if version_increment_type == 'minor':
+                minor += 1
+            elif version_increment_type == 'major':
+                major += 1
+                minor = 0
+            else:
+                major += 1  # default to major
+
+            new_version = f"{major}.{minor}"
 
             # create new metadata record; set dataset_doi to original_doi (if any)
             dsmetadata_data["version"] = new_version

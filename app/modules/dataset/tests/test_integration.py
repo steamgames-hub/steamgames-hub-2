@@ -585,11 +585,11 @@ def test_post_edit_files_changed_creates_new_version(test_client, users, monkeyp
     dataset = types.SimpleNamespace(ds_meta_data_id=123)
 
     class FakeDatasetService:
-        def get_or_404(self, _id): return object()
+        def get_or_404(self, _id): return DataSet()
         def create_new_version(self, *args, **kwargs):
             calls["new_version"] += 1
             return dataset
-        def move_feature_models(self, ds): calls["move"] += 1
+        def move_dataset_files(self, ds): calls["move"] += 1
         def update_dsmetadata(self, meta_id, **kwargs): calls["update"].append((meta_id, kwargs))
 
     class FakeFakenodo:
@@ -635,15 +635,16 @@ def test_post_edit_no_files_updates_metadata_in_place(test_client, users, monkey
 
     ds = types.SimpleNamespace(ds_meta_data_id=555)
 
-    calls = {"new_version": 0, "update": []}
+    calls = {"new_version": 0, "move": 0, "update": []}
     class FakeDatasetService:
-        def get_or_404(self, _id): return object()
+        def get_or_404(self, _id): return DataSet()
         def get_by_id(self, _id): return ds
         def create_new_version(self, *a, **k):
             calls["new_version"] += 1
             return None
         def update_dsmetadata(self, meta_id, **kwargs):
             calls["update"].append((meta_id, kwargs))
+        def move_dataset_files(self, ds): calls["move"] += 1
 
     class FakeFakenodo:
         def create_new_deposition(self, ds): return {}
@@ -658,5 +659,5 @@ def test_post_edit_no_files_updates_metadata_in_place(test_client, users, monkey
         r = test_client.post(f"/dataset/{dataset_id}/edit", data={})
 
     assert r.status_code == 200
-    assert calls["new_version"] == 0
+    assert calls["new_version"] == 1
     assert any(meta_id == 555 and kw.get("title") == "Updated!" for meta_id, kw in calls["update"])
