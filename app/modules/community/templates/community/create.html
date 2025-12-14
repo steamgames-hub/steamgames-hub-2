@@ -17,11 +17,44 @@
   </div>
   <div class="mb-3">
     <label class="form-label">Icon (image)</label>
-    <input type="file" name="icon" accept="image/*" class="form-control" />
+    <div class="input-group">
+      <button class="btn btn-outline-secondary" type="button" id="icon_browse_btn">Explore...</button>
+      <div class="form-control" id="icon_filename_display_area" style="cursor: pointer; background-color: #e9ecef;">
+        <span id="icon_filename_display">No file selected</span>
+            <input type="file" name="icon" accept="image/*" id="icon_input"
+                   style="position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; z-index: 1000;" />
+      </div>
+    </div>
     <small class="text-muted">Optional. An image file to represent the community.</small>
   </div>
   <button type="submit" class="btn btn-primary">Create</button>
   <a href="{{ url_for('community.list_communities') }}" class="btn btn-secondary">Cancel</a>
  </form>
 
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const browseBtn = document.getElementById('icon_browse_btn');
+      const realInput = document.getElementById('icon_input');
+      const display = document.getElementById('icon_filename_display');
+      if (browseBtn && realInput && display) {
+        browseBtn.addEventListener('click', function () {
+          realInput.click();
+        });
+        // also click on the filename area
+        document.getElementById('icon_filename_display_area').addEventListener('click', function () {
+          realInput.click();
+        });
+        realInput.addEventListener('change', function () {
+          if (realInput.files && realInput.files.length > 0) {
+            display.textContent = realInput.files[0].name;
+          } else {
+            display.textContent = 'No file selected';
+          }
+        });
+      }
+    });
+  </script>
 {% endblock %}

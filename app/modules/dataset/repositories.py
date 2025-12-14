@@ -38,6 +38,15 @@ class DSMetaDataRepository(BaseRepository):
     def get_all_versions_by_deposition_id(self, deposition_id: int):
         return self.model.query.filter_by(deposition_id=deposition_id).order_by(self.model.version.asc()).all()
 
+    def get_previous_version_by_deposition_id(self, deposition_id: int):
+        return (
+            self.model.query.filter(
+                DSMetaData.deposition_id == deposition_id,
+                DSMetaData.is_latest.is_(False),
+            )
+            .order_by(desc(DSMetaData.version))
+            .first()
+        )
 
 class DSViewRecordRepository(BaseRepository):
     def __init__(self):

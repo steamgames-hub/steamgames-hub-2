@@ -145,19 +145,19 @@
 
                 <div class="row mb-2 mt-4">
                     <div class="col-md-4 col-12">
-                        <span class="text-secondary">Versiones</span>
+                        <span class="text-secondary">Versions</span>
                     </div>
 
                     <div class="col-md-8 col-12">
                         {% if not versions %}
-                        <span class="text-muted">No hay historial de versiones (aún).</span>
+                        <span class="text-muted">No history version (yet).</span>
                         {% else %}
                         <div class="table-responsive">
                             <table class="table table-sm mb-0">
                             <thead>
                                 <tr>
-                                <th>Versión</th>
-                                <th>Fecha</th>
+                                <th>Version</th>
+                                <th>Date</th>
                                 <th class="text-end"></th>
                                 </tr>
                             </thead>
@@ -168,10 +168,10 @@
                                     <td>
                                     <strong>{{ "%.1f"|format(v.version) }}</strong>
                                     {% if v.is_latest %}
-                                        <span class="badge bg-primary ms-2">Actual</span>
+                                        <span class="badge bg-primary ms-2">Current</span>
                                     {% endif %}
                                     {% if is_current and not v.is_latest %}
-                                        <span class="badge bg-secondary ms-2">Viendo</span>
+                                        <span class="badge bg-secondary ms-2">Showing</span>
                                     {% endif %}
                                     </td>
                                     <td>{{ v.created_at.strftime('%B %d, %Y') if v.created_at else '' }}</td>
@@ -180,12 +180,12 @@
                                             {% if v.dataset_doi %}
                                                 <a class="btn btn-outline-primary btn-sm"
                                                     href="{{ url_for('dataset.subdomain_index', doi=v.dataset_doi) }}">
-                                                    Ver
+                                                    Show
                                                 </a>
                                             {% else %}
                                                 <a class="btn btn-outline-primary btn-sm"
                                                     href="{{ url_for('dataset.view_dataset_by_id', dataset_id=v.dataset_id) }}">
-                                                    Ver
+                                                    Show
                                                 </a>
                                             {% endif %}
                                         {% else %}
@@ -200,17 +200,40 @@
                         <div class="mt-2">
                             <a class="btn btn-outline-primary btn-sm"
                             href="{{ url_for('dataset.dataset_versions', dataset_id=dataset.id) }}">
-                            Ver timeline
+                            Show timeline
                             </a>
                         </div>
                         {% endif %}
                     </div>
                 </div>
+                
+                {% if dataset.ds_meta_data.dataset_doi %}
+                <div class="card-body" style="padding-top: 0px">
 
+                    <div id="dataset_doi_uvlhub" style="display: none">
+                        {{ dataset.get_steamgameshub_doi() }}
+                    </div>
+
+                    <button type="button" class="btn doi_button btn-sm" onclick="copyText('dataset_doi_uvlhub')">
+                        <span class="button_doi_id">
+                            <i data-feather="clipboard" class="center-button-icon" style="cursor: pointer"></i>
+                            <b>DOI</b>
+                        </span>
+                        <span class="doi_text">
+                            {{ dataset.get_steamgameshub_doi() }}
+                        </span>
+                    </button>
+
+                    <div id="dataset_doi_uvlhub" style="display: none">
+                        {{ dataset.get_steamgameshub_doi() }}
+                    </div>
+
+                </div>
+                {% endif %}
 
                 {% if not dataset.ds_meta_data.is_latest %}
                     <div class="alert-error">
-                        <p>Atención: Versión desactualizada</p>
+                        <p>Warning: outdated version</p>
                     </div>
                 {% endif %}
 
@@ -228,8 +251,6 @@
         </div>
         
         
-    
-        <a href="/dataset/download/{{ dataset.id }}" class="btn btn-primary mt-3" style="border-radius: 5px;">
 
         {% if accepted_community %}
         <div class="card mt-3">
@@ -274,6 +295,17 @@
             <i data-feather="download" class="center-button-icon"></i>
             Download all ({{ dataset.get_file_total_size_for_human() }})
         </a>
+
+        {% if current_user.is_authenticated and dataset.ds_meta_data.is_latest and versions and versions|length > 1 and (current_user.id == dataset.user_id or current_user.role.name == 'ADMIN')%}
+        <form method="POST" action="/dataset/versions/rollback/{{ dataset.id }}"
+            onsubmit="return confirm('Do you want to roll back to the previous version?\n\nThe current version will be removed and the previous one will become active.');"
+            style="display: inline;">
+            <button type="submit" class="btn btn-primary mt-3" style="border-radius: 5px;">
+                <i data-feather="rotate-ccw" class="center-button-icon"></i>
+                Rollback to {{ versions[-2].version }} version
+            </button>
+        </form>
+        {% endif %}
     </div>
     
 </div>

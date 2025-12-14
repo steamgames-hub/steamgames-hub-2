@@ -16,6 +16,13 @@ jobs:
       MARIADB_PASSWORD: uvlhub_password
       MARIADB_HOSTNAME: 127.0.0.1
       MARIADB_PORT: 3306
+    
+    services:
+      firefox:
+        image: selenium/standalone-firefox:latest
+        ports:
+          - 4444:4444
+        options: --shm-size=2g
 
     steps:
       - name: Checkout repository
@@ -66,23 +73,13 @@ jobs:
             sleep 2
           done
 
-      - name: Start Selenium Firefox (standalone)
-        run: |
-          echo "Starting Selenium standalone Firefox container..."
-          docker run -d --rm --name selenium_firefox -p 4444:4444 selenium/standalone-firefox:latest
-          sleep 5
-
       - name: Run Selenium Tests
         env:
           SELENIUM_REMOTE_URL: http://localhost:4444/wd/hub
-          BASE_URL: http://host.docker.internal:5000
+          BASE_URL: http://localhost:5000
         run: |
-          if pytest --collect-only -m selenium 2>&1 | grep -q "no tests ran"; then
-            exit 0
-          else
-            pytest -m selenium -v --tb=short
-          fi
-        continue-on-error: true
+          rosemary selenium
+        continue-on-error: false
       
       - name: Stop Flask application
         if: always()

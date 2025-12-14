@@ -33,6 +33,12 @@ def _wait_visible_any(driver, locators, timeout=15):
                 el = driver.find_element(by, sel)
                 if el.is_displayed():
                     return el
+                # Allow file inputs to be returned even if visually hidden (some UIs hide the real file input)
+                try:
+                    if el.tag_name.lower() == "input" and (el.get_attribute("type") or "").lower() == "file":
+                        return el
+                except Exception:
+                    pass
             except Exception as exc:
                 last_exc = exc
                 continue

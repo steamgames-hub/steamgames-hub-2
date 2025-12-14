@@ -1015,3 +1015,30 @@ def view_dataset_by_id(dataset_id):
     return render_template("dataset/view_dataset.html", dataset=dataset, versions=versions)
 
 
+@dataset_bp.route("/dataset/versions/rollback/<int:dataset_id>", methods=["POST"])
+@login_required
+def rollback_dataset_version(dataset_id):
+
+    current_dataset = dataset_service.get_by_id(dataset_id)
+    if not current_dataset or current_dataset.draft_mode:
+        abort(404)
+
+    if current_user.role != UserRole.ADMIN and current_dataset.user_id != current_user.id:
+        abort(403, description="Unauthorized")
+
+    deposition_id = current_dataset.ds_meta_data.deposition_id
+    if not deposition_id:
+        abort(404)
+
+    previous_version = dsmetadata_service.get_previous_version_by_deposition_id(deposition_id)
+    if not previous_version:
+        return jsonify({"message": "No previous version available for rollback"}), 400
+
+    try:
+        dataset_service.rollback_to_previous_version(previous_version, current_dataset)
+        return redirect(
+            url_for("dataset.subdomain_index", doi=previous_version.dataset_doi)
+        )
+    except Exception as exc:
+        logger.exception(f"Exception while rolling back dataset version: {exc}")
+        return jsonify({"Exception while rolling back dataset version: ": str(exc)}), 400
