@@ -255,7 +255,7 @@ def test_post_upload_invalid_form_returns_version_message(test_client, users, mo
 
     class FakeForm:
         def __init__(self):
-            self.feature_models = [Subform()]
+            self.dataset_files = [Subform()]
             self.errors = {}
         def validate_on_submit(self):
             return False
@@ -343,7 +343,7 @@ def test_post_upload_happy_path_updates_doi_and_cleans_temp(test_client, users, 
     class FakeDatasetService:
         def create_from_form(self, **kwargs):
             return dataset
-        def move_feature_models(self, ds):
+        def move_dataset_files(self, ds):
             calls["move"] += 1
         def update_dsmetadata(self, meta_id, **kwargs):
             calls["update"].append((meta_id, kwargs))

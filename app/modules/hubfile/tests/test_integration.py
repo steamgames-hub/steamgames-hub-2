@@ -7,8 +7,8 @@ import pytest
 
 from app import db
 from app.modules.auth.models import User
+from app.modules.datasetfile.models import DatasetFile
 from app.modules.dataset.models import DataCategory, DataSet, DSMetaData
-from app.modules.featuremodel.models import FeatureModel
 from app.modules.hubfile.models import Hubfile, HubfileDownloadRecord, HubfileViewRecord
 from app.modules.hubfile.services import HubfileService
 
@@ -68,7 +68,7 @@ def make_dataset(owner: User) -> DataSet:
 @pytest.fixture()
 def feature_model(user, clean_database):
     ds = make_dataset(user)
-    fm = FeatureModel(data_set_id=ds.id)
+    fm = DatasetFile(data_set_id=ds.id)
     db.session.add(fm)
     db.session.commit()
     return fm
@@ -80,7 +80,7 @@ def _create_valid_hubfile(feature_model, name: str, content: bytes) -> Hubfile:
         name=name,
         checksum=checksum,
         size=len(content),
-        feature_model_id=feature_model.id,
+        dataset_file_id=feature_model.id,
         download_count=0,
     )
     db.session.add(hf)
@@ -106,6 +106,7 @@ def _write_disk_text_for(hubfile: Hubfile, text: str):
 # DOWNLOAD endpoint tests
 # ---------------------------
 
+@pytest.fixture(scope="session")
 def test_download_cookie_and_records(test_client, monkeypatch, tmp_path, clean_database, feature_model, user):
     """
     Covers:
@@ -143,7 +144,7 @@ def test_download_cookie_and_records(test_client, monkeypatch, tmp_path, clean_d
     assert len(recs_cookie1) == 1
 
     # 3) Authenticated download with a NEW cookie -> creates a second record (cookie2)
-    cookie2 = str(uuid.uuid4())
+    cookie2 = str(uuid.uuid4()) + "1"
     test_client.set_cookie("file_download_cookie", cookie2)
 
     with force_login(test_client, user):

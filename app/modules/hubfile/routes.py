@@ -7,7 +7,7 @@ from flask_login import current_user
 
 from app import db
 from app.modules.hubfile import hubfile_bp
-from app.modules.hubfile.models import HubfileViewRecord
+from app.modules.hubfile.models import HubfileViewRecord, HubfileDownloadRecord
 from app.modules.hubfile.services import HubfileDownloadRecordService, HubfileService
 
 
@@ -30,6 +30,7 @@ def download_file(file_id):
             404,
         )
 
+    
     user_cookie = str(uuid.uuid4())
 
     HubfileDownloadRecordService().create(
@@ -38,6 +39,7 @@ def download_file(file_id):
         download_date=datetime.now(timezone.utc),
         download_cookie=user_cookie,
     )
+
     HubfileDownloadRecordService().update_download_count(file_id)
     db.session.commit()
 

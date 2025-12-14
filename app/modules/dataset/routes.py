@@ -537,7 +537,7 @@ def clean_temp():
         logger.exception("Error cleaning temp folder: %s", exc)
         return jsonify({"message": str(exc)}), 500
 
-    return jsonify({"message": "Temp folder cleaned"}), 200
+    return jsonify({"message": "Temp folder cleaned"}), 302
 
 
 @dataset_bp.route("/dataset/download/<int:dataset_id>", methods=["GET"])
