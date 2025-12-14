@@ -444,7 +444,19 @@ class DataSetService(BaseService):
         except Exception:
             logger.exception("Fallback de trending_datasets también ha fallado. Devolviendo lista vacía.")
             return []
+        
+    def rollback_to_previous_version(self, previous_version, current_dataset):
+        try:
+            previous_version.dataset_doi = previous_version.dataset_doi.rsplit("/v", 1)[0] if previous_version.dataset_doi else None
+            previous_version.publication_doi = previous_version.publication_doi.rsplit("/v", 1)[0] if previous_version.publication_doi else None
+            previous_version.is_latest = True
 
+            self.delete_dataset(current_dataset)
+            self.repository.session.commit()
+        except Exception as exc:
+            logger.exception(f"Exception rolling back to previous dataset version: {exc}")
+            self.repository.session.rollback()
+            raise exc
 
 class AuthorService(BaseService):
     def __init__(self):
@@ -471,6 +483,9 @@ class DSMetaDataService(BaseService):
 
     def get_all_versions_by_deposition_id(self, deposition_id: int):
         return self.repository.get_all_versions_by_deposition_id(deposition_id)
+    
+    def get_previous_version_by_deposition_id(self, deposition_id: int):
+        return self.repository.get_previous_version_by_deposition_id(deposition_id)
 
 
 class DSViewRecordService(BaseService):
