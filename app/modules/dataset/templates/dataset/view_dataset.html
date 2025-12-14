@@ -145,19 +145,19 @@
 
                 <div class="row mb-2 mt-4">
                     <div class="col-md-4 col-12">
-                        <span class="text-secondary">Versiones</span>
+                        <span class="text-secondary">Versions</span>
                     </div>
 
                     <div class="col-md-8 col-12">
                         {% if not versions %}
-                        <span class="text-muted">No hay historial de versiones (aún).</span>
+                        <span class="text-muted">No history version (yet).</span>
                         {% else %}
                         <div class="table-responsive">
                             <table class="table table-sm mb-0">
                             <thead>
                                 <tr>
-                                <th>Versión</th>
-                                <th>Fecha</th>
+                                <th>Version</th>
+                                <th>Date</th>
                                 <th class="text-end"></th>
                                 </tr>
                             </thead>
@@ -168,10 +168,10 @@
                                     <td>
                                     <strong>{{ "%.1f"|format(v.version) }}</strong>
                                     {% if v.is_latest %}
-                                        <span class="badge bg-primary ms-2">Actual</span>
+                                        <span class="badge bg-primary ms-2">Current</span>
                                     {% endif %}
                                     {% if is_current and not v.is_latest %}
-                                        <span class="badge bg-secondary ms-2">Viendo</span>
+                                        <span class="badge bg-secondary ms-2">Showing</span>
                                     {% endif %}
                                     </td>
                                     <td>{{ v.created_at.strftime('%B %d, %Y') if v.created_at else '' }}</td>
@@ -180,12 +180,12 @@
                                             {% if v.dataset_doi %}
                                                 <a class="btn btn-outline-primary btn-sm"
                                                     href="{{ url_for('dataset.subdomain_index', doi=v.dataset_doi) }}">
-                                                    Ver
+                                                    Show
                                                 </a>
                                             {% else %}
                                                 <a class="btn btn-outline-primary btn-sm"
                                                     href="{{ url_for('dataset.view_dataset_by_id', dataset_id=v.dataset_id) }}">
-                                                    Ver
+                                                    Show
                                                 </a>
                                             {% endif %}
                                         {% else %}
@@ -200,7 +200,7 @@
                         <div class="mt-2">
                             <a class="btn btn-outline-primary btn-sm"
                             href="{{ url_for('dataset.dataset_versions', dataset_id=dataset.id) }}">
-                            Ver timeline
+                            Show timeline
                             </a>
                         </div>
                         {% endif %}
@@ -233,7 +233,7 @@
 
                 {% if not dataset.ds_meta_data.is_latest %}
                     <div class="alert-error">
-                        <p>Atención: Versión desactualizada</p>
+                        <p>Warning: outdated version</p>
                     </div>
                 {% endif %}
 
