@@ -45,10 +45,6 @@
         });
     </script>
     {% endif %}
-    <script>
-        var draftMode = {{ editing_dataset.draft_mode|tojson if editing_dataset else false|tojson }};
-        const checkbox;
-    </script>
     <h1 class="h2 mb-3"><b>{% if editing_dataset %}Edit{% else %}Upload{% endif %}</b> dataset</h1>
 
     <div class="row">
@@ -650,7 +646,8 @@
 
                 {% if not editing_dataset or (editing_dataset and editing_dataset.draft_mode) %}
                 <script>
-                    checkbox = document.getElementById('agreeCheckbox');
+
+                    const checkbox = document.getElementById('agreeCheckbox');
                     const upload_button = document.getElementById('upload_button');
 
                     checkbox.addEventListener('change', function () {
@@ -727,16 +724,13 @@
 
                     // Submit full dataset (metadata + references to uploaded files)
                     const loading = document.getElementById('loading');
+                </script>
+
+                {% if not editing_dataset or (editing_dataset and editing_dataset.draft_mode) %}
+                <script>
                     function submitUpload(versionType) {
-                        if(!draftMode) {
-                        if ((versionType === 'minor' && upload_minor_button.disabled) || (versionType === 'major' && upload_major_button.disabled)) return;
-                        upload_minor_button.disabled = true;
-                        upload_major_button.disabled = true;
-                        }
-                        else {
                         if (upload_button.disabled) return;
                         upload_button.disabled = true;
-                        }
                         if (loading) loading.style.display = 'block';
 
                         try {
@@ -754,11 +748,6 @@
                                     fd.append(el.name, el.value === undefined ? '' : el.value);
                                 }
                             });
-
-                            if(!draftMode) {
-                            // Add version increment type
-                            fd.append('version_increment_type', versionType);
-                            }
 
                             // Determine URL: if editing, use edit endpoint
                             const editingId = document.querySelector('input[name="editing_dataset_id"]')?.value;
@@ -782,17 +771,73 @@
                             alert('Error uploading dataset');
                         } finally {
                             if (loading) loading.style.display = 'none';
-                            if(!draftMode) {
-                            upload_minor_button.disabled = false;
-                            upload_major_button.disabled = false;
-                            }
-                            else {
                             upload_button.disabled = false;
-                            }
                         }
                     }
 
-                    if(!draftMode) {
+                    upload_button.addEventListener('click', async function (ev) {
+                        ev.preventDefault();
+                        await submitUpload('major');  // default for new uploads
+                    });
+
+                </script>
+
+                {% else %}
+                <script>
+                    function submitUpload(versionType) {
+                        if ((versionType === 'minor' && upload_minor_button.disabled) || (versionType === 'major' && upload_major_button.disabled)) return;
+                        upload_minor_button.disabled = true;
+                        upload_major_button.disabled = true;
+
+                        if (loading) loading.style.display = 'block';
+
+                        try {
+                            const fd = new FormData();
+
+                            // Collect all named form controls (inputs, selects, textareas)
+                            document.querySelectorAll('input[name], select[name], textarea[name]').forEach(el => {
+                                // Skip file inputs (Dropzone handles files)
+                                if (el.type === 'file') return;
+                                if (el.type === 'checkbox') {
+                                    if (el.checked) {
+                                        fd.append(el.name, el.value || 'on');
+                                    }
+                                } else {
+                                    fd.append(el.name, el.value === undefined ? '' : el.value);
+                                }
+                            });
+
+                            // Add version increment type
+                            fd.append('version_increment_type', versionType);
+
+                            // Determine URL: if editing, use edit endpoint
+                            const editingId = document.querySelector('input[name="editing_dataset_id"]')?.value;
+                            console.log('Editing ID:', editingId);
+                            const url = editingId ? `/dataset/${editingId}/edit` : '/dataset/upload';
+
+                            const resp = await fetch(url, {
+                                method: 'POST',
+                                body: fd,
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            });
+                            const json = await resp.json().catch(() => ({}));
+                            if (resp.ok) {
+                                // on success redirect to list page or reload
+                                window.location.href = '/dataset/list';
+                            } else {
+                                alert(json.message || 'Error uploading dataset');
+                            }
+
+                        } catch (e) {
+                            console.error('Upload error', e);
+                            alert('Error uploading dataset');
+                        } finally {
+                            if (loading) loading.style.display = 'none';
+                            upload_minor_button.disabled = false;
+                            upload_major_button.disabled = false;
+                        }
+                    }
+                    
                     upload_minor_button.addEventListener('click', async function (ev) {
                         ev.preventDefault();
                         await submitUpload('minor');
@@ -802,19 +847,11 @@
                         ev.preventDefault();
                         await submitUpload('major');
                     });
-                    }
-                    else {
-                    upload_button.addEventListener('click', async function (ev) {
-                        ev.preventDefault();
-                        await submitUpload('major');  // default for new uploads
-                    });
-                    }
                 </script>
 
+                {% endif %}
+
             </div>
-
-
-
 
         </div>
 
