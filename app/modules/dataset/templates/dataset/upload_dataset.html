@@ -21,7 +21,7 @@
             </div>
         </div>
     </div>
-    {% if not save_drafts %}
+    {% if not save_drafts or editing_dataset %}
     <script>
         document.querySelectorAll('a').forEach(link => {
             if(link.getAttribute("class") === 'sidebar-link' || link.getAttribute("class") === 'sidebar-brand'){
@@ -45,7 +45,11 @@
         });
     </script>
     {% endif %}
-    <h1 class="h2 mb-3"><b>Upload</b> dataset</h1>
+    <script>
+        var draftMode = {{ editing_dataset.draft_mode|tojson if editing_dataset else false|tojson }};
+        const checkbox;
+    </script>
+    <h1 class="h2 mb-3"><b>{% if editing_dataset %}Edit{% else %}Upload{% endif %}</b> dataset</h1>
 
     <div class="row">
         <div class="col-12 mb-3">
@@ -598,13 +602,22 @@
                             </span>
                 </label>
 
+                {% if not editing_dataset or (editing_dataset and editing_dataset.draft_mode) %}
                 <button id="upload_button" class="btn btn-primary mt-2" disabled>
                     <i data-feather="upload" class="center-button-icon"></i>
                     Upload dataset</button>
+                {% else %}
+                <button id="upload_minor_button" class="btn btn-primary mt-2" disabled>
+                    <i data-feather="upload" class="center-button-icon"></i>
+                    Update minor version (e.g., 1.0 → 1.1)</button>
+                <button id="upload_major_button" class="btn btn-secondary mt-2 ms-2" disabled>
+                    <i data-feather="upload" class="center-button-icon"></i>
+                    Update major version (e.g., 1.2 → 2.0)</button>
+                {% endif %}
 
                 <div id="loading" style="display: none">
                     <img width="40px" src="{{ url_for("static", filename="gifs/loading.svg") }}"/>
-                    Uploading dataset, please wait...
+                    {% if editing_dataset %}Updating{% else %}Uploading{% endif %} dataset, please wait...
                 </div>
 
                 <div class="row">
@@ -635,13 +648,29 @@
 
                     </span>
 
+                {% if not editing_dataset or (editing_dataset and editing_dataset.draft_mode) %}
                 <script>
-                    const checkbox = document.getElementById('agreeCheckbox');
+                    checkbox = document.getElementById('agreeCheckbox');
                     const upload_button = document.getElementById('upload_button');
 
                     checkbox.addEventListener('change', function () {
                         upload_button.disabled = !checkbox.checked;
                     });
+                </script>
+                {% else %}
+                <script>
+                    checkbox = document.getElementById('agreeCheckbox');
+                    
+                    const upload_minor_button = document.getElementById('upload_minor_button');
+                    const upload_major_button = document.getElementById('upload_major_button');
+                    
+                    checkbox.addEventListener('change', function () {
+                        upload_minor_button.disabled = !checkbox.checked;
+                        upload_major_button.disabled = !checkbox.checked;
+                    });
+                </script>
+                {% endif %}
+                <script>
                     // Delete handler for files shown when editing a draft
                     document.querySelectorAll('.edit-file-delete').forEach(btn => {
                         btn.addEventListener('click', async function (ev) {
@@ -698,10 +727,16 @@
 
                     // Submit full dataset (metadata + references to uploaded files)
                     const loading = document.getElementById('loading');
-                    upload_button.addEventListener('click', async function (ev) {
-                        ev.preventDefault();
+                    function submitUpload(versionType) {
+                        if(!draftMode) {
+                        if ((versionType === 'minor' && upload_minor_button.disabled) || (versionType === 'major' && upload_major_button.disabled)) return;
+                        upload_minor_button.disabled = true;
+                        upload_major_button.disabled = true;
+                        }
+                        else {
                         if (upload_button.disabled) return;
                         upload_button.disabled = true;
+                        }
                         if (loading) loading.style.display = 'block';
 
                         try {
@@ -714,16 +749,22 @@
                                 if (el.type === 'checkbox') {
                                     if (el.checked) {
                                         fd.append(el.name, el.value || 'on');
-                                    } else {
-                                        // append empty to ensure field presence if necessary
-                                        // do nothing for unchecked checkboxes by default
                                     }
                                 } else {
                                     fd.append(el.name, el.value === undefined ? '' : el.value);
                                 }
                             });
 
-                            const resp = await fetch('/dataset/upload', {
+                            if(!draftMode) {
+                            // Add version increment type
+                            fd.append('version_increment_type', versionType);
+                            }
+
+                            // Determine URL: if editing, use edit endpoint
+                            const editingId = document.querySelector('input[name="editing_dataset_id"]')?.value;
+                            const url = editingId ? `/dataset/${editingId}/edit` : '/dataset/upload';
+
+                            const resp = await fetch(url, {
                                 method: 'POST',
                                 body: fd,
                                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -741,9 +782,33 @@
                             alert('Error uploading dataset');
                         } finally {
                             if (loading) loading.style.display = 'none';
+                            if(!draftMode) {
+                            upload_minor_button.disabled = false;
+                            upload_major_button.disabled = false;
+                            }
+                            else {
                             upload_button.disabled = false;
+                            }
                         }
+                    }
+
+                    if(!draftMode) {
+                    upload_minor_button.addEventListener('click', async function (ev) {
+                        ev.preventDefault();
+                        await submitUpload('minor');
                     });
+
+                    upload_major_button.addEventListener('click', async function (ev) {
+                        ev.preventDefault();
+                        await submitUpload('major');
+                    });
+                    }
+                    else {
+                    upload_button.addEventListener('click', async function (ev) {
+                        ev.preventDefault();
+                        await submitUpload('major');  // default for new uploads
+                    });
+                    }
                 </script>
 
             </div>
