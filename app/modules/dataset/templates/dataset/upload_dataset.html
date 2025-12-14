@@ -728,7 +728,7 @@
 
                 {% if not editing_dataset or (editing_dataset and editing_dataset.draft_mode) %}
                 <script>
-                    function submitUpload(versionType) {
+                    async function submitUpload(versionType) {
                         if (upload_button.disabled) return;
                         upload_button.disabled = true;
                         if (loading) loading.style.display = 'block';
@@ -784,7 +784,7 @@
 
                 {% else %}
                 <script>
-                    function submitUpload(versionType) {
+                    async function submitUpload(versionType) {
                         if ((versionType === 'minor' && upload_minor_button.disabled) || (versionType === 'major' && upload_major_button.disabled)) return;
                         upload_minor_button.disabled = true;
                         upload_major_button.disabled = true;
