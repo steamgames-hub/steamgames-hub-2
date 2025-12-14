@@ -35,6 +35,7 @@ def create_app(config_name="development"):
     app.config["SECURITY_PASSWORD_SALT"] = os.getenv("SECURITY_PASSWORD_SALT")
     app.config["SENDGRID_API_KEY"] = os.getenv("SENDGRID_API_KEY")
     app.config["FROM_EMAIL"] = os.getenv("FROM_EMAIL")
+    app.config["TWO_FACTOR_ENABLED"] = os.getenv("TWO_FACTOR_ENABLED", "False") == "True"
 
     mail.init_app(app)
 
