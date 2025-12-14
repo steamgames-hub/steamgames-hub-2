@@ -21,7 +21,8 @@
       <button class="btn btn-outline-secondary" type="button" id="icon_browse_btn">Explore...</button>
       <div class="form-control" id="icon_filename_display_area" style="cursor: pointer; background-color: #e9ecef;">
         <span id="icon_filename_display">No file selected</span>
-        <input type="file" name="icon" accept="image/*" class="d-none" id="icon_input">
+            <input type="file" name="icon" accept="image/*" id="icon_input"
+                   style="position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; z-index: 1000;" />
       </div>
     </div>
     <small class="text-muted">Optional. An image file to represent the community.</small>
@@ -42,11 +43,15 @@
         browseBtn.addEventListener('click', function () {
           realInput.click();
         });
+        // also click on the filename area
+        document.getElementById('icon_filename_display_area').addEventListener('click', function () {
+          realInput.click();
+        });
         realInput.addEventListener('change', function () {
           if (realInput.files && realInput.files.length > 0) {
-            display.value = realInput.files[0].name;
+            display.textContent = realInput.files[0].name;
           } else {
-            display.value = 'No file selected';
+            display.textContent = 'No file selected';
           }
         });
       }
