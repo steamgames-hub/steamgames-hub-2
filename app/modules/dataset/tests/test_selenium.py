@@ -170,7 +170,7 @@ def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGames
                 return m.group(1)
         except Exception:
             pass
-        time.sleep(1,2)
+        time.sleep(2)
     raise TimeoutException("[yopmail] 2FA code not found in email body")
 
 

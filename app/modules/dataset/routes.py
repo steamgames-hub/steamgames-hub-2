@@ -56,7 +56,7 @@ def _write_dataset_zip(dataset, zip_path: str):
     dataset_dir = storage_service.dataset_subdir(dataset.user_id, dataset.id)
     stored_files = storage_service.list_files(dataset_dir)
     if not stored_files:
-        raise FileNotFoundError("Dataset files not found")
+        raise FileNotFoundError("Files not found")
     dataset_prefix = dataset_dir.replace("\\", "/")
     with ZipFile(zip_path, "w") as zipf:
         for stored_key in stored_files:
@@ -102,7 +102,7 @@ def create_dataset():
         if not form.validate_on_submit():
             messages = []
             try:
-                for subform in getattr(form, "feature_models", []) or []:
+                for subform in getattr(form, "dataset_files", []) or []:
                     version_errors = getattr(subform, "version", None).errors if hasattr(subform, "version") else []
                     if version_errors:
                         filename = getattr(getattr(subform, "csv_filename", None), "data", None) or "file"
@@ -139,7 +139,7 @@ def create_dataset():
             logger.info("Creating dataset...")
             dataset = dataset_service.create_from_form(form=form, current_user=current_user, draft_mode=False)
             logger.info(f"Created dataset: {dataset}")
-            dataset_service.move_feature_models(dataset)
+            dataset_service.move_dataset_files(dataset)
         except Exception as exc:
             logger.exception(f"Exception while create dataset data in local {exc}")
             return jsonify({"Exception while create dataset data in local: ": str(exc)}), 400
@@ -167,7 +167,7 @@ def create_dataset():
                 deposition_doi = fakenodo_service.get_doi(deposition_id)
                 dataset_service.update_dsmetadata(dataset.ds_meta_data_id, dataset_doi=deposition_doi)
             except Exception as e:
-                msg = f"it has not been possible upload feature models in Zenodo and update the DOI: {e}"
+                msg = f"It has not been possible to upload files to Fakenodo and update the DOI: {e}"
                 return jsonify({"message": msg}), 200
 
         file_path = current_user.temp_folder()
@@ -212,7 +212,7 @@ def save_draft_dataset():
         logger.info("Creating dataset...")
         dataset = dataset_service.create_from_form(form=form, current_user=current_user, draft_mode=True)
         logger.info(f"Created dataset: {dataset}")
-        dataset_service.move_feature_models(dataset)
+        dataset_service.move_dataset_files(dataset)
     except Exception as exc:
         logger.exception(f"Exception while create dataset data in local {exc}")
         return jsonify({"Exception while create dataset data in local: ": str(exc)}), 400
@@ -376,7 +376,7 @@ def download_dataset(dataset_id):
 def get_dataset_stats(dataset_id):
     dataset = dataset_service.get_or_404(dataset_id)
 
-    downloads = {hubfile.name: hubfile.download_count or 0 for fm in dataset.feature_models for hubfile in fm.files}
+    downloads = {hubfile.name: hubfile.download_count or 0 for df in dataset.dataset_files for hubfile in df.files}
 
     response = {"id": dataset.id, "downloads": downloads}
 

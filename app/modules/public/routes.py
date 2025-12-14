@@ -3,7 +3,7 @@ import logging
 from flask import jsonify, render_template, request, url_for
 from flask_login import current_user
 from app.modules.dataset.services import DataSetService
-from app.modules.featuremodel.services import FeatureModelService
+from app.modules.datasetfile.services import DatasetFileService
 from app.modules.public import public_bp
 
 logger = logging.getLogger(__name__)
@@ -13,16 +13,16 @@ logger = logging.getLogger(__name__)
 def index():
     logger.info("Access index")
     dataset_service = DataSetService()
-    feature_model_service = FeatureModelService()
+    dataset_file_service = DatasetFileService()
 
     datasets_counter = dataset_service.count_synchronized_datasets()
-    feature_models_counter = feature_model_service.count_feature_models()
+    dataset_files_counter = dataset_file_service.count_dataset_files()
 
     total_dataset_downloads = dataset_service.total_dataset_downloads()
-    total_feature_model_downloads = feature_model_service.total_feature_model_downloads()
+    total_dataset_file_downloads = dataset_file_service.total_dataset_file_downloads()
 
     total_dataset_views = dataset_service.total_dataset_views()
-    total_feature_model_views = feature_model_service.total_feature_model_views()
+    total_dataset_file_views = dataset_file_service.total_dataset_file_views()
 
     latest = dataset_service.latest_synchronized()
 
@@ -54,11 +54,11 @@ def index():
         "public/index.html",
         datasets=latest,
         datasets_counter=datasets_counter,
-        feature_models_counter=feature_models_counter,
+        dataset_files_counter=dataset_files_counter,
         total_dataset_downloads=total_dataset_downloads,
-        total_feature_model_downloads=total_feature_model_downloads,
+        total_dataset_file_downloads=total_dataset_file_downloads,
         total_dataset_views=total_dataset_views,
-        total_feature_model_views=total_feature_model_views,
+        total_dataset_file_views=total_dataset_file_views,
         user_metrics=user_metrics,
         trending_datasets=trending,
     )

@@ -11,7 +11,7 @@ from app.modules.dataset.models import (
     DSMetrics,
     DSViewRecord,
 )
-from app.modules.featuremodel.models import FeatureModel, FMMetaData, FMMetrics
+from app.modules.datasetfile.models import DatasetFile, DatasetFileMetaData, DatasetFileMetrics
 from app.modules.hubfile.models import Hubfile, HubfileDownloadRecord, HubfileViewRecord
 from rosemary.commands.clear_uploads import clear_uploads
 
@@ -50,10 +50,10 @@ def datasets_purge(yes):
 
         # Now remove dependent tables in FK-safe order using bulk deletes
         files_deleted = db.session.query(Hubfile).delete(synchronize_session=False)
-        fms_deleted = db.session.query(FeatureModel).delete(synchronize_session=False)
+        fms_deleted = db.session.query(DatasetFile).delete(synchronize_session=False)
         authors_deleted = db.session.query(Author).delete(synchronize_session=False)
-        fmmd_deleted = db.session.query(FMMetaData).delete(synchronize_session=False)
-        fmm_deleted = db.session.query(FMMetrics).delete(synchronize_session=False)
+        fmmd_deleted = db.session.query(DatasetFileMetaData).delete(synchronize_session=False)
+        fmm_deleted = db.session.query(DatasetFileMetrics).delete(synchronize_session=False)
         datasets_deleted = db.session.query(DataSet).delete(synchronize_session=False)
         dsmd_deleted = db.session.query(DSMetaData).delete(synchronize_session=False)
         dsm_deleted = db.session.query(DSMetrics).delete(synchronize_session=False)
@@ -64,8 +64,8 @@ def datasets_purge(yes):
             click.style(
                 "Purge summary: "
                 f"file_dl={file_dl}, file_view={file_view}, ds_dl={ds_dl}, ds_view={ds_view}, doi={doi}. "
-                f"files={files_deleted}, feature_models={fms_deleted}, authors={authors_deleted}, "
-                f"fm_meta_data={fmmd_deleted}, fm_metrics={fmm_deleted}, datasets={datasets_deleted}, "
+                f"files={files_deleted}, dataset_files={fms_deleted}, authors={authors_deleted}, "
+                f"dataset_file_metadata={fmmd_deleted}, dataset_file_metrics={fmm_deleted}, datasets={datasets_deleted}, "
                 f"ds_meta_data={dsmd_deleted}, ds_metrics={dsm_deleted}.",
                 fg="green",
             )
