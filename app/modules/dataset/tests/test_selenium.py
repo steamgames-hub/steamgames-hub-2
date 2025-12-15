@@ -1,3 +1,4 @@
+import random
 import os, re, time
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
@@ -7,6 +8,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from app import create_app
 from app.modules.auth.models import User
+from app.modules.community.tests.test_selenium import create_dataset_via_ui
 from core.environment.host import get_host_for_selenium_testing
 from core.selenium.common import close_driver, initialize_driver
 
@@ -458,4 +460,51 @@ def test_timeline():
         except Exception:
             pass
     finally:
+        close_driver(driver)
+def test_delete_dataset():
+    driver = initialize_driver()
+    
+    try:
+        host = get_host_for_selenium_testing()
+
+        # Login with optional 2FA
+        _login_with_optional_2fa(driver, host)
+        
+        # Create Dataset
+        dataset_title = f"Proposal Test Dataset {random.randint(1, 1_000_000)}"
+        create_dataset_via_ui(driver, host, dataset_title)
+
+        # Count datasets before
+        count_before = count_datasets(driver, host)
+
+        if count_before == 0:
+            print("No datasets to delete. Skipping delete test.")
+            return
+
+        # Go to dataset list
+        driver.get(f"{host}")
+        wait_for_page_to_load(driver)
+
+        # Click delete on the first dataset
+        delete_buttons = driver.find_elements(By.ID, "delete_dataset_button")
+        if not delete_buttons:
+            print("No delete buttons found. Skipping delete test.")
+            return
+
+        delete_buttons[0].click()
+
+        # Accept JS confirm dialog
+        WebDriverWait(driver, 5).until(EC.alert_is_present())
+        driver.switch_to.alert.accept()
+
+        # Wait for page to reload and count datasets after
+        time.sleep(2)
+        count_after = count_datasets(driver, host)
+
+        assert count_after == count_before - 1, "Dataset count should decrease by 1 after deletion"
+
+        print("Delete test passed!")
+
+    finally:
+        # Close the browser
         close_driver(driver)

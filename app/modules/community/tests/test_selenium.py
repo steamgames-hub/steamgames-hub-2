@@ -609,7 +609,7 @@ def _create_community_via_ui(driver, host, name_value):
     return community_id, icon_path
 
 
-def _create_dataset_via_ui(driver, host, title_value):
+def create_dataset_via_ui(driver, host, title_value):
     """Helper to create a dataset and return its view URL and CSV path.
 
     Flow:
@@ -793,7 +793,7 @@ def test_propose_reject_accept_flow():
 
         # 2. Create Dataset
         dataset_title = f"Proposal Test Dataset {random.randint(1, 1_000_000)}"
-        dataset_view_url, dataset_csv_path = _create_dataset_via_ui(driver, host, dataset_title)
+        dataset_view_url, dataset_csv_path = create_dataset_via_ui(driver, host, dataset_title)
 
         # 3. Propose to Community
         _propose_dataset_to_community(driver, dataset_view_url, community_id)
