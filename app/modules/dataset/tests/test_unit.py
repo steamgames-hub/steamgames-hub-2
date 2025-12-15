@@ -1723,3 +1723,43 @@ def test_user_metrics_not_authenticated():
     dataset_service.count_user_datasets.assert_not_called()
     dataset_service.count_user_dataset_downloads.assert_not_called()
     dataset_service.count_user_synchronized_datasets.assert_not_called()
+
+def test_delete_draft_dataset_success(test_client):
+    """delete_draft_dataset should remove a draft dataset from the DB."""
+    # create minimal metadata + dataset marked as draft
+    md = DSMetaData(title="draft", description="d", data_category=DataCategory.NONE)
+    db.session.add(md)
+    db.session.commit()
+
+    ds = DataSet(user_id=1, ds_meta_data_id=md.id)
+    # ensure attribute exists and is True for draft
+    if hasattr(ds, "draft_mode"):
+        ds.draft_mode = True
+    db.session.add(ds)
+    db.session.commit()
+
+    svc = DataSetService()
+    # call delete_draft_dataset with the persisted object
+    svc.delete_draft_dataset(ds)
+
+    # dataset should no longer exist
+    assert db.session.get(DataSet, ds.id) is None
+
+
+def test_delete_draft_dataset_non_draft_raises(test_client):
+    """delete_draft_dataset should raise ValueError when dataset is not a draft."""
+    md = DSMetaData(title="notdraft", description="d", data_category=DataCategory.NONE)
+    db.session.add(md)
+    db.session.commit()
+
+    ds = DataSet(user_id=1, ds_meta_data_id=md.id)
+    # ensure attribute exists and is False for non-draft
+    if hasattr(ds, "draft_mode"):
+        ds.draft_mode = False
+    db.session.add(ds)
+    db.session.commit()
+
+    svc = DataSetService()
+
+    with pytest.raises(ValueError):
+        svc.delete_draft_dataset(ds)

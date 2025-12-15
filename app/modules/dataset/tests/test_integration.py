@@ -660,3 +660,21 @@ def test_post_edit_no_files_updates_metadata_in_place(test_client, users, monkey
 
     assert r.status_code == 200
     assert calls["new_version"] == 1
+    
+def test_create_draft_dataset_failure_returns_400(test_client, users, monkeypatch):
+    """Integration: simulate failure in dataset_service.create_draft and expect 400."""
+    from app.modules.dataset import routes as dataset_routes
+
+    owner, _ = users
+
+    def fake_create_draft(current_user, data=None):
+        raise RuntimeError("boom-create-draft")
+
+    monkeypatch.setattr(dataset_routes.dataset_service, "create_draft", fake_create_draft)
+
+    with force_login(test_client, owner):
+        payload = {"title": "Should Fail", "desc": "Cause error"}
+        r = test_client.post("/dataset/draft/save", json=payload)
+
+    assert r.status_code == 400
+    assert "boom-create-draft" in r.get_data(as_text=True)
