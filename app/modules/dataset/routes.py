@@ -920,8 +920,6 @@ def report_dataset(dataset_id: int):
 def dataset_versions(dataset_id):
     """Display version history timeline for a dataset."""
     dataset = dataset_service.get_by_id(dataset_id)
-    if not dataset or dataset.draft_mode:
-        abort(404)
 
     # Get the deposition_id and fetch all versions
     deposition_id = dataset.ds_meta_data.deposition_id
@@ -999,8 +997,6 @@ def view_dataset_by_id(dataset_id):
 def rollback_dataset_version(dataset_id):
 
     current_dataset = dataset_service.get_by_id(dataset_id)
-    if not current_dataset or current_dataset.draft_mode:
-        abort(404)
 
     if current_user.role != UserRole.ADMIN and current_dataset.user_id != current_user.id:
         abort(403, description="Unauthorized")
