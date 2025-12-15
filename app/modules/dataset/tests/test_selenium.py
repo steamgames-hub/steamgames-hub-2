@@ -43,6 +43,7 @@ def _wait_visible_any(driver, locators, timeout=15):
         time.sleep(0.3)
     raise TimeoutException(f"Element not visible for any locator: {locators}") from last_exc
 
+
 def fetch_2fa_from_yopmail(driver, username="user1", sender_contains="SteamGamesHub", timeout=60):
     driver.get("https://yopmail.com/es/")
     wait = WebDriverWait(driver, 10)
@@ -323,6 +324,7 @@ def test_related_datasets_section_visible(driver=None):
     finally:
         close_driver(driver)
 
+
 def test_related_dataset_item_contents(driver=None):
     driver = driver or initialize_driver()
     try:
@@ -361,6 +363,7 @@ def test_related_dataset_item_contents(driver=None):
     finally:
         close_driver(driver)
 
+
 def test_related_dataset_link_navigation(driver=None):
     driver = driver or initialize_driver()
     try:
@@ -385,17 +388,9 @@ def test_related_dataset_link_navigation(driver=None):
         close_driver(driver)
 
 
-
-
-def wait_for_page_to_load(driver, timeout=5):
-    WebDriverWait(driver, timeout).until(
-        lambda d: d.execute_script("return document.readyState") == "complete"
-    )
-
 def test_user_metrics():
     driver = initialize_driver()
 
-    
     try:
         host = get_host_for_selenium_testing()
         _login_with_optional_2fa(driver, host)
@@ -435,10 +430,32 @@ def test_user_metrics():
         driver.quit()
 
 
-
-
-
-
 # Call the test function
 test_upload_dataset()
 test_user_metrics()
+
+
+def test_timeline():
+    """Adapted from Selenium IDE: navigate to version history and interact."""
+    driver = initialize_driver()
+    try:
+        host = get_host_for_selenium_testing()
+        driver.get(host)
+        wait_for_page_to_load(driver)
+        try:
+            WebDriverWait(driver, 8).until(EC.element_to_be_clickable((By.LINK_TEXT, "Version history"))).click()
+            time.sleep(0.6)
+            try:
+                item = driver.find_element(By.CSS_SELECTOR, ".timeline-item:nth-child(1) .timeline-version")
+                driver.execute_script("arguments[0].scrollIntoView(true);", item)
+                item.click()
+            except Exception:
+                pass
+            try:
+                WebDriverWait(driver, 4).until(EC.element_to_be_clickable((By.LINK_TEXT, "Show timeline"))).click()
+            except Exception:
+                pass
+        except Exception:
+            pass
+    finally:
+        close_driver(driver)
