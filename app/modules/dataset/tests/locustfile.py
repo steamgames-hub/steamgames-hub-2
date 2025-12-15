@@ -5,6 +5,7 @@ from locust import HttpUser, TaskSet, task
 
 from core.environment.host import get_host_for_locust_testing
 from core.locust.common import get_csrf_token
+import json
 
 # Adjust to a valid path in your environment
 locust_file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -98,6 +99,50 @@ class DatasetBehavior(TaskSet):
             print("User metrics:", metrics)
         else:
             print("Metrics not found in index page.")
+
+    @task(5)
+    def get_report_page(self):
+        """Load the report page for a dataset (renders a form)."""
+        # Use dataset id 1 as an example; adjust if your test DB differs
+        response = self.client.get("/dataset/report/1")
+        if response.status_code != 200:
+            print("/dataset/report/1 returned", response.status_code)
+
+    @task(3)
+    def list_issues(self):
+        """Hit the admin issues listing endpoint."""
+        response = self.client.get("/dataset/issues")
+        if response.status_code != 200:
+            print("GET /dataset/issues returned", response.status_code)
+
+    @task(8)
+    def create_issue(self):
+        """POST a JSON issue payload to create an issue (curator-only normally)."""
+        # fetch CSRF token from report page (or list) to be safe
+        resp = self.client.get("/dataset/report/1")
+        csrf = get_csrf_token(resp)
+        headers = {"Content-Type": "application/json"}
+        if csrf:
+            headers["X-CSRFToken"] = csrf
+
+        payload = {"dataset_id": 1, "description": "Load test issue"}
+        r = self.client.post("/dataset/issues", data=json.dumps(payload), headers=headers)
+        if r.status_code not in (200, 201):
+            print("POST /dataset/issues returned", r.status_code, r.text[:200])
+
+    @task(2)
+    def open_issue(self):
+        """Toggle (open/close) an issue by id using PUT. Uses issue id 1 as example."""
+        # Try to get CSRF token
+        resp = self.client.get("/dataset/issues")
+        csrf = get_csrf_token(resp)
+        headers = {"Content-Type": "application/json"}
+        if csrf:
+            headers["X-CSRFToken"] = csrf
+
+        r = self.client.put(f"/dataset/issues/open/1/", headers=headers)
+        if r.status_code != 200:
+            print("PUT /dataset/issues/open/1 returned", r.status_code)
 
 
 

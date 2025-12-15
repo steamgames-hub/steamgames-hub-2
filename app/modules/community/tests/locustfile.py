@@ -73,18 +73,6 @@ class CommunityBehavior(TaskSet):
         self.client.get(f"/community/{cid}")
 
     @task
-    def community_icon_random(self):
-        """Fetch a random community icon (404 tolerated)."""
-        listing = self.client.get("/community")
-        if listing.status_code != 200:
-            return
-        ids = [int(m.group(1)) for m in COMMUNITY_LINK_RE.finditer(listing.text)]
-        if not ids:
-            return
-        cid = random.choice(ids)
-        self.client.get(f"/community/icon/{cid}")
-
-    @task
     def community_create_get(self):
         """Access the community create page"""
 
