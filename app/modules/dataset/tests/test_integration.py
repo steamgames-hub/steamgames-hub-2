@@ -1,22 +1,26 @@
 import io
 import tempfile
+import types
 import uuid
 from contextlib import contextmanager
+
 import pytest
+
 from app import db
 from app.modules.auth.models import User
 from app.modules.dataset.models import DataCategory, DataSet, DSMetaData
 
-import types
 
 class _Field:
     def __init__(self):
         self.data = None
         self.errors = []
 
+
 class _Entry:
     def __init__(self, form):
         self.form = form
+
 
 class _ListField:
     def __init__(self, factory):
@@ -25,6 +29,7 @@ class _ListField:
 
     def append_entry(self):
         self.entries.append(_Entry(self._factory()))
+
 
 try:
     from app.modules.profile.models import Profile
@@ -36,6 +41,7 @@ except Exception:
 def _workdir(monkeypatch):
     monkeypatch.setenv("WORKING_DIR", tempfile.mkdtemp())
     yield
+
 
 @pytest.fixture()
 def users(clean_database):
@@ -66,6 +72,7 @@ def users(clean_database):
     db.session.add_all([owner, other])
     db.session.commit()
     return owner, other
+
 
 def make_dataset(owner: User, doi: str | None = None) -> DataSet:
     meta = DSMetaData(
@@ -224,8 +231,10 @@ def test_view_dataset_redirects_to_doi_when_present(test_client, users):
     assert r.status_code == 302
     assert f"/doi/{doi}/" in r.headers.get("Location", "")
 
+
 def test_get_upload_triggers_cleanup_and_renders(test_client, users, monkeypatch, tmp_path):
     from app.modules.dataset import routes as dataset_routes
+
     owner, _ = users
 
     temp_dir = tmp_path / "tmp"
@@ -242,13 +251,19 @@ def test_get_upload_triggers_cleanup_and_renders(test_client, users, monkeypatch
 
     assert r.status_code == 200
     assert removed["called"] is True
-    
+
+
 def test_post_upload_invalid_form_returns_version_message(test_client, users, monkeypatch):
     from app.modules.dataset import routes as dataset_routes
+
     owner, _ = users
 
-    class V: errors = ["bad"]
-    class CsvName: data = "file.csv"
+    class V:
+        errors = ["bad"]
+
+    class CsvName:
+        data = "file.csv"
+
     class Subform:
         version = V()
         csv_filename = CsvName()
@@ -257,6 +272,7 @@ def test_post_upload_invalid_form_returns_version_message(test_client, users, mo
         def __init__(self):
             self.dataset_files = [Subform()]
             self.errors = {}
+
         def validate_on_submit(self):
             return False
 
@@ -268,13 +284,16 @@ def test_post_upload_invalid_form_returns_version_message(test_client, users, mo
     assert r.status_code == 400
     assert "Invalid version" in r.get_json()["message"]
 
+
 def test_post_upload_validate_folder_valueerror_returns_400(test_client, users, monkeypatch, tmp_path):
     from app.modules.dataset import routes as dataset_routes
+
     owner, _ = users
 
     class FakeForm:
         def __init__(self):
             self.errors = {}
+
         def validate_on_submit(self):
             return True
 
@@ -293,18 +312,22 @@ def test_post_upload_validate_folder_valueerror_returns_400(test_client, users, 
     assert r.status_code == 400
     assert r.get_json()["message"] == "Bad CSV"
 
+
 def test_post_upload_create_from_form_exception_returns_400(test_client, users, monkeypatch, tmp_path):
     from app.modules.dataset import routes as dataset_routes
+
     owner, _ = users
 
     class FakeForm:
         def __init__(self):
             self.errors = {}
+
         def validate_on_submit(self):
             return True
 
     class OkSteam:
-        def validate_folder(self, p): return None
+        def validate_folder(self, p):
+            return None
 
     class FakeDatasetService:
         def create_from_form(self, **kwargs):
@@ -322,20 +345,24 @@ def test_post_upload_create_from_form_exception_returns_400(test_client, users, 
     assert r.status_code == 400
     assert "Exception while create dataset data in local" in list(r.get_json().keys())[0]
 
+
 def test_post_upload_happy_path_updates_doi_and_cleans_temp(test_client, users, monkeypatch, tmp_path):
-    from app.modules.dataset import routes as dataset_routes
     import types
+
+    from app.modules.dataset import routes as dataset_routes
 
     owner, _ = users
 
     class FakeForm:
         def __init__(self):
             self.errors = {}
+
         def validate_on_submit(self):
             return True
 
     class OkSteam:
-        def validate_folder(self, p): return None
+        def validate_folder(self, p):
+            return None
 
     calls = {"update": [], "move": 0}
     dataset = types.SimpleNamespace(ds_meta_data_id=123)
@@ -343,16 +370,23 @@ def test_post_upload_happy_path_updates_doi_and_cleans_temp(test_client, users, 
     class FakeDatasetService:
         def create_from_form(self, **kwargs):
             return dataset
+
         def move_dataset_files(self, ds):
             calls["move"] += 1
+
         def update_dsmetadata(self, meta_id, **kwargs):
             calls["update"].append((meta_id, kwargs))
-        def get_by_id(self, _id): return None
-        def delete_draft_dataset(self, orig): pass
+
+        def get_by_id(self, _id):
+            return None
+
+        def delete_draft_dataset(self, orig):
+            pass
 
     class FakeFakenodo:
         def create_new_deposition(self, ds):
             return {"conceptrecid": 1, "id": 99}
+
         def get_doi(self, deposition_id):
             return "10.1234/1"
 
@@ -379,6 +413,7 @@ def test_post_upload_happy_path_updates_doi_and_cleans_temp(test_client, users, 
     assert removed["called"] is True
     assert len(calls["update"]) >= 2
 
+
 def test_get_edit_prefills_form_and_runs_cleanup(test_client, users, monkeypatch, tmp_path):
     from app.modules.dataset import routes as dataset_routes
 
@@ -392,9 +427,7 @@ def test_get_edit_prefills_form_and_runs_cleanup(test_client, users, monkeypatch
         publication_doi="10.pub/xx",
         dataset_doi="10.ds/yy",
         tags="a,b",
-        authors=[
-            types.SimpleNamespace(name="Ana", affiliation="US", orcid="0000")
-        ],
+        authors=[types.SimpleNamespace(name="Ana", affiliation="US", orcid="0000")],
     )
 
     fm_meta = types.SimpleNamespace(
@@ -405,16 +438,17 @@ def test_get_edit_prefills_form_and_runs_cleanup(test_client, users, monkeypatch
         publication_doi="10.pub/fm",
         tags="x,y",
         csv_version="1.2.3",
-        authors=[
-            types.SimpleNamespace(name="Bob", affiliation="Lab", orcid="1111")
-        ],
+        authors=[types.SimpleNamespace(name="Bob", affiliation="Lab", orcid="1111")],
     )
 
     ds = types.SimpleNamespace(ds_meta_data=md, feature_models=[types.SimpleNamespace(fm_meta_data=fm_meta)])
 
     class FakeDatasetService:
-        def get_or_404(self, _id): return ds
-        def get_by_id(self, _id): return ds
+        def get_or_404(self, _id):
+            return ds
+
+        def get_by_id(self, _id):
+            return ds
 
     monkeypatch.setattr(dataset_routes, "dataset_service", FakeDatasetService())
 
@@ -488,12 +522,15 @@ def test_get_edit_prefills_form_and_runs_cleanup(test_client, users, monkeypatch
     assert r.status_code == 200
     assert removed["called"] is True
 
+
 def test_get_edit_404_when_missing(test_client, users, monkeypatch):
     from app.modules.dataset import routes as dataset_routes
+
     owner, _ = users
 
     class FakeDatasetService:
-        def get_or_404(self, _id): return None
+        def get_or_404(self, _id):
+            return None
 
     monkeypatch.setattr(dataset_routes, "dataset_service", FakeDatasetService())
 
@@ -502,12 +539,18 @@ def test_get_edit_404_when_missing(test_client, users, monkeypatch):
 
     assert r.status_code == 404
 
+
 def test_post_edit_invalid_form_returns_version_message(test_client, users, monkeypatch):
     from app.modules.dataset import routes as dataset_routes
+
     owner, _ = users
 
-    class V: errors = ["bad"]
-    class CsvName: data = "fm.csv"
+    class V:
+        errors = ["bad"]
+
+    class CsvName:
+        data = "fm.csv"
+
     class Subform:
         version = V()
         csv_filename = CsvName()
@@ -516,10 +559,13 @@ def test_post_edit_invalid_form_returns_version_message(test_client, users, monk
         def __init__(self):
             self.feature_models = [Subform()]
             self.errors = {}
-        def validate_on_submit(self): return False
+
+        def validate_on_submit(self):
+            return False
 
     class FakeDatasetService:
-        def get_or_404(self, _id): return object()
+        def get_or_404(self, _id):
+            return object()
 
     monkeypatch.setattr(dataset_routes, "DataSetForm", FakeForm)
     monkeypatch.setattr(dataset_routes, "dataset_service", FakeDatasetService())
@@ -530,21 +576,26 @@ def test_post_edit_invalid_form_returns_version_message(test_client, users, monk
     assert r.status_code == 400
     assert "Invalid version" in r.get_json()["message"]
 
+
 def test_post_edit_validate_folder_valueerror_returns_400(test_client, users, monkeypatch, tmp_path):
     from app.modules.dataset import routes as dataset_routes
+
     owner, _ = users
 
     class FakeForm:
         def __init__(self):
             self.errors = {}
-        def validate_on_submit(self): return True
+
+        def validate_on_submit(self):
+            return True
 
     class FakeSteam:
         def validate_folder(self, p):
             raise ValueError("Bad CSV")
 
     class FakeDatasetService:
-        def get_or_404(self, _id): return object()
+        def get_or_404(self, _id):
+            return object()
 
     monkeypatch.setattr(dataset_routes, "DataSetForm", FakeForm)
     monkeypatch.setattr(dataset_routes, "SteamCSVService", FakeSteam)
@@ -558,10 +609,12 @@ def test_post_edit_validate_folder_valueerror_returns_400(test_client, users, mo
     assert r.status_code == 400
     assert r.get_json()["message"] == "Bad CSV"
 
+
 def test_post_edit_files_changed_creates_new_version(test_client, users, monkeypatch, tmp_path):
     import types
-    from app.modules.dataset import routes as dataset_routes
+
     from app.modules.auth.models import User
+    from app.modules.dataset import routes as dataset_routes
 
     owner, _ = users
     dataset_id = 7
@@ -575,26 +628,40 @@ def test_post_edit_files_changed_creates_new_version(test_client, users, monkeyp
     class FakeForm:
         def __init__(self):
             self.errors = {}
-        def validate_on_submit(self): return True
-        def get_dsmetadata(self): return {"title": "noop"}
+
+        def validate_on_submit(self):
+            return True
+
+        def get_dsmetadata(self):
+            return {"title": "noop"}
 
     class OkSteam:
-        def validate_folder(self, p): return None
+        def validate_folder(self, p):
+            return None
 
     calls = {"new_version": 0, "move": 0, "update": []}
     dataset = types.SimpleNamespace(ds_meta_data_id=123)
 
     class FakeDatasetService:
-        def get_or_404(self, _id): return DataSet()
+        def get_or_404(self, _id):
+            return DataSet()
+
         def create_new_version(self, *args, **kwargs):
             calls["new_version"] += 1
             return dataset
-        def move_dataset_files(self, ds): calls["move"] += 1
-        def update_dsmetadata(self, meta_id, **kwargs): calls["update"].append((meta_id, kwargs))
+
+        def move_dataset_files(self, ds):
+            calls["move"] += 1
+
+        def update_dsmetadata(self, meta_id, **kwargs):
+            calls["update"].append((meta_id, kwargs))
 
     class FakeFakenodo:
-        def create_new_deposition(self, ds): return {"conceptrecid": 1, "id": 99}
-        def get_doi(self, dep_id): return "10.1234/99"
+        def create_new_deposition(self, ds):
+            return {"conceptrecid": 1, "id": 99}
+
+        def get_doi(self, dep_id):
+            return "10.1234/99"
 
     removed = {"called": False}
     monkeypatch.setattr(dataset_routes.shutil, "rmtree", lambda p: removed.__setitem__("called", True))
@@ -615,8 +682,10 @@ def test_post_edit_files_changed_creates_new_version(test_client, users, monkeyp
     assert any("deposition_id" in kw for _, kw in calls["update"])
     assert any("dataset_doi" in kw for _, kw in calls["update"])
 
+
 def test_post_edit_no_files_updates_metadata_in_place(test_client, users, monkeypatch, tmp_path):
     from app.modules.dataset import routes as dataset_routes
+
     owner, _ = users
     dataset_id = 8
 
@@ -627,27 +696,41 @@ def test_post_edit_no_files_updates_metadata_in_place(test_client, users, monkey
     class FakeForm:
         def __init__(self):
             self.errors = {}
-        def validate_on_submit(self): return True
-        def get_dsmetadata(self): return {"title": "Updated!"}
+
+        def validate_on_submit(self):
+            return True
+
+        def get_dsmetadata(self):
+            return {"title": "Updated!"}
 
     class OkSteam:
-        def validate_folder(self, p): return None
+        def validate_folder(self, p):
+            return None
 
     ds = types.SimpleNamespace(ds_meta_data_id=555)
 
     calls = {"new_version": 0, "move": 0, "update": []}
+
     class FakeDatasetService:
-        def get_or_404(self, _id): return DataSet()
-        def get_by_id(self, _id): return ds
+        def get_or_404(self, _id):
+            return DataSet()
+
+        def get_by_id(self, _id):
+            return ds
+
         def create_new_version(self, *a, **k):
             calls["new_version"] += 1
             return None
+
         def update_dsmetadata(self, meta_id, **kwargs):
             calls["update"].append((meta_id, kwargs))
-        def move_dataset_files(self, ds): calls["move"] += 1
+
+        def move_dataset_files(self, ds):
+            calls["move"] += 1
 
     class FakeFakenodo:
-        def create_new_deposition(self, ds): return {}
+        def create_new_deposition(self, ds):
+            return {}
 
     monkeypatch.setattr(dataset_routes, "DataSetForm", FakeForm)
     monkeypatch.setattr(dataset_routes, "SteamCSVService", OkSteam)
@@ -660,7 +743,8 @@ def test_post_edit_no_files_updates_metadata_in_place(test_client, users, monkey
 
     assert r.status_code == 200
     assert calls["new_version"] == 1
-    
+
+
 def test_create_draft_dataset_failure_returns_400(test_client, users, monkeypatch):
     """Integration: simulate failure in dataset_service.create_draft and expect 400."""
     from app.modules.dataset import routes as dataset_routes

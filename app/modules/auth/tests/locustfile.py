@@ -5,7 +5,7 @@ from locust import HttpUser, TaskSet, task
 from app import create_app, db
 from app.modules.auth.models import User
 from core.environment.host import get_host_for_locust_testing
-from core.locust.common import fake, get_csrf_token
+from core.locust.common import fake
 
 app = create_app(os.getenv("FLASK_ENV", "testing"))
 app.app_context().push()
@@ -19,21 +19,19 @@ class SignupBehavior(TaskSet):
     @task
     def signup_with_verify(self):
         response = self.client.get("/signup")
-        #csrf_token = get_csrf_token(response)
+        # csrf_token = get_csrf_token(response)
 
-        response = self.client.post(
-            "/signup", data={"email": fake.email(), "password": fake.password()}
-        )
+        response = self.client.post("/signup", data={"email": fake.email(), "password": fake.password()})
         if response.status_code != 200:
             print(f"Signup failed: {response.status_code}")
-        
+
         response = self.client.get("/verify")
         if response.status_code != 200:
             print(f"Verification failed: {response.status_code}")
-    
+
     @task
     def verify_invalid_token(self):
-        response = self.client.get("/verify/invalid-token")
+        self.client.get("/verify/invalid-token")
 
 
 class LoginBehavior(TaskSet):

@@ -103,7 +103,7 @@ class FakenodoService(BaseService):
         """
 
         return self.get_deposition(deposition_id).associated_doi
-    
+
     def test_full_connection(self):
         try:
             dataset = DataSet.query.order_by(DataSet.id.desc()).first()

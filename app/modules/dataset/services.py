@@ -124,7 +124,7 @@ class DataSetService(BaseService):
             raw_authors = [main_author] + form.get_authors()
             seen = set()
             for author_data in raw_authors:
-                key = (author_data.get('name'), author_data.get('orcid'))
+                key = (author_data.get("name"), author_data.get("orcid"))
                 if key in seen:
                     continue
                 seen.add(key)
@@ -167,7 +167,7 @@ class DataSetService(BaseService):
             raise exc
         return dataset
 
-    def create_new_version(self, dataset_id: int, form, current_user, version_increment_type: str = 'major') -> DataSet:
+    def create_new_version(self, dataset_id: int, form, current_user, version_increment_type: str = "major") -> DataSet:
         """Create a new version of an existing dataset.
 
         Steps:
@@ -193,8 +193,8 @@ class DataSetService(BaseService):
 
             # increment version number based on type
             current_version = str(prev_meta.version)
-            if '.' in current_version:
-                parts = current_version.split('.')
+            if "." in current_version:
+                parts = current_version.split(".")
                 if len(parts) == 2:
                     major, minor = map(int, parts)
                 else:
@@ -203,9 +203,9 @@ class DataSetService(BaseService):
                 major = int(float(current_version))
                 minor = 0
 
-            if version_increment_type == 'minor':
+            if version_increment_type == "minor":
                 minor += 1
-            elif version_increment_type == 'major':
+            elif version_increment_type == "major":
                 major += 1
                 minor = 0
             else:
@@ -231,7 +231,7 @@ class DataSetService(BaseService):
                 raw_auths = [main_author] + form.get_authors()
                 seen_new = set()
             for author_data in raw_auths:
-                key = (author_data.get('name'), author_data.get('orcid'))
+                key = (author_data.get("name"), author_data.get("orcid"))
                 if key in seen_new:
                     continue
                 seen_new.add(key)
@@ -254,7 +254,7 @@ class DataSetService(BaseService):
                 fmmetadata = self.fmmetadata_repository.create(commit=False, **feature_model.get_fmmetadata())
                 fm_seen = set()
                 for author_data in feature_model.get_authors():
-                    key = (author_data.get('name'), author_data.get('orcid'))
+                    key = (author_data.get("name"), author_data.get("orcid"))
                     if key in fm_seen:
                         continue
                     fm_seen.add(key)
@@ -281,7 +281,7 @@ class DataSetService(BaseService):
             self.repository.session.rollback()
             raise exc
         return dataset
-    
+
     def create_draft(self, current_user, data: dict = None) -> DataSet:
         try:
             title = (data or {}).get("title") or "Untitled Dataset"
@@ -333,10 +333,14 @@ class DataSetService(BaseService):
                         )
 
                         # create a minimal author for the feature model
-                        fm_author = self.author_repository.create(commit=False, fm_meta_data_id=fmmetadata.id, **main_author)
+                        fm_author = self.author_repository.create(
+                            commit=False, fm_meta_data_id=fmmetadata.id, **main_author
+                        )
                         fmmetadata.authors.append(fm_author)
 
-                        fm = self.feature_model_repository.create(commit=False, data_set_id=dataset.id, fm_meta_data_id=fmmetadata.id)
+                        fm = self.feature_model_repository.create(
+                            commit=False, data_set_id=dataset.id, fm_meta_data_id=fmmetadata.id
+                        )
 
                         hubfile = self.hubfilerepository.create(
                             commit=False, name=filename, checksum=checksum, size=size, feature_model_id=fm.id
@@ -462,11 +466,15 @@ class DataSetService(BaseService):
         except Exception:
             logger.exception("Fallback de trending_datasets también ha fallado. Devolviendo lista vacía.")
             return []
-        
+
     def rollback_to_previous_version(self, previous_version, current_dataset):
         try:
-            previous_version.dataset_doi = previous_version.dataset_doi.rsplit("/v", 1)[0] if previous_version.dataset_doi else None
-            previous_version.publication_doi = previous_version.publication_doi.rsplit("/v", 1)[0] if previous_version.publication_doi else None
+            previous_version.dataset_doi = (
+                previous_version.dataset_doi.rsplit("/v", 1)[0] if previous_version.dataset_doi else None
+            )
+            previous_version.publication_doi = (
+                previous_version.publication_doi.rsplit("/v", 1)[0] if previous_version.publication_doi else None
+            )
             previous_version.is_latest = True
 
             self.delete_dataset(current_dataset)
@@ -475,6 +483,7 @@ class DataSetService(BaseService):
             logger.exception(f"Exception rolling back to previous dataset version: {exc}")
             self.repository.session.rollback()
             raise exc
+
     def get_related_datasets(self, dataset: DataSet, limit: int = 3) -> List[dict]:
         if not dataset or not dataset.ds_meta_data:
             return []
@@ -510,9 +519,7 @@ class DataSetService(BaseService):
         ).all()
         return {proposal.community_id for proposal in proposals}
 
-    def _fetch_author_related_ids(
-        self, dataset_id: int, author_names: Set[str], author_orcids: Set[str]
-    ) -> Set[int]:
+    def _fetch_author_related_ids(self, dataset_id: int, author_names: Set[str], author_orcids: Set[str]) -> Set[int]:
         if not (author_names or author_orcids):
             return set()
 
@@ -637,7 +644,7 @@ class DSMetaDataService(BaseService):
 
     def get_all_versions_by_deposition_id(self, deposition_id: int):
         return self.repository.get_all_versions_by_deposition_id(deposition_id)
-    
+
     def get_previous_version_by_deposition_id(self, deposition_id: int):
         return self.repository.get_previous_version_by_deposition_id(deposition_id)
 

@@ -1,9 +1,8 @@
 import os
-import re
 
 from locust import HttpUser, TaskSet, task
 
-from app import create_app, db
+from app import create_app
 from core.environment.host import get_host_for_locust_testing
 from core.locust.common import get_csrf_token
 
@@ -31,7 +30,6 @@ class ProfilePreferencesBehaviour(TaskSet):
         r = self.client.post("/login", data=payload)
         if r.status_code != 200:
             print("Error during login:", r.status_code, r.text)
-    
 
     @task
     def change_save_draft_preference(self):
@@ -39,7 +37,7 @@ class ProfilePreferencesBehaviour(TaskSet):
 
         response = self.client.put("/profile/save_drafts")
         get_csrf_token(response)
-    
+
     @task
     def edit_profile_task(self):
         """Load edit profile form and submit updated profile data"""
@@ -59,7 +57,8 @@ class ProfilePreferencesBehaviour(TaskSet):
         edit_post = self.client.post(f"/profile/edit/{user_id}", data=payload, allow_redirects=True)
         if edit_post.status_code not in (200, 302):
             print("Edit profile submit failed", edit_post.status_code, edit_post.text)
-    
+
+
 class ProfileUser(HttpUser):
     tasks = [ProfilePreferencesBehaviour]
     host = get_host_for_locust_testing()

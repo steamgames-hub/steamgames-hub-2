@@ -1,12 +1,14 @@
+import os
+
 from flask import (
     abort,
+    current_app,
     flash,
     redirect,
     render_template,
     request,
-    url_for,
     send_from_directory,
-    current_app,
+    url_for,
 )
 from flask_login import current_user, login_required
 
@@ -15,10 +17,8 @@ from app.modules.community.forms import CommunityForm
 from app.modules.community.models import ProposalStatus
 from app.modules.community.services import CommunityProposalService, CommunityService
 from app.modules.dataset.services import DataSetService
-from core.services.MailService import MailService
-from core.storage import storage_service
-import os
 from core.configuration.configuration import uploads_folder_name
+from core.services.MailService import MailService
 
 community_service = CommunityService()
 proposal_service = CommunityProposalService()

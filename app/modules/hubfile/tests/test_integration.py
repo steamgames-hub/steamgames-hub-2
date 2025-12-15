@@ -7,8 +7,8 @@ import pytest
 
 from app import db
 from app.modules.auth.models import User
-from app.modules.datasetfile.models import DatasetFile
 from app.modules.dataset.models import DataCategory, DataSet, DSMetaData
+from app.modules.datasetfile.models import DatasetFile
 from app.modules.hubfile.models import Hubfile, HubfileDownloadRecord, HubfileViewRecord
 from app.modules.hubfile.services import HubfileService
 
@@ -106,6 +106,7 @@ def _write_disk_text_for(hubfile: Hubfile, text: str):
 # DOWNLOAD endpoint tests
 # ---------------------------
 
+
 @pytest.fixture(scope="session")
 def test_download_cookie_and_records(test_client, monkeypatch, tmp_path, clean_database, feature_model, user):
     """
@@ -198,6 +199,7 @@ def test_download_failure_cases(test_client, monkeypatch, tmp_path, clean_databa
 # ---------------------------
 # VIEW endpoint tests
 # ---------------------------
+
 
 def test_view_cookie_and_records(test_client, monkeypatch, tmp_path, clean_database, feature_model, user):
     """

@@ -2,9 +2,9 @@ import os
 from datetime import datetime
 from typing import List
 
+from flask import current_app
 from PIL import Image
 from werkzeug.utils import secure_filename
-from flask import current_app
 
 from app.modules.community.models import Community, ProposalStatus
 from app.modules.community.repositories import CommunityProposalRepository, CommunityRepository

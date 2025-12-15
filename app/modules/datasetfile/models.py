@@ -11,9 +11,7 @@ class DatasetFile(db.Model):
     data_set_id = db.Column(db.Integer, db.ForeignKey("data_set.id"), nullable=False)
     metadata_id = db.Column("fm_meta_data_id", db.Integer, db.ForeignKey("fm_meta_data.id"))
     files = db.relationship("Hubfile", backref="dataset_file", lazy=True, cascade="all, delete")
-    file_metadata = db.relationship(
-        "DatasetFileMetaData", uselist=False, backref="dataset_file", cascade="all, delete"
-    )
+    file_metadata = db.relationship("DatasetFileMetaData", uselist=False, backref="dataset_file", cascade="all, delete")
 
     def __repr__(self):
         return f"DatasetFile<{self.id}>"

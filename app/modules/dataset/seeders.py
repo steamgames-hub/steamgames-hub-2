@@ -1,16 +1,15 @@
 import os
 import shutil
 from copy import deepcopy
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 
 from app.modules.auth.models import User
-from app.modules.dataset.models import Author, DataSet, DSMetaData, DSMetrics, DataCategory, DSDownloadRecord
+from app.modules.dataset.models import Author, DataCategory, DataSet, DSDownloadRecord, DSMetaData, DSMetrics
 from app.modules.datasetfile.models import DatasetFile, DatasetFileMetaData
 from app.modules.hubfile.models import Hubfile
 from core.seeders.BaseSeeder import BaseSeeder
-
 
 DATASET_BLUEPRINTS = [
     {
@@ -203,34 +202,30 @@ class DataSetSeeder(BaseSeeder):
                     ds_metrics_id=ds_metrics_id,
                 )
             )
-        
-        ds_meta_data_list[5]=(
-            DSMetaData(
-                deposition_id=506,
-                title="Steam Games Master Index",
-                description="Canonical reference dataset containing core metadata for Steam games.",
-                data_category=DataCategory.GENERAL,
-                publication_doi="10.9999/dataset.6/v1.0",
-                dataset_doi="10.9999/dataset.6/v1.0",
-                tags="steam, analytics",
-                ds_metrics_id=ds_metrics_id,
-                is_latest=False,
-            )
+
+        ds_meta_data_list[5] = DSMetaData(
+            deposition_id=506,
+            title="Steam Games Master Index",
+            description="Canonical reference dataset containing core metadata for Steam games.",
+            data_category=DataCategory.GENERAL,
+            publication_doi="10.9999/dataset.6/v1.0",
+            dataset_doi="10.9999/dataset.6/v1.0",
+            tags="steam, analytics",
+            ds_metrics_id=ds_metrics_id,
+            is_latest=False,
         )
 
-        ds_meta_data_list[6]=(
-            DSMetaData(
-                deposition_id=506,
-                title="New Version Steam Games Master Index",
-                description="Canonical reference dataset containing core metadata for Steam games (Version 2.0).",
-                data_category=DataCategory.OTHER,
-                publication_doi="10.9999/dataset.6",
-                dataset_doi="10.9999/dataset.6",
-                tags="steam, analytics, community",
-                ds_metrics_id=ds_metrics_id,
-                version=2.0,
-                is_latest=True,
-            )
+        ds_meta_data_list[6] = DSMetaData(
+            deposition_id=506,
+            title="New Version Steam Games Master Index",
+            description="Canonical reference dataset containing core metadata for Steam games (Version 2.0).",
+            data_category=DataCategory.OTHER,
+            publication_doi="10.9999/dataset.6",
+            dataset_doi="10.9999/dataset.6",
+            tags="steam, analytics, community",
+            ds_metrics_id=ds_metrics_id,
+            version=2.0,
+            is_latest=True,
         )
 
         return self.seed(ds_meta_data_list)
@@ -298,9 +293,7 @@ class DataSetSeeder(BaseSeeder):
         for ds_index, dataset in enumerate(seeded_datasets):
             for offset in range(self.FILES_PER_DATASET):
                 fm_idx = ds_index * self.FILES_PER_DATASET + offset
-                dataset_files.append(
-                    DatasetFile(data_set_id=dataset.id, metadata_id=seeded_file_metadata[fm_idx].id)
-                )
+                dataset_files.append(DatasetFile(data_set_id=dataset.id, metadata_id=seeded_file_metadata[fm_idx].id))
         seeded_dataset_files = self.seed(dataset_files)
         return seeded_file_metadata, seeded_dataset_files
 

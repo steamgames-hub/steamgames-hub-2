@@ -6,8 +6,8 @@ from app import db
 from app.modules.auth.models import User
 from app.modules.community.models import Community, CommunityDatasetProposal, ProposalStatus
 from app.modules.dataset.models import Author, DataCategory, DataSet, DSDownloadRecord, DSMetaData, DSViewRecord
-from app.modules.explore.repositories import ExploreRepository
 from app.modules.datasetfile.models import DatasetFile, DatasetFileMetaData
+from app.modules.explore.repositories import ExploreRepository
 
 
 @pytest.fixture(scope="module")

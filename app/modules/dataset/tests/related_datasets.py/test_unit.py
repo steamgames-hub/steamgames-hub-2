@@ -1,15 +1,12 @@
-import pytest
-from types import SimpleNamespace
 from datetime import datetime
-from flask import Flask
+from types import SimpleNamespace
 
 from app.modules.dataset.services import DataSetService
-from app.modules.dataset.models import DataSet, DSMetaData
-
 
 # ---------------------------------------------------------------------------
 # HELPERS
 # ---------------------------------------------------------------------------
+
 
 def make_dataset(
     ds_id,
@@ -32,11 +29,7 @@ def make_dataset(
         dataset_doi=doi,
     )
 
-    ds = SimpleNamespace(
-        id=ds_id,
-        ds_meta_data=meta,
-        created_at=created_at or datetime(2024, 1, 1)
-    )
+    ds = SimpleNamespace(id=ds_id, ds_meta_data=meta, created_at=created_at or datetime(2024, 1, 1))
     return ds
 
 
@@ -63,6 +56,7 @@ def test_normalize_tags_empty():
     assert svc._normalize_tags("") == set()
     assert svc._normalize_tags(None) == set()
 
+
 def test_fetch_author_related_ids_no_authors(monkeypatch):
     svc = DataSetService()
 
@@ -79,20 +73,23 @@ def test_fetch_author_related_ids_matches(monkeypatch):
         def __init__(self):
             pass
 
-        def join(self, *a, **kw): return self
-        def filter(self, *a, **kw): return self
-        def distinct(self): return self
+        def join(self, *a, **kw):
+            return self
+
+        def filter(self, *a, **kw):
+            return self
+
+        def distinct(self):
+            return self
+
         def all(self):
             return fake_query_result([10, 11])
 
     monkeypatch.setattr("app.modules.dataset.services.db.session.query", lambda *a, **kw: FakeQuery())
 
-    out = svc._fetch_author_related_ids(
-        dataset_id=1,
-        author_names={"alice"},
-        author_orcids=set()
-    )
+    out = svc._fetch_author_related_ids(dataset_id=1, author_names={"alice"}, author_orcids=set())
     assert out == {10, 11}
+
 
 def test_fetch_tag_related_ids_no_tags():
     svc = DataSetService()
@@ -104,10 +101,17 @@ def test_fetch_tag_related_ids_matches(monkeypatch):
     svc = DataSetService()
 
     class FakeQuery:
-        def join(self, *a, **kw): return self
-        def filter(self, *a, **kw): return self
-        def distinct(self): return self
-        def all(self): return fake_query_result([20, 21])
+        def join(self, *a, **kw):
+            return self
+
+        def filter(self, *a, **kw):
+            return self
+
+        def distinct(self):
+            return self
+
+        def all(self):
+            return fake_query_result([20, 21])
 
     monkeypatch.setattr("app.modules.dataset.services.db.session.query", lambda *args, **kwargs: FakeQuery())
 
@@ -124,10 +128,17 @@ def test_fetch_community_related_ids_matches(monkeypatch):
     svc = DataSetService()
 
     class FakeQuery:
-        def join(self, *a, **kw): return self
-        def filter(self, *a, **kw): return self
-        def distinct(self): return self
-        def all(self): return fake_query_result([30, 31])
+        def join(self, *a, **kw):
+            return self
+
+        def filter(self, *a, **kw):
+            return self
+
+        def distinct(self):
+            return self
+
+        def all(self):
+            return fake_query_result([30, 31])
 
     monkeypatch.setattr("app.modules.dataset.services.db.session.query", lambda *a, **kw: FakeQuery())
 

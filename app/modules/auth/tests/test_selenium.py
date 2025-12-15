@@ -1,11 +1,15 @@
-import pytest, time, re, os
+import os
+import re
+import time
+
+import pytest
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from app import db, create_app
+from app import create_app, db
 from app.modules.auth.models import User
 from app.modules.auth.services import AuthenticationService
 from core.environment.host import get_host_for_selenium_testing
@@ -290,7 +294,7 @@ def test_login_and_2fa():
     wait = WebDriverWait(driver, 20)
     app = create_app()
     try:
-        if (os.getenv("TWO_FACTOR_ENABLED", "False") == "True"):
+        if os.getenv("TWO_FACTOR_ENABLED", "False") == "True":
 
             host = get_host_for_selenium_testing()
             driver.get(f"{host}/login")
@@ -304,7 +308,7 @@ def test_login_and_2fa():
             # --- Esperar página 2FA ---
             wait.until(EC.url_contains("/two-factor/"))
 
-            main_window = driver.current_window_handle
+            driver.current_window_handle
 
             # --- Obtener 2FA ---
             with app.app_context():
@@ -357,7 +361,7 @@ def test_signup_and_verify(auth_service):
     driver = initialize_driver()
     wait = WebDriverWait(driver, 20)
     app = create_app()
-            
+
     try:
         host = get_host_for_selenium_testing()
         driver.get(f"{host}/signup")
@@ -374,13 +378,13 @@ def test_signup_and_verify(auth_service):
         password_field.send_keys(Keys.RETURN)
 
         # verify lockscreen
-        wait.until(
-            EC.visibility_of_element_located((By.XPATH, "//h5[contains(text(), 'Message sent')]"))
-        )
+        wait.until(EC.visibility_of_element_located((By.XPATH, "//h5[contains(text(), 'Message sent')]")))
 
         # --- Obtener enlace ---
         with app.app_context():
-            token = auth_service.generate_token(email="verify@example.com") # mockeamos el envío del email para no agotar el límite de la API
+            token = auth_service.generate_token(
+                email="verify@example.com"
+            )  # mockeamos el envío del email para no agotar el límite de la API
             app.logger.info(f"[test] Moqueando la obtención del token. Token obtenido: {token}")
 
         # --- Verificar cuenta ---
@@ -388,15 +392,13 @@ def test_signup_and_verify(auth_service):
         driver.get(link)
 
         # --- Comprobamos que se ha verificado con éxito ---
-        user_div = wait.until(
-            EC.visibility_of_element_located((By.XPATH, "//a[contains(text(), 'our homepage')]"))
-        )
+        user_div = wait.until(EC.visibility_of_element_located((By.XPATH, "//a[contains(text(), 'our homepage')]")))
 
         if user_div:
             print("[test] Login + verificación completado correctamente")
         else:
             print("[test] ERROR: verificación fallida")
-    
+
         # eliminamos el usuario creado
         with app.app_context():
             user = User.query.filter_by(email="verify@example.com").first()
@@ -496,7 +498,7 @@ def test_roles():
     try:
         host = get_host_for_selenium_testing()
         _login_with_optional_2fa(driver, host)
-        wait = WebDriverWait(driver, 8)
+        WebDriverWait(driver, 8)
         try:
             driver.get(f"{host}/users")
             wait_for_page_to_load(driver)

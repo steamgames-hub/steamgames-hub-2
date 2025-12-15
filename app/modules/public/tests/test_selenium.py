@@ -6,7 +6,6 @@ from selenium.webdriver.support.ui import Select, WebDriverWait
 from core.environment.host import get_host_for_selenium_testing
 from core.selenium.common import close_driver, initialize_driver
 
-
 TRENDING_LIST_SELECTOR = "[data-testid='trending-list-primary']"
 TRENDING_ROW_SELECTOR = "[data-testid='trending-list-primary'] li"
 TRENDING_BY_SELECT_ID = "trending-by"

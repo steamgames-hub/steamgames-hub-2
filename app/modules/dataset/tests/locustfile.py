@@ -1,3 +1,4 @@
+import json
 import os
 import re
 
@@ -5,7 +6,6 @@ from locust import HttpUser, TaskSet, task
 
 from core.environment.host import get_host_for_locust_testing
 from core.locust.common import get_csrf_token
-import json
 
 # Adjust to a valid path in your environment
 locust_file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -86,9 +86,9 @@ class DatasetBehavior(TaskSet):
         html = response.text
 
         # Ejemplo usando regex para extraer métricas
-        uploaded = re.search(r'Uploaded Datasets:\s*(\d+)', html)
-        downloads = re.search(r'Downloads:\s*(\d+)', html)
-        syncs = re.search(r'Synchronizations:\s*(\d+)', html)
+        uploaded = re.search(r"Uploaded Datasets:\s*(\d+)", html)
+        downloads = re.search(r"Downloads:\s*(\d+)", html)
+        syncs = re.search(r"Synchronizations:\s*(\d+)", html)
 
         if uploaded and downloads and syncs:
             metrics = {
@@ -159,6 +159,7 @@ class DatasetBehavior(TaskSet):
                 print("Draft creation returned", r.status_code, r.text[:200])
         except Exception as exc:
             print("Exception creating draft via locust:", exc)
+
 
 class DatasetUser(HttpUser):
     tasks = [DatasetBehavior]

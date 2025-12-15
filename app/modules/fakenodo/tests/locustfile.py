@@ -1,7 +1,7 @@
-import os
 from locust import HttpUser, TaskSet, task
+
 from core.environment.host import get_host_for_locust_testing
-from core.locust.common import get_csrf_token
+
 
 class FakenodoBehaviour(TaskSet):
     """
@@ -14,6 +14,7 @@ class FakenodoBehaviour(TaskSet):
         response = self.client.get("/fakenodo/test")
         if response.status_code != 200:
             print(f"Fakenodo test_full_connection failed: {response.status_code}")
+
 
 class FakenodoUser(HttpUser):
     tasks = [FakenodoBehaviour]

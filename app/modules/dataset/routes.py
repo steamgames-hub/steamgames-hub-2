@@ -164,14 +164,14 @@ def create_dataset():
                 dataset_service.update_dsmetadata(dataset.ds_meta_data_id, dataset_doi=deposition_doi)
                 # If this upload was created by editing an existing draft, delete the original draft
                 try:
-                    editing_id = request.form.get('editing_dataset_id')
+                    editing_id = request.form.get("editing_dataset_id")
                     if editing_id:
                         try:
                             orig = dataset_service.get_by_id(int(editing_id))
                             if orig:
                                 dataset_service.delete_draft_dataset(orig)
                         except Exception:
-                            logger.exception('Could not delete original draft %s', editing_id)
+                            logger.exception("Could not delete original draft %s", editing_id)
                 except Exception:
                     pass
             except Exception as e:
@@ -361,7 +361,7 @@ def update_dataset(dataset_id):
 
             # For published datasets, always create a new version
             # For drafts, if files changed, create new version; else update in-place
-            version_increment_type = request.form.get('version_increment_type', 'major')
+            version_increment_type = request.form.get("version_increment_type", "major")
             if not old_dataset.draft_mode or files_changed:
                 dataset = dataset_service.create_new_version(dataset_id, form, current_user, version_increment_type)
                 logger.info(f"Created new dataset version: {dataset}")
@@ -515,7 +515,7 @@ def delete_dataset_file(dataset_id):
         return jsonify({"message": "Dataset not found"}), 404
 
     # Only owner or admin can delete files
-    if getattr(current_user, 'id', None) != dataset.user_id and getattr(current_user, 'role', None) != UserRole.ADMIN:
+    if getattr(current_user, "id", None) != dataset.user_id and getattr(current_user, "role", None) != UserRole.ADMIN:
         return jsonify({"message": "Forbidden"}), 403
 
     data = request.get_json()
@@ -555,10 +555,10 @@ def delete_draft(dataset_id):
         return jsonify({"message": "Dataset not found"}), 404
 
     # Only owner or admin can delete a draft
-    if getattr(current_user, 'id', None) != dataset.user_id and getattr(current_user, 'role', None) != UserRole.ADMIN:
+    if getattr(current_user, "id", None) != dataset.user_id and getattr(current_user, "role", None) != UserRole.ADMIN:
         return jsonify({"message": "Forbidden"}), 403
 
-    if not getattr(dataset, 'draft_mode', False):
+    if not getattr(dataset, "draft_mode", False):
         return jsonify({"message": "Dataset is not a draft"}), 400
 
     try:
@@ -653,7 +653,7 @@ def subdomain_index(doi):
         abort(404)
 
     dataset = ds_meta_data.data_set
-    
+
     versions = []
     deposition_id = getattr(dataset.ds_meta_data, "deposition_id", None)
 
@@ -662,13 +662,15 @@ def subdomain_index(doi):
         for meta in versions_meta:
             ds = DataSet.query.filter_by(ds_meta_data_id=meta.id).first()
             if ds:
-                versions.append({
-                    "version": meta.version,
-                    "is_latest": meta.is_latest,
-                    "dataset_id": ds.id,
-                    "metadata": meta,
-                    "created_at": ds.created_at,
-                })
+                versions.append(
+                    {
+                        "version": meta.version,
+                        "is_latest": meta.is_latest,
+                        "dataset_id": ds.id,
+                        "metadata": meta,
+                        "created_at": ds.created_at,
+                    }
+                )
 
     user_cookie = ds_view_record_service.create_cookie(dataset=dataset)
     FAKENODO_URL = os.getenv("FAKENODO_URL")
@@ -819,22 +821,24 @@ def edit(dataset_id):
                     entry.affiliation.data = author.affiliation
                     entry.orcid.data = author.orcid
                 except Exception:
-                    logger.exception('Could not populate author form entry for dataset %s', dataset_id)
+                    logger.exception("Could not populate author form entry for dataset %s", dataset_id)
 
         # Feature models: prepare a simple representation for the template to render
         editing_files = []
         for idx, fm in enumerate(dataset.feature_models):
             fm_md = fm.fm_meta_data
             filename = fm_md.csv_filename
-            editing_files.append({
-                'csv_filename': filename,
-                'title': fm_md.title,
-                'description': fm_md.description,
-                'data_category': getattr(fm_md.data_category, 'value', None),
-                'publication_doi': fm_md.publication_doi,
-                'tags': fm_md.tags,
-                'version': fm_md.csv_version,
-            })
+            editing_files.append(
+                {
+                    "csv_filename": filename,
+                    "title": fm_md.title,
+                    "description": fm_md.description,
+                    "data_category": getattr(fm_md.data_category, "value", None),
+                    "publication_doi": fm_md.publication_doi,
+                    "tags": fm_md.tags,
+                    "version": fm_md.csv_version,
+                }
+            )
 
             # Copy stored file into user's temp folder so the upload flow can find it
             try:
@@ -848,12 +852,12 @@ def edit(dataset_id):
                 logger.exception("Could not copy stored file %s to temp folder for editing", filename)
 
     except Exception:
-        logger.exception('Error preparing edit form for dataset %s', dataset_id)
+        logger.exception("Error preparing edit form for dataset %s", dataset_id)
         return list_dataset()
 
     user_preference = current_user.profile.save_drafts
     return render_template(
-        'dataset/upload_dataset.html',
+        "dataset/upload_dataset.html",
         form=form,
         save_drafts=user_preference,
         editing_dataset=dataset,
@@ -964,12 +968,13 @@ def open_issue(issue_id):
     issues = issue_service.list_all()
     return render_template("dataset/list_issues.html", issues=issues)
 
+
 @dataset_bp.route("/dataset/view/<int:dataset_id>", methods=["GET"])
 def view_dataset_by_id(dataset_id):
     dataset = dataset_service.get_by_id(dataset_id)
     if not dataset or dataset.draft_mode:
         abort(404)
-        
+
     doi = getattr(dataset.ds_meta_data, "dataset_doi", None)
     if doi:
         return redirect(url_for("dataset.subdomain_index", doi=doi))
@@ -981,13 +986,15 @@ def view_dataset_by_id(dataset_id):
         for meta in versions_meta:
             ds = DataSet.query.filter_by(ds_meta_data_id=meta.id).first()
             if ds:
-                versions.append({
-                    "version": meta.version,
-                    "is_latest": meta.is_latest,
-                    "dataset_id": ds.id,
-                    "metadata": meta,
-                    "created_at": ds.created_at,
-                })
+                versions.append(
+                    {
+                        "version": meta.version,
+                        "is_latest": meta.is_latest,
+                        "dataset_id": ds.id,
+                        "metadata": meta,
+                        "created_at": ds.created_at,
+                    }
+                )
 
     return render_template("dataset/view_dataset.html", dataset=dataset, versions=versions)
 
@@ -1011,9 +1018,7 @@ def rollback_dataset_version(dataset_id):
 
     try:
         dataset_service.rollback_to_previous_version(previous_version, current_dataset)
-        return redirect(
-            url_for("dataset.subdomain_index", doi=previous_version.dataset_doi)
-        )
+        return redirect(url_for("dataset.subdomain_index", doi=previous_version.dataset_doi))
     except Exception as exc:
         logger.exception(f"Exception while rolling back dataset version: {exc}")
         return jsonify({"Exception while rolling back dataset version: ": str(exc)}), 400

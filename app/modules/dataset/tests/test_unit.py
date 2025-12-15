@@ -1514,7 +1514,9 @@ def test_rollback_dataset_version_success(test_client, test_app):
     latest_dataset_id = ds_v2.id
 
     test_client.get("/logout", follow_redirects=True)
-    resp = test_client.post("/login", data={"email": "test@example.com", "password": "test1234"},
+    resp = test_client.post(
+        "/login",
+        data={"email": "test@example.com", "password": "test1234"},
         follow_redirects=True,
     )
     assert resp.status_code == 200
@@ -1536,7 +1538,6 @@ def test_rollback_dataset_version_success(test_client, test_app):
 
         v2 = db.session.get(DataSet, md_v2_id)
         assert v2 is None
-
 
 
 def test_rollback_dataset_version_unsuccess(test_client, test_app):
@@ -1568,18 +1569,19 @@ def test_rollback_dataset_version_unsuccess(test_client, test_app):
     latest_dataset_id = ds_v1.id
 
     test_client.get("/logout", follow_redirects=True)
-    resp = test_client.post("/login", data={"email": "test@example.com", "password": "test1234"},
+    resp = test_client.post(
+        "/login",
+        data={"email": "test@example.com", "password": "test1234"},
         follow_redirects=True,
     )
     assert resp.status_code == 200
 
-    response = test_client.post(
-        f"/dataset/versions/rollback/{latest_dataset_id}"
-    )
+    response = test_client.post(f"/dataset/versions/rollback/{latest_dataset_id}")
 
     data = response.get_json()
     assert data["message"] == "No previous version available for rollback"
     assert response.status_code == 400
+
 
 def test_rollback_dataset_version_unauthorized(test_client, test_app):
     with test_app.app_context():
@@ -1612,16 +1614,18 @@ def test_rollback_dataset_version_unauthorized(test_client, test_app):
     latest_dataset_id = ds_v1.id
 
     test_client.get("/logout", follow_redirects=True)
-    resp = test_client.post("/login", data={"email": "test@example.com", "password": "test1234"},
+    resp = test_client.post(
+        "/login",
+        data={"email": "test@example.com", "password": "test1234"},
         follow_redirects=True,
     )
     assert resp.status_code == 200
 
-    response = test_client.post(
-        f"/dataset/versions/rollback/{latest_dataset_id}"
-    )
+    response = test_client.post(f"/dataset/versions/rollback/{latest_dataset_id}")
 
     assert response.status_code == 403, "Unauthorized"
+
+
 def test_dataset_file_form_accepts_empty_version():
     form = DatasetFileForm(
         formdata=MultiDict(
@@ -1723,6 +1727,7 @@ def test_user_metrics_not_authenticated():
     dataset_service.count_user_datasets.assert_not_called()
     dataset_service.count_user_dataset_downloads.assert_not_called()
     dataset_service.count_user_synchronized_datasets.assert_not_called()
+
 
 def test_delete_draft_dataset_success(test_client):
     """delete_draft_dataset should remove a draft dataset from the DB."""

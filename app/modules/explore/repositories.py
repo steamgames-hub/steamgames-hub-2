@@ -4,9 +4,9 @@ import unidecode
 from sqlalchemy import and_, func, or_
 
 from app import db
+from app.modules.community.models import Community, CommunityDatasetProposal, ProposalStatus
 from app.modules.dataset.models import Author, DataCategory, DataSet, DSDownloadRecord, DSMetaData, DSViewRecord
 from app.modules.datasetfile.models import DatasetFile, DatasetFileMetaData
-from app.modules.community.models import Community, CommunityDatasetProposal, ProposalStatus
 from core.repositories.BaseRepository import BaseRepository
 
 
