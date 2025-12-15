@@ -207,9 +207,63 @@ Con todo esto, el sistema ahora es mucho más completo, manejable y robusto.
 
 Debe dar una visión general del proceso que ha seguido enlazándolo con las herramientas que ha utilizado. Ponga un ejemplo de un cambio que se proponga al sistema y cómo abordaría todo el ciclo hasta tener ese cambio en producción. Los detalles de cómo hacer el cambio vendrán en el apartado correspondiente.
 
-## Entorno de desarrollo (800 palabras aproximadamente)
+## Entorno de desarrollo
 
-Debe explicar cuál es el entorno de desarrollo que ha usado, cuáles son las versiones usadas y qué pasos hay que seguir para instalar tanto su sistema como los subsistemas relacionados para hacer funcionar el sistema al completo. Si se han usado distintos entornos de desarrollo por parte de distintos miembros del grupo, también debe referenciarlo aquí.
+### Configuración principal del equipo
+
+Este proyecto puede funcionar en diversos entornos debido a la flexibilidad que proporciona, pero los miembros de este equipo han usado la siguiente configuración para su uso en local:
+
+1. Un sistema operativo basado en Linux, en este caso, todo el equipo ha usado Ubuntu, entre las versiones 24.04.1 y 24.04.03 (última en el momento de la redacción de este documento)
+2. Un IDE moderno, como es Visual Studio Code, en su versión `1.105.1`, junto con las extensiones que cada uno haya deseado. Debido a que ninguna extensión es **ESTRICTAMENTE NECESARIA**, no se detallarán en este apartado. Además, también se necesita acceso a una consola o CLI.
+3. Una configuración de variables de entorno adecuadas para el funcionamiento en local, lo que **DEBE INCLUIR**:
+- El nombre de la aplicación: `Steamgameshub.IO` en `FLASK_APP_NAME` y demás variables de entorno necesarias para una aplicación de flask, como son `FLASK_APP` y `FLASK_ENV`, en este caso con `app` y `development`, respectivamente.
+- El dominio a usar cuando la aplicación arranque: `localhost:5000` en `DOMAIN`
+- La configuración para conectarse con la base de datos de mariadb: puerto, nombre de la base de datos, usuario y contraseña. Estas variables se detallarán en el siguiente apartado.
+- Una url ficticia para fakenodo en `FAKENODO_URL`, donde se ha usado `fakenodo.org`
+- Las credenciales necesarias para poder enviar correos tanto para el 2FA como para la verificación del email y para almacenar ficheros en remoto en AWS (aunque esto último **NO INFLUYE PARA EL DESPLIGUE EN LOCAL**).
+4. Una instalación limpia de Python 3.12.3, con su posterior instalación de dependencias con `pip install -r requirements.txt`
+5. Una instalación y puesta en marcha del servicio de MariaDB consecuentes con las variables de entorno elegidas.
+
+Una vez ejecutado todo este proceso, el equipo de trabajo ha trabajado en el proyecto siguiendo una serie de pasos:
+
+1. Ejecutar migraciones (si existieran) con el servicio de MariaDB activado: `flask db upgrade`
+2. Limpiar y poblar la base de datos: `rosemary db:reset` y `rosemary db:seed`
+3. Arrancar la aplicación con `flask run --host=0.0.0.0 --debug --reload` y acceder a la url configurada en las variables de entorno.
+
+### Correcto funcionamiento de la base de datos
+
+Debido a que el sistema requiere una base de datos de MariaDB para funcionar en un sistema local, todo el equipo se ha instalado este servicio, configurándolo según la guía de [UVLHub](https://docs.uvlhub.io/installation/manual_installation), aunque a posteriori se le han hecho modificaciones en los nombres de las bases de datos para que sean `steamgameshubdb` y `steamgameshubdb_test` y por tanto, incluido esto en las variables de entorno de `MARIADB_DATABASE` y `MARIADB_TEST_DATABASE` respectivamente. El resto de variables de entorno y configuraciones se han dejado por defecto tal y como se dice en la guía.
+
+### Otras configuraciones (con Docker y Vagrant)
+
+Además, algunos integrantes del equipo han usado Docker para su entorno de desarrollo. Para esto, únicamente es necesario tener instalado Docker y corroborar que exista una variable de nombre `WORKING_DIR` apuntando a la carpeta `/app/` y quqe el nombre de la base de datos se llame `db`. Esto es debido a como están diseñados los Dockerfile del proyecto.
+
+Una vez se verifique lo anterior, se puede arrancar el proyecto con Docker de la siguiente manera: `docker compose -f docker/docker-compose.dev.yml up -d `.
+
+A su vez, el proyecto también se puede usar con una máquina virtual (Vagrant), pero ningún miembro la ha usado activamente. De todas formas, la configuración para poder usar Vagrant en muy sencilla, únicamente hay que verificar que la variable de entorno `WORKING_DIR` apunte a la carpeta `/vagrant/`. 
+
+Una vez hecho esto, suponiendo que se tiene instalado Vagrant, Ansible y VirtualBox, un simple comando dentro de la carpeta `/vagrant/` arranca automaticamente la máquina virtual: `vagrant up`.
+
+### API keys necesarias
+
+Si bien el proyecto proporciona una serie de variables de entorno que en principio debieran ser "Plug-and-Play" en la raíz, el proyecto, tal y como se ha mencionado antes, requiere de API keys para funcionar, estas API keys (se incluyen en [este enlace](https://uses0-my.sharepoint.com/:f:/r/personal/albramvar1_alum_us_es/Documents/steamgames-hub-env?csf=1&web=1&e=SuQXbM) ya que no se pueden subir directamente a GitHub). Estas API keys son las siguientes:
+
+- `AWS_ACCESS_KEY_ID` y `AWS_SECRET_ACCESS_KEY`, correspondientes con la conexión de AWS S3 para almacenar ficheros, siempre y cuando no se trate de un despliegue local. Claves que se complementan con `S3_BUCKET` y `S3_REGION`. 
+
+- Para el email, las variables de entorno necesarias son:
+    #### Para el 2FA
+    - `FROM_EMAIL`, `MAIL_DEFAULT_SENDER` y `MAIL_USER`, con el correo usado como remitente, en este caso `noreply.steamgameshub@gmail.com`.
+    - `MAIL_PASSWORD` y `MAIL_USERNAME`, con las claves necesarias para iniciar sesión en el correo anterior.
+    - `MAIL_PORT`, `MAIL_USE_TLS` y `MAIL_PORT`
+
+    #### Para la verficación del email
+    - `SECRET_KEY`, `SECURITY_PASSWORD_SALT` y `SENDGRID_API_KEY`, con los valores que proporciona Sendgrid para poder enviar emails.
+
+    Estas variables son muchas debido a que cada grupo ha integrado de una manera distinta el envío de correos.
+
+### Puesta en marcha mejorada
+
+Debido a que este proceso puede llegar a ser engorroso y, sobre todo, repetitivo si se instala en varias máquinas, se ha desarrollado una serie de scripts que facilitan y automatizan este proceso. Estos scripts son los denominados como `set-up-local.sh`, `set-up-docker.sh` y `set-up-vagrant.sh`. 
 
 ## Ejercicio de propuesta de cambio
 
@@ -217,4 +271,18 @@ Se presentará un ejercicio con una propuesta concreta de cambio en la que a par
 
 ## Conclusiones y trabajo futuro
 
-Se enunciarán algunas conclusiones y se presentará un apartado sobre las mejoras que se proponen para el futuro (curso siguiente) y que no han sido desarrolladas en el sistema que se entrega.
+### Conclusiones
+- El proyecto ha alcanzado los objetivos funcionales planteados: gestión de usuarios, subida y descarga de ficheros, gestión de datasets y mecanismos básicos de verificación y 2FA. Las funcionalidades implementadas son coherentes con los requisitos y han sido validadas mediante tests unitarios e integración.
+- La arquitectura modular facilita la extensión y el mantenimiento: cada módulo (auth, dataset, hubfile, profile, etc.) está claramente separado y documentado, lo que ha permitido trabajar en paralelo en varias partes del sistema.
+- Se ha logrado un nivel de automatización (scripts de arranque, seeds, y pruebas locales) que acelera la puesta en marcha del entorno de desarrollo y unos workflows que permiten detectar bugs y errores temprano.
+- La integración entre equipos ha sido complicada, sobre todo, por no tener claro desde el principio la manera de proceder entre nosotros.
+
+### Trabajo futuro
+- Calidad y pruebas: aumentar la cobertura de tests (unitarios, selenium, carga, etc.).
+- Mejorar la interfaz gŕafica de la aplicación y unificar el estilo.
+- CI/CD: añadir nuevos workflows y mejorar aquellos existentes, workflows de integración y despliegue automatizados.
+- Rendimiento y escalabilidad: optimizar manejo de ficheros grandes (streaming, chunked uploads), mejorar cache y consultas a la base de datos, y añadir métricas.
+- Robustez y experiencia de usuario: mejorar validaciones en formularios, mensajes de error más bonitos, accesibilidad y añadir idiomas (i18n).
+- Documentación y onboarding: añadir guías más completas y mejorar el README.md
+
+Estas propuestas priorizan la estabilidad, la seguridad y la facilidad de mantenimiento, dejando más de lado el aumento de las funcionalidades para el siguiente curso de desarrollo.
