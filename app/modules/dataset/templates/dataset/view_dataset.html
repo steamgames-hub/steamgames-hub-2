@@ -167,9 +167,9 @@
                                     <td>{{ v.created_at.strftime('%B %d, %Y') if v.created_at else '' }}</td>
                                     <td class="text-end">
                                         {% if not is_current %}
-                                            {% if v.dataset_doi %}
+                                            {% if v.metadata and v.metadata.dataset_doi %}
                                                 <a class="btn btn-outline-primary btn-sm"
-                                                    href="{{ url_for('dataset.subdomain_index', doi=v.dataset_doi) }}">
+                                                    href="{{ url_for('dataset.subdomain_index', doi=v.metadata.dataset_doi) }}">
                                                     Show
                                                 </a>
                                             {% else %}

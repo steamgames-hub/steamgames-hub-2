@@ -108,6 +108,44 @@ DATASET_BLUEPRINTS = [
         ],
         "user_ref": "user1",
     },
+    {
+        "title": "Steam Games Master Index",
+        "description": "Canonical reference dataset containing core metadata for Steam games.",
+        "data_category": DataCategory.GENERAL,
+        "tags": ["steam", "analytics"],
+        "authors": [
+            {
+                "name": "Sofia Alvarez",
+                "affiliation": "IndiePulse",
+                "orcid": "0000-0000-0000-4001",
+            },
+            {
+                "name": "Omar Malik",
+                "affiliation": "Revenue R&D",
+                "orcid": "0000-0000-0000-5001",
+            },
+        ],
+        "user_ref": "user1",
+    },
+    {
+        "title": "New Version Steam Games Master Index",
+        "description": "Canonical reference dataset containing core metadata for Steam games (Version 2.0).",
+        "data_category": DataCategory.OTHER,
+        "tags": ["steam", "analytics", "community"],
+        "authors": [
+            {
+                "name": "Sofia Alvarez",
+                "affiliation": "IndiePulse",
+                "orcid": "0000-0000-0000-4001",
+            },
+            {
+                "name": "Omar Malik",
+                "affiliation": "Revenue R&D",
+                "orcid": "0000-0000-0000-5001",
+            },
+        ],
+        "user_ref": "user1",
+    },
 ]
 
 
@@ -166,7 +204,7 @@ class DataSetSeeder(BaseSeeder):
                 )
             )
         
-        ds_meta_data_list.append(
+        ds_meta_data_list[5]=(
             DSMetaData(
                 deposition_id=506,
                 title="Steam Games Master Index",
@@ -180,7 +218,7 @@ class DataSetSeeder(BaseSeeder):
             )
         )
 
-        ds_meta_data_list.append(
+        ds_meta_data_list[6]=(
             DSMetaData(
                 deposition_id=506,
                 title="New Version Steam Games Master Index",

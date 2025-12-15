@@ -286,6 +286,20 @@ def update_dataset(dataset_id):
                                     pass
                     except Exception:
                         pass
+
+                    # If editing a published dataset, copy existing files to temp folder
+                    if not ds.draft_mode:
+                        try:
+                            temp_dir = current_user.temp_folder()
+                            if not os.path.exists(temp_dir):
+                                os.makedirs(temp_dir, exist_ok=True)
+                            for fm in ds.feature_models:
+                                filename = fm.fm_meta_data.csv_filename
+                                stored_key = storage_service.dataset_file_path(ds.user_id, ds.id, filename)
+                                with storage_service.as_local_path(stored_key) as local_file_path:
+                                    shutil.copy(local_file_path, os.path.join(temp_dir, filename))
+                        except Exception:
+                            logger.exception("Could not copy stored files to temp folder for editing published dataset")
             except Exception:
                 # don't block rendering on prefill errors
                 logger.exception("Error pre-filling dataset edit form")
@@ -345,16 +359,17 @@ def update_dataset(dataset_id):
 
             logger.info("Creating/updating dataset...")
 
-            if files_changed:
-                # Create a new version only when files were modified/uploaded
-                dataset = dataset_service.create_new_version(dataset_id, form, current_user)
+            # For published datasets, always create a new version
+            # For drafts, if files changed, create new version; else update in-place
+            version_increment_type = request.form.get('version_increment_type', 'major')
+            if not old_dataset.draft_mode or files_changed:
+                dataset = dataset_service.create_new_version(dataset_id, form, current_user, version_increment_type)
                 logger.info(f"Created new dataset version: {dataset}")
                 # move uploaded feature model files into storage
-                dataset_service.move_feature_models(dataset)
+                dataset_service.move_dataset_files(dataset)
             else:
-                # No file changes: update metadata in-place
+                # Draft without file changes: update metadata in-place
                 dsmetadata_data = form.get_dsmetadata()
-                # update existing metadata fields
                 dataset = dataset_service.get_by_id(dataset_id)
                 dataset_service.update_dsmetadata(dataset.ds_meta_data_id, **dsmetadata_data)
                 logger.info(f"Updated dataset metadata for dataset_id={dataset_id}")
@@ -396,7 +411,7 @@ def update_dataset(dataset_id):
         msg = "Everything works!"
         return jsonify({"message": msg}), 200
 
-    return render_template("dataset/upload_dataset.html", form=form, save_drafts=False)
+    return render_template("dataset/upload_dataset.html", form=form, save_drafts=False, editing_dataset=ds)
 
 
 @dataset_bp.route("/dataset/draft/save", methods=["POST"])
@@ -490,6 +505,46 @@ def delete():
         return jsonify({"message": "File deleted successfully"}), 200
 
     return jsonify({"error": "File not found"}), 404
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/file/delete", methods=["POST"])
+@login_required
+def delete_dataset_file(dataset_id):
+    dataset = dataset_service.get_by_id(dataset_id)
+    if not dataset:
+        return jsonify({"message": "Dataset not found"}), 404
+
+    # Only owner or admin can delete files
+    if getattr(current_user, 'id', None) != dataset.user_id and getattr(current_user, 'role', None) != UserRole.ADMIN:
+        return jsonify({"message": "Forbidden"}), 403
+
+    data = request.get_json()
+    filename = data.get("file")
+    if not filename:
+        return jsonify({"message": "Filename required"}), 400
+
+    try:
+        # Find the feature model with this filename
+        fm_to_delete = None
+        for fm in dataset.feature_models:
+            if fm.fm_meta_data.csv_filename == filename:
+                fm_to_delete = fm
+                break
+
+        if not fm_to_delete:
+            return jsonify({"message": "File not found in dataset"}), 404
+
+        # Delete the file from storage
+        stored_key = storage_service.dataset_file_path(dataset.user_id, dataset.id, filename)
+        storage_service.delete_file(stored_key)
+
+        # Delete from DB
+        dataset_service.feature_model_repository.delete(fm_to_delete.id)
+
+        return jsonify({"message": "File deleted successfully"})
+    except Exception as exc:
+        logger.exception(f"Error deleting file {filename} from dataset {dataset_id}: {exc}")
+        return jsonify({"message": str(exc)}), 500
 
 
 @dataset_bp.route("/dataset/<int:dataset_id>/draft/delete", methods=["DELETE"])
@@ -865,8 +920,6 @@ def report_dataset(dataset_id: int):
 def dataset_versions(dataset_id):
     """Display version history timeline for a dataset."""
     dataset = dataset_service.get_by_id(dataset_id)
-    if not dataset or dataset.draft_mode:
-        abort(404)
 
     # Get the deposition_id and fetch all versions
     deposition_id = dataset.ds_meta_data.deposition_id
@@ -944,8 +997,6 @@ def view_dataset_by_id(dataset_id):
 def rollback_dataset_version(dataset_id):
 
     current_dataset = dataset_service.get_by_id(dataset_id)
-    if not current_dataset or current_dataset.draft_mode:
-        abort(404)
 
     if current_user.role != UserRole.ADMIN and current_dataset.user_id != current_user.id:
         abort(403, description="Unauthorized")
