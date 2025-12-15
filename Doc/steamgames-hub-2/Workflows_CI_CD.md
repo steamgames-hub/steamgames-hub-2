@@ -1,5 +1,22 @@
 # Workflows
 
+#### Versión 1.0 del documento
+
+|                |                                         |
+| -------------- | --------------------------------------- |
+| **Asignatura** | Evolución y Gestión de la Configuración |
+| **Curso**      | 2025/2026                               |
+| **Proyecto**   | steamgames-hub-2                        |
+
+| **Integrantes**               | **Correo**            |
+| ----------------------------- | --------------------- |
+| Julia Virginia Ángeles Burgos | julangbur@alum.us.es  |
+| Manuel Jesús Benito Merchán   | manbenmer1@alum.us.es |
+| Francisco Fernández Noguerol  | frafernog@alum.us.es  |
+| Beatriz Gutiérrez Arazo       | beagutara@alum.us.es  |
+| José Javier Morán Corbacho    | josmorcor3@alum.us.es |
+| Alba Ramos Vargas             | albramvar1@alum.us.es |
+
 ## Introducción
 
 Este documento describe los workflows de GitHub Actions utilizados en el proyecto, detallando su finalidad, las tareas que automatizan y las condiciones bajo las que se ejecutan.

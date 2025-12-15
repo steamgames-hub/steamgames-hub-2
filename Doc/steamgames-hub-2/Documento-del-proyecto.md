@@ -257,7 +257,7 @@ Una vez se finalice el desarrollo y se integre la rama feature/tarea-xx a la ram
 
 4. **Despliegue de preproducción**: ante un push a trunk se realizará un [despliegue en render](https://steamgames-hub-2-trunk.onrender.com/) sólo si previamente se han pasado los tests de pytest. De esta forma aseguramos tener siempre un entorno de pruebas para usuarios piloto que no tenga bugs identificables por código estático.
 
-5. **Merge automático a main y auto releases**: para automatizar y simplificar el desarrollo, hemos introducido además estos dos workflows. Por un lado, todo los domingos a las 00:00 se realiza un merge de trunk a main, de esta forma podemos centrarnos en el desarrollo sin tener que estar pendientes de cuándo integrar el código. Por otra parte, tenemos un workflow que crea una release cuando se realiza un push en main.
+5. **Merge automático a main y auto releases**: para automatizar y simplificar el desarrollo, hemos introducido además estos dos workflows. Por un lado, todo los lunes a las 00:00 se realiza un merge de trunk a main, de esta forma podemos centrarnos en el desarrollo sin tener que estar pendientes de cuándo integrar el código. Por otra parte, tenemos un workflow que crea una release cuando se realiza un push en main.
 
 6. **Despliegues de producción**: una vez de hace un merge a main se actualizan los servicios de producción. Por un lado, tenemos un [despliegue en render](https://steamgames-hub-2.onrender.com/) como la publicación de la imagen en DockerHub.
 
