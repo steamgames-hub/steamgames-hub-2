@@ -30,7 +30,7 @@ En primer lugar, para escribir los mensajes de commits vamos a emplear la especi
     <cuerpo>
 ```
 
-El campo tipo debe comenzar obligatoriamente por uno de los siguientes prefijos: `feat`, `fix` o `chore`. Además, el cuerpo debe finalizar con uno de los siguientes prefijos: `Refs:`, `Closes:`, `Fixes:` seguido de #xx, siendo xx el número de la issue a la que está vinculado el commit. Todo esto se valida automáticamente mediante un hook que hemos configurado.
+El campo tipo debe comenzar obligatoriamente por uno de los siguientes prefijos: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore` o `revert`. Además, el cuerpo debe finalizar con uno de los siguientes prefijos: `Refs:`, `Closes:`, `Fixes:` seguido de #xx, siendo xx el número de la issue a la que está vinculado el commit. Todo esto se valida automáticamente mediante un hook que hemos configurado.
 
 Por último, siempre que sea posible la fusión de ramas se realizará mediante fast-forward. Si existen conflictos o la rama de destino tiene commits adicionales, se realizará una fusión generando un commit de merge.
 
