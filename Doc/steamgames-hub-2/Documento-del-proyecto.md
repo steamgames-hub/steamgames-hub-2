@@ -203,9 +203,75 @@ Las siguientes features son las elegidas por el equipo de Steamgames-Hub-2 y por
 
 Con todo esto, el sistema ahora es mucho más completo, manejable y robusto.
 
-## Visión global del proceso de desarrollo (1.500 palabras aproximadamente)
+## Visión global del proceso de desarrollo
 
-Debe dar una visión general del proceso que ha seguido enlazándolo con las herramientas que ha utilizado. Ponga un ejemplo de un cambio que se proponga al sistema y cómo abordaría todo el ciclo hasta tener ese cambio en producción. Los detalles de cómo hacer el cambio vendrán en el apartado correspondiente.
+Para visualizar mejor el flujo de trabajo, pongamos de ejemplo el caso de recibir una sugerencia de una nueva feature, sea la que sea. 
+
+### Creación de la issue y reparto del trabajo
+
+Lo primero que ocurriría sería recibir dicha sugerencia como una nueva issue. Para facilitar al resto de usuarios la creación de esta issue, tenemos algunas plantillas a su disposición: 
+
+- **Task**: para tareas no técnicas del proyecto. Incluye apartados de descripción, objetivo, pasos a realizar y contexto adicional.  
+
+- **Feature**: para tareas técnicas y de desarrollo. Incluye los siguientes apartados: 
+
+    - Descripción técnica: puede presentarse como una historia de usuario o como una descripción detallada de la funcionalidad, especificando casos de uso y consideraciones especiales, como casos límite o valores nulos. 
+
+    - Criterios de aceptación 
+
+    - Subtareas: aunque este apartado está enfocado a un miembro del equipo para organizar su trabajo, también puede utilizarse para completar la descripción, ya que permite un mayor desglose del trabajo a realizar. 
+
+    - Dependencias: tareas que están bloqueadas por esta tarea o que bloquean a la issue que se está creando. También se puede mencionar issues del grupo steamgames-hub-1 para saber que hay que tenerlo en cuenta (ya sea por solapamientos o por poder utilizar implementaciones suyas) o incluso librerías que podrían ser de ayuda. 
+
+- **Bug report**: enfocado a usuarios de la aplicación, ya sea en desarrollo o en producción. Incluye los siguientes apartados: 
+
+    - Descripción del bug: descripción general del bug, cuál es el fallo, dónde ocurre, etc. 
+
+    - Para reproducirlo: pasos detallados para reproducir el bug. 
+
+    - Comportamiento esperado 
+
+    - Capturas de pantalla: siempre es recomendable añadir capturas y evidencias del bug. Puede ocurrir que el equipo no sea capaz de reproducir el bug pero estas capturas pueden ayudar a identificarlas si vuelven a ocurrir en el futuro.
+
+Una vez creada esta issue, esta sería automáticamente añadida a un tablero con el estado 'Triage'. Si la issue es de tipo Feature o Task, se añadiría al tablero [Feature tracker](https://github.com/orgs/steamgames-hub/projects/2) mientras que si es de tipo Bug se añadiría al tablero [Bug tracker](https://github.com/orgs/steamgames-hub/projects/4). Nosotros como equipo de desarrollo decidiríamos si es un cambio razonable e interesante y, si es así, se pasaría al estado de 'Todo'. 
+
+Veamos primero qué ocurriría si recibimos una issue de tipo Feature.
+
+A partir de aquí, nuestra coordinadora de equipos (Beatriz Gutiérrez) hablaría con el equipo de steamgames-hub-1 para ver si hay funcionalidades en común que podamos reutilizar o bien conflictos con los que tengamos que tener cuidado. Luego, nuestro coordinador de trabajo (Javier Morán) crearía las subtareas para que estas sean atómicas y realizables por una sola persona en un tiempo razonable para favorecer la integración continua. Aunque las issues existentes relacionadas con los work-items tienen la dificultad por defecto de dicho work-item, independientemente de su dificultad real, toda nueva issue recibiría como mínimo dos etiquetas: una de prioridad y otra de dificultad.
+
+La etiqueta de dificultad, al ser establecida a priori, puede no estar perfectamente ajustada a la dificultad real de la tarea, sin embargo, la etiqueta de prioridad siempre será exacta y vinculante. A partir de aquí, el equipo discutiría cómo repartirse el trabajo. La repartición de tareas se haría de forma colaborativa, decidiéndose en conjunto qué hace cada uno. 
+
+### Desarrollo y automatización
+
+Una vez una persona empiece con su tarea, esta se creará una rama específica llamada feature/tarea-xx, siendo xx el número de tarea establecido en el título de la issue, y movería la tarea al estado 'In progress'. Esta rama puede incluir más información para que la rama sea más reconocible, por ejemplo, feature/tarea-33-datos-en-despliegue.
+
+Conforme se avance en la tarea y se hagan commits la integración y el despliegue continuos comenzarán. Aunque todos los workflows y cómo interactúan está detallado en el documento [Workflows CI CD](./Workflows_CI_CD.md), veremos a continuación qué pasa, aunque sea por encima.
+
+1. **Testing**: ante todo push o pull request (al ser un proyecto de equipo hemos incluido este trigger), se realizarán workflows de testing, tanto con pytest como con selenium. De esta forma, nos aseguramos de que los tests se pasan o, al menos, de qué tests fallan y con qué cambios.
+
+2. **Python lint**: igual que el anterior, tras cualquier push o pull request se realiza un análisis estático del código. Permite mantener la calidad del código en un nivel mínimo.
+
+Una vez se finalice el desarrollo y se integre la rama feature/tarea-xx a la rama trunk, habrá otros workflows de integración continua.
+
+3. **Codacy analysis**: tras cualquier push o pull request a trunk, main o bugfix, se hará un análisis del código.
+
+4. **Despliegue de preproducción**: ante un push a trunk se realizará un [despliegue en render](https://steamgames-hub-2-trunk.onrender.com/) sólo si previamente se han pasado los tests de pytest. De esta forma aseguramos tener siempre un entorno de pruebas para usuarios piloto que no tenga bugs identificables por código estático.
+
+5. **Merge automático a main y auto releases**: para automatizar y simplificar el desarrollo, hemos introducido además estos dos workflows. Por un lado, todo los domingos a las 00:00 se realiza un merge de trunk a main, de esta forma podemos centrarnos en el desarrollo sin tener que estar pendientes de cuándo integrar el código. Por otra parte, tenemos un workflow que crea una release cuando se realiza un push en main.
+
+6. **Despliegues de producción**: una vez de hace un merge a main se actualizan los servicios de producción. Por un lado, tenemos un [despliegue en render](https://steamgames-hub-2.onrender.com/) como la publicación de la imagen en DockerHub.
+
+### Conflictos
+
+Cada uno trabaja en su tarea y, si cuando tiene que integrar la rama a trunk ve que hay conflictos que resolver, los resolverá en su rama de manera individual antes de subirlo a trunk.
+
+Por otro lado, si son conflictos por integración de cambios del equipo steamgames-hub-1, será nuestro coordinador de trabajo (Javier Morán) que se encargará de resolverlo en local antes de subirlo a nuestro repositorio, ya que es él el que se encarga de coordinar el código de los dos equipos. Si necesitase ayuda para la resolución de conflictos, se lo comentaría al resto del equipo como si fuese una incidencia.
+
+### Resolución de incidencias
+
+En este caso, el flujo de trabajo cambiaría ligeramente. En función de la prioridad de dicho bug y de la carga de trabajo de cada miembro del equipo, alguno se autoasignaría directamente el bug y empezaría a trabajar en él, empezando por decidir si es necesario resolverlo, pasando la issue a 'Todo', o no. Aun así, depende el flujo de trabajo de si este bug se encuentra en producción o en preproducción.  
+
+En el primer caso, un bug en producción, se resolvería dicho bug en la rama 'bugfix' y se pasaría automáticamente a main y a trunk. Sin embargo, si es un bug en preproducción, se seguiría el flujo de una issue cualquiera, con una rama específica y siendo incorporado de forma directa sólo a trunk, aunque llegaría finalmente a main con el merge automático semanal. 
 
 ## Entorno de desarrollo
 
