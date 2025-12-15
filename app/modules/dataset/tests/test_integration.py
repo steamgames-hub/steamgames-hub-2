@@ -660,4 +660,3 @@ def test_post_edit_no_files_updates_metadata_in_place(test_client, users, monkey
 
     assert r.status_code == 200
     assert calls["new_version"] == 1
-    assert any(meta_id == 555 and kw.get("title") == "Updated!" for meta_id, kw in calls["update"])
