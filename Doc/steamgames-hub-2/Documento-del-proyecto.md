@@ -213,7 +213,44 @@ Debe explicar cuál es el entorno de desarrollo que ha usado, cuáles son las ve
 
 ## Ejercicio de propuesta de cambio
 
-Se presentará un ejercicio con una propuesta concreta de cambio en la que a partir de un cambio que se requiera, se expliquen paso por paso (incluyendo comandos y uso de herramientas) lo que hay que hacer para realizar dicho cambio. Debe ser un ejercicio ilustrativo de todo el proceso de evolución y gestión de la configuración del proyecto.
+
+El ejercicio que proponemos es añadir nuevas restricciones en el apartado de operar con roles de usuarios. Concretamente, no se permitirá que un admin pueda editar, borrar ni bajar de rango a otro admin. Sabiendo, por tanto, que si subimos de rango a un usuario para volverlo admin ya no podríamos editarlo, saltará un modal de confirmación antes de hacerlo.
+
+Para llevar a cabo un cambio así, tendremos que llevar a cabo los siguientes pasos:
+1. Crear la tarea (issue) asociada a esto en GitHub. Esto conllevará usar la plantilla apropiada, asignarle un responsable, asociarle etiquetas, asociarle un tipo y asociarle el tablero de "Feature tracker" colocando la tarea en Todo. Al crearla, supongamos que el id que se le genera es "#20"
+2. Cuando vaya a abordarse la tarea, se crear una rama a partir de trunk a la que llamaremos feat/propuesta-de-cambio, y movemos la tarea de Todo a In Progress.
+3. En la rama anterior, realizaremos la tarea. Para ello, es importante actualizar las ramas y cambiarnos a la que hemos creado con los siguientes comandos: 
+```
+>>>git fetch origin
+>>>git checkout feat/propuesta-de-cambio
+```
+4. Realizaremos los cambios que sean necesarios, tanto en backend como en frontend.
+5. En el módulo en el que se haya realizado la tarea (en este caso, auth), nos adentraremos en la carpeta "testa" para modificar el archivo "test_unit.py". Aquí, crearemos tests y modificaremos algunos de los ya existentes para que se adapten a la nueva funcionalidad, asegurándola ante cualquier cambio futuro. También se pueden crear tests de interfaz en test_selenium.py y tests de carga en locustfile.py si procede.
+6. Subiremos los cambios con los comandos:
+```
+>>>git add .
+
+>>>git commit -m "feat: Propuesta de cambios implementada
+
+Se ha implementado la propuesta de cambios, la cual consistía en añadir nuevas restricciones en el apartado de operar con roles de usuarios. Concretamente, no se permitirá que un admin pueda editar, borrar ni bajar de rango a otro admin. Sabiendo, por tanto, que si subimos de rango a un usuario para volverlo admin ya no podríamos editarlo, saltará un modal de confirmación antes de hacerlo.
+
+Closes: #20"
+
+>>>git push
+```
+Nótese que:
+- Al ser una nueva feature, el commit comienza con "feat"
+- Al final del commit, escribimos el  tarea hace referencia o, como en este caso, cuál cierra. 
+7. En GitHub, podremos observar cómo se activan los worksflows. Si algunos de estos falla, tendremos que revisar los cambios que hemos hecho para saber qué ha fallado y corregirlo.
+8. Si está todo bien, nos cambiaremos en nuestra máquina a la rama trunk y nos traeremos los cambios:
+```
+>>>git checkout trunk
+>>>git merge feat/propuesta-de-cambio
+```
+Si nada falla, hacemos "git push" y subimos los cambios a la rama trunk del repo. Si hay algún conflicto, lo resolveremos con cuidado para no romper ninguna funcionalidad.
+
+9. Gracias a que la release está automatizada, se subirá automáticamente a la rama main cuando ocurra una release.
+10. Movemos la tarea a Done y borramos la rama feat/propuesta-de-cambio.
 
 ## Conclusiones y trabajo futuro
 
