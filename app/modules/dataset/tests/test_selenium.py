@@ -459,3 +459,112 @@ def test_timeline():
             pass
     finally:
         close_driver(driver)
+        
+def test_delete_draft_dataset_via_ui():
+    """
+    Create a draft dataset in the DB, then delete it via the UI and assert it is removed.
+    Based on test_delete_dataset flow but ensures the dataset is a draft.
+    """
+    driver = initialize_driver()
+    try:
+        host = get_host_for_selenium_testing()
+
+        # Login with optional 2FA
+        _login_with_optional_2fa(driver, host)
+
+        # Create a draft dataset directly in the DB so UI shows it as draft
+        app = create_app()
+        with app.app_context():
+            from app import db
+            from app.modules.dataset.models import DataSet
+
+            user = User.query.filter_by(email="user1@yopmail.com").first()
+            title = f"Draft Test Dataset"
+            # Try to set owner; if not available, allow None
+            owner_id = user.id if user else None
+
+            ds = DataSet(title=title, desc="Selenium draft test", draft_mode=True)
+            # attach owner if model supports it
+            try:
+                if owner_id is not None:
+                    setattr(ds, "owner_id", owner_id)
+                db.session.add(ds)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                # best-effort: try without owner
+                try:
+                    ds = DataSet(title=title, desc="Selenium draft test", draft_mode=True)
+                    db.session.add(ds)
+                    db.session.commit()
+                except Exception as exc:
+                    db.session.rollback()
+                    raise
+
+            ds_title = ds.title
+
+        # Open dataset list and locate the draft row
+        driver.get(f"{host}/dataset/list")
+        wait_for_page_to_load(driver)
+        time.sleep(1)
+
+        try:
+            row = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, f"//table//tbody//tr[.//td[contains(., \"{ds_title}\")]]"))
+            )
+        except TimeoutException:
+            # fallback: search rows manually
+            rows = driver.find_elements(By.XPATH, "//table//tbody//tr")
+            row = None
+            for r in rows:
+                if ds_title in r.text:
+                    row = r
+                    break
+            if not row:
+                raise AssertionError("Draft dataset row not found in list")
+
+        # Find a delete button inside the row (try multiple selectors)
+        del_btn = None
+        possible_btn_xpaths = [
+            ".//button[@id='delete_dataset_button']",
+            ".//button[contains(., 'Delete')]",
+            ".//button[contains(., 'Eliminar')]",
+            ".//a[contains(@href, 'delete')]",
+            ".//a[contains(., 'Delete')]",
+            ".//a[contains(., 'Eliminar')]",
+        ]
+        for xp in possible_btn_xpaths:
+            try:
+                del_btn = row.find_element(By.XPATH, xp)
+                if del_btn:
+                    break
+            except Exception:
+                del_btn = None
+        if not del_btn:
+            raise AssertionError("Delete control not found in draft dataset row")
+
+        del_btn.click()
+
+        # Accept JS confirm dialog if present
+        try:
+            WebDriverWait(driver, 5).until(EC.alert_is_present())
+            driver.switch_to.alert.accept()
+        except Exception:
+            # maybe confirmation is modal; try to accept common modal buttons
+            try:
+                ok_btn = WebDriverWait(driver, 3).until(
+                    EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Confirm') or contains(., 'Aceptar') or contains(., 'Yes')]"))
+                )
+                ok_btn.click()
+            except Exception:
+                pass
+
+        # Wait a short time for deletion to complete and page to refresh
+        time.sleep(2)
+        # Verify the dataset title no longer appears in the table
+        remaining = driver.find_elements(By.XPATH, f"//table//tbody//tr[.//td[contains(., \"{ds_title}\")]]")
+        assert len(remaining) == 0, "Draft dataset was not deleted via UI"
+
+    finally:
+        close_driver(driver)
+

@@ -144,7 +144,21 @@ class DatasetBehavior(TaskSet):
         if r.status_code != 200:
             print("PUT /dataset/issues/open/1 returned", r.status_code)
 
+    @task(6)
+    def create_draft_dataset(self):
+        """Create a draft dataset by POSTing JSON to the draft save endpoint."""
+        # prepare a small payload with a random title and description
+        title = f"Locust Test Draft"
+        payload = {"title": title, "desc": "Created by locust draft task"}
 
+        headers = {"Content-Type": "application/json"}
+        # send as JSON body; use keepalive behaviour similar to fetch used in client-side script
+        try:
+            r = self.client.post("/dataset/draft/save", data=json.dumps(payload), headers=headers)
+            if r.status_code not in (200, 201):
+                print("Draft creation returned", r.status_code, r.text[:200])
+        except Exception as exc:
+            print("Exception creating draft via locust:", exc)
 
 class DatasetUser(HttpUser):
     tasks = [DatasetBehavior]
