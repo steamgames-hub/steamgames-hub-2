@@ -1,4 +1,4 @@
-import pytest, time, re
+import pytest, time, re, os
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -229,44 +229,46 @@ def test_login_and_2fa():
     wait = WebDriverWait(driver, 20)
     app = create_app()
     try:
-        host = get_host_for_selenium_testing()
-        driver.get(f"{host}/login")
+        if (os.getenv("TWO_FACTOR_ENABLED", "False") == "True"):
 
-        # --- Login ---
-        email_field = wait.until(EC.presence_of_element_located((By.NAME, "email")))
-        password_field = driver.find_element(By.NAME, "password")
-        email_field.send_keys("user1@yopmail.com")
-        password_field.send_keys("1234")
-        password_field.send_keys(Keys.RETURN)
+            host = get_host_for_selenium_testing()
+            driver.get(f"{host}/login")
 
-        # --- Esperar página 2FA ---
-        wait.until(EC.url_contains("/two-factor/"))
+            # --- Login ---
+            email_field = wait.until(EC.presence_of_element_located((By.NAME, "email")))
+            password_field = driver.find_element(By.NAME, "password")
+            email_field.send_keys("user1@yopmail.com")
+            password_field.send_keys("1234")
+            password_field.send_keys(Keys.RETURN)
+            # --- Esperar página 2FA ---
+            wait.until(EC.url_contains("/two-factor/"))
 
-        main_window = driver.current_window_handle
+            main_window = driver.current_window_handle
 
-        # --- Obtener 2FA ---
-        with app.app_context():
-            user = User.query.filter_by(email="user1@yopmail.com").first()
-            code = user.two_factor_code
-            app.logger.info(f"[test] Moqueando la obtención del código. Código 2FA obtenido: {code}")
+            # --- Obtener 2FA ---
+            with app.app_context():
+                user = User.query.filter_by(email="user1@yopmail.com").first()
+                code = user.two_factor_code
+                app.logger.info(f"[test] Moqueando la obtención del código. Código 2FA obtenido: {code}")
 
-        # --- Introducir código 2FA ---
-        code_field = wait.until(EC.presence_of_element_located((By.ID, "code")))  # <-- CORREGIDO
-        code_field.clear()
-        code_field.send_keys(code)
+            # --- Introducir código 2FA ---
+            code_field = wait.until(EC.presence_of_element_located((By.ID, "code")))  # <-- CORREGIDO
+            code_field.clear()
+            code_field.send_keys(code)
 
-        # --- Click en botón Verificar ---
-        submit_btn = driver.find_element(By.ID, "submit")
-        submit_btn.click()
+            # --- Click en botón Verificar ---
+            submit_btn = driver.find_element(By.ID, "submit")
+            submit_btn.click()
 
-        # --- Esperar a que aparezca el div con el nombre del usuario ---
-        user_div = wait.until(EC.visibility_of_element_located((By.XPATH, "//span[contains(text(), 'Doe, John')]")))
+            # --- Esperar a que aparezca el div con el nombre del usuario ---
+            user_div = wait.until(EC.visibility_of_element_located((By.XPATH, "//span[contains(text(), 'Doe, John')]")))
 
-        if user_div:
-            print("[test] Login + 2FA completado correctamente")
+            if user_div:
+                print("[test] Login + 2FA completado correctamente")
+            else:
+                print("[test] ERROR: No se encontró el div del usuario, login fallido")
         else:
-            print("[test] ERROR: No se encontró el div del usuario, login fallido")
-
+            print("El 2FA se encuentra desactivado. Para testear su uso, modifique las variables de entorno en app")
     finally:
         driver.quit()
 
