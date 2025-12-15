@@ -19,8 +19,6 @@
 
 <br>
 
-# Política de gestión del código fuente
-
 ## Gestión de commits
  
 Para este proyecto se ha decidido seguir las siguientes pautas en cuanto a a la gestión de los commits se refiere.
