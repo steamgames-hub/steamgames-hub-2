@@ -341,6 +341,84 @@ def test_upgrade_user_role_unsuccessful(test_client):
     assert user2.role == UserRole.USER, "User role was incorrectly upgraded"
 
 
+def test_admin_cannot_upgrade_another_admin(test_client):
+    # Create two admins
+    admin1 = User(email="admin1_modify@example.com", password="test1234", verified=True, role=UserRole.ADMIN)
+    admin2 = User(email="admin2_modify@example.com", password="test1234", verified=True, role=UserRole.ADMIN)
+    db.session.add(admin1)
+    db.session.add(admin2)
+    db.session.commit()
+    # Ensure profiles exist
+    from app.modules.profile.models import UserProfile
+
+    if not admin1.profile:
+        db.session.add(UserProfile(user_id=admin1.id, name="A", surname="One"))
+    if not admin2.profile:
+        db.session.add(UserProfile(user_id=admin2.id, name="B", surname="Two"))
+    db.session.commit()
+
+    # Login as admin1
+    test_client.get("/logout", follow_redirects=True)
+    resp = test_client.post("/login", data={"email": admin1.email, "password": "test1234"}, follow_redirects=True)
+    assert resp.status_code == 200
+
+    # Attempt to upgrade admin2 (should be forbidden)
+    response = test_client.post(f"/user/upgrade/{admin2.id}", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_admin_cannot_downgrade_another_admin(test_client):
+    # Create two admins
+    admin1 = User(email="admin3_modify@example.com", password="test1234", verified=True, role=UserRole.ADMIN)
+    admin2 = User(email="admin4_modify@example.com", password="test1234", verified=True, role=UserRole.ADMIN)
+    db.session.add(admin1)
+    db.session.add(admin2)
+    db.session.commit()
+    # Ensure profiles exist
+    from app.modules.profile.models import UserProfile
+
+    if not admin1.profile:
+        db.session.add(UserProfile(user_id=admin1.id, name="C", surname="Three"))
+    if not admin2.profile:
+        db.session.add(UserProfile(user_id=admin2.id, name="D", surname="Four"))
+    db.session.commit()
+
+    # Login as admin1
+    test_client.get("/logout", follow_redirects=True)
+    resp = test_client.post("/login", data={"email": admin1.email, "password": "test1234"}, follow_redirects=True)
+    assert resp.status_code == 200
+
+    # Attempt to downgrade admin2 (should be forbidden)
+    response = test_client.post(f"/user/downgrade/{admin2.id}", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_admin_cannot_delete_other_admin(test_client):
+    # Create two admins
+    admin1 = User(email="admin5_modify@example.com", password="test1234", verified=True, role=UserRole.ADMIN)
+    admin2 = User(email="admin6_modify@example.com", password="test1234", verified=True, role=UserRole.ADMIN)
+    db.session.add(admin1)
+    db.session.add(admin2)
+    db.session.commit()
+    # Ensure profiles exist
+    from app.modules.profile.models import UserProfile
+
+    if not admin1.profile:
+        db.session.add(UserProfile(user_id=admin1.id, name="E", surname="Five"))
+    if not admin2.profile:
+        db.session.add(UserProfile(user_id=admin2.id, name="F", surname="Six"))
+    db.session.commit()
+
+    # Login as admin1
+    test_client.get("/logout", follow_redirects=True)
+    resp = test_client.post("/login", data={"email": admin1.email, "password": "test1234"}, follow_redirects=True)
+    assert resp.status_code == 200
+
+    # Attempt to delete admin2 (should be forbidden)
+    response = test_client.delete(f"/user/delete/{admin2.id}")
+    assert response.status_code == 403
+
+
 def test_downgrade_user_role_success(test_client):
 
     admin = User.query.filter_by(email="admin_test@example.com").first()

@@ -85,3 +85,34 @@ def test_change_preference_save_drafts(test_client):
     response = test_client.put("/profile/save_drafts")
     assert response.status_code == 200, "The preference was changed succesfully"
     logout(test_client)
+
+
+def test_admin_cannot_edit_another_admin_profile(test_client):
+    # Create two admin users
+    admin1 = User(email="admin_edit1@example.com", password="test1234",)
+    admin2 = User(email="admin_edit2@example.com", password="test1234",)
+    db.session.add(admin1)
+    db.session.add(admin2)
+    db.session.commit()
+    # Give both admin role and profiles
+    from app.modules.auth.models import UserRole
+    from app.modules.profile.models import UserProfile
+
+    admin1.role = UserRole.ADMIN
+    admin2.role = UserRole.ADMIN
+    db.session.commit()
+
+    if not admin1.profile:
+        db.session.add(UserProfile(user_id=admin1.id, name="Admin1", surname="Test"))
+    if not admin2.profile:
+        db.session.add(UserProfile(user_id=admin2.id, name="Admin2", surname="Test"))
+    db.session.commit()
+
+    # Login as admin1
+    resp = test_client.post("/login", data={"email": admin1.email, "password": "test1234"}, follow_redirects=True)
+    assert resp.status_code == 200
+
+    # Attempt to access edit page for admin2 (should be forbidden)
+    response = test_client.get(f"/profile/edit/{admin2.id}")
+    assert response.status_code == 403
+    logout(test_client)
