@@ -1,4 +1,4 @@
-from flask import redirect, render_template, request, url_for
+from flask import redirect, render_template, request, url_for, abort
 from flask_login import current_user, login_required
 
 from app import db
@@ -19,9 +19,11 @@ def edit_profile(user_id):
     else:
         profile = auth_service.get_authenticated_user_profile()
 
+    user = auth_service.repository.get_by_id(user_id) if current_user.role == UserRole.ADMIN else current_user
+    if user.role == UserRole.ADMIN and current_user.id != user.id:
+        abort(403, description="Unauthorized")
     # If profile does not exist, create a blank one for the user (including empty affiliation)
     if not profile:
-        user = auth_service.repository.get_by_id(user_id) if current_user.role == UserRole.ADMIN else current_user
         if user:
             # Crea el perfil en la base de datos si no existe
             auth_service.user_profile_repository.create(user_id=user.id, name="", surname="", affiliation="")
