@@ -3,6 +3,21 @@
 {% block title %}Users List{% endblock %}
 
 {% block content %}
+
+ <div id="myModal" class="modal" user-id="">
+        
+	<div class="modal-content">
+		<h2>Do you really want to <strong>upgrade this user</strong>?</h2>
+		<p class="p-0 m-0">
+			You can now decide whether this user will be an admin or not. Be careful as you cannot edit an admin later.
+		</p>
+		<div class="modal-buttons-container">
+			<button class="btn btn-primary mt-2" onclick="upgradeUser()">Yes, upgrade user</button>
+			<button class="btn btn-secondary mt-2" onclick="discardUpgradeUser()">No, don't upgrade user</button>
+		</div>
+	</div>
+</div>
+
 <div class="container-fluid p-0">
 	<h1 class="h3 mb-3"><b>Role</b> management</h1>
 	<div class="row">
@@ -31,13 +46,15 @@
 								<td>
 									{% if user.id != current_user.id %}
 										{% if user.role.name != 'ADMIN' %}
-											<button class="btn btn-success btn-sm user-upgrade" data-user-id="{{ user.id }}">Upgrade</button>
+											<button class="btn btn-success btn-sm user-upgrade" data-user-id="{{ user.id }}" actual-role="{{user.role.name}} ">Upgrade</button>
 										{% endif %}
-										{% if user.role.name != 'USER' %}
+										{% if user.role.name != 'USER' and user.role.name != 'ADMIN' %}
 											<button class="btn btn-warning btn-sm user-downgrade" data-user-id="{{ user.id }}">Downgrade</button>
 										{% endif %}
-										<a class="btn btn-primary btn-sm" href="{{ url_for('profile.edit_profile', user_id=user.id) }}">Edit</a>
-										<button class="btn btn-danger btn-sm user-delete" data-user-id="{{ user.id }}">Delete</button>
+										{% if user.role.name != 'ADMIN' %}
+											<a class="btn btn-primary btn-sm" href="{{ url_for('profile.edit_profile', user_id=user.id) }}">Edit</a>
+											<button class="btn btn-danger btn-sm user-delete" data-user-id="{{ user.id }}">Delete</button>
+										{% endif %}
 									{% else %}
 										<a class="btn btn-primary btn-sm" href="{{ url_for('profile.edit_profile', user_id=user.id) }}">Edit</a>
 									{% endif %}
@@ -52,19 +69,42 @@
 	</div>
 </div>
 <script>
+	function upgradeUser(userId) {
+		if(!userId){
+			userId = document.getElementById("myModal").getAttribute("user-id")
+		}
+		fetch(`/user/upgrade/${userId}`, {
+			method: 'POST',
+			headers: { 'X-Requested-With': 'XMLHttpRequest' }
+		})
+		.then(response => {
+			if (response.ok) {
+				window.location.reload();
+			} else {
+				response.json().then(data => alert(data.message || 'Error'));
+			}
+		});
+	}
+
+	function showModal(event, userId) {
+		event.preventDefault()
+		document.getElementById("myModal").style.display = "flex";
+		document.getElementById("myModal").setAttribute("user-id", userId)
+	}
+
+	function discardUpgradeUser() {
+		document.getElementById("myModal").style.display = "none";
+	}
+
 	document.querySelectorAll('.user-upgrade').forEach(button => {
-		button.addEventListener('click', function () {
-			fetch(`/user/upgrade/${button.dataset.userId}`, {
-				method: 'POST',
-				headers: { 'X-Requested-With': 'XMLHttpRequest' }
-			})
-			.then(response => {
-				if (response.ok) {
-					window.location.reload();
-				} else {
-					response.json().then(data => alert(data.message || 'Error'));
-				}
-			});
+		
+		button.addEventListener('click', function (event) {
+			userRole = button.getAttribute('actual-role')
+			if(userRole === 'CURATOR '){
+				showModal(event, button.dataset.userId)
+			} else {
+				upgradeUser(button.dataset.userId)
+			}
 		});
 	});
 	document.querySelectorAll('.user-downgrade').forEach(button => {
