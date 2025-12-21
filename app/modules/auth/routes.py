@@ -186,8 +186,7 @@ def verify(token):
 @login_required
 def upgrade_user_role(user_id):
     user = User.query.get_or_404(user_id)
-
-    if not current_user.role == UserRole.ADMIN:
+    if current_user.role != UserRole.ADMIN or (user.role == UserRole.ADMIN and current_user.id != user.id):
         abort(403, description="Unauthorized")
     try:
         authentication_service.upgrade_user_role(user)
@@ -202,8 +201,7 @@ def upgrade_user_role(user_id):
 @login_required
 def downgrade_user_role(user_id):
     user = User.query.get_or_404(user_id)
-
-    if not current_user.role == UserRole.ADMIN:
+    if current_user.role != UserRole.ADMIN or (user.role == UserRole.ADMIN and current_user.id != user.id):
         abort(403, description="Unauthorized")
     try:
         authentication_service.downgrade_user_role(user)
@@ -227,7 +225,7 @@ def list_all_users():
 @login_required
 def delete_user(user_id):
     user = User.query.get_or_404(user_id)
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role != UserRole.ADMIN or (user.role == UserRole.ADMIN and current_user.id != user.id):
         abort(403, description="Unauthorized")
     try:
         authentication_service.delete_user(user)
